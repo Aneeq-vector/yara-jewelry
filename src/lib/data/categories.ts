@@ -1,0 +1,60 @@
+import { Category } from '@/types';
+
+export const categories: Category[] = [
+  {
+    id: 'cat-1',
+    name: 'Earrings',
+    slug: 'earrings',
+    description: 'Elegant drops, studs & hoops crafted for everyday luxury.',
+    image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=600&h=800&fit=crop',
+    productCount: 8,
+  },
+  {
+    id: 'cat-2',
+    name: 'Necklaces',
+    slug: 'necklaces',
+    description: 'Statement chains & delicate pendants to complete any look.',
+    image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&h=800&fit=crop',
+    productCount: 7,
+  },
+  {
+    id: 'cat-3',
+    name: 'Rings',
+    slug: 'rings',
+    description: 'Stackable bands & cocktail rings for every occasion.',
+    image: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=600&h=800&fit=crop',
+    productCount: 6,
+  },
+  {
+    id: 'cat-4',
+    name: 'Bracelets',
+    slug: 'bracelets',
+    description: 'Dainty chains & bold cuffs to adorn your wrist.',
+    image: 'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=600&h=800&fit=crop',
+    productCount: 5,
+  },
+  {
+    id: 'cat-5',
+    name: 'Sets',
+    slug: 'sets',
+    description: 'Curated jewelry sets designed to be worn together.',
+    image: 'https://images.unsplash.com/photo-1588444837495-c6cfeb53f32d?w=600&h=800&fit=crop',
+    productCount: 4,
+  },
+  {
+    id: 'cat-6',
+    name: 'New Arrivals',
+    slug: 'new-arrivals',
+    description: 'Fresh designs just dropped — be the first to wear them.',
+    image: 'https://images.unsplash.com/photo-1611085583191-a3b181a88401?w=600&h=800&fit=crop',
+    productCount: 6,
+  },
+  {
+    id: 'cat-7',
+    name: 'Gift Boxes',
+    slug: 'gift-boxes',
+    description: 'Beautifully curated gift boxes and the option to build your own.',
+    image: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=600&h=800&fit=crop',
+    productCount: 3,
+  },
+];
