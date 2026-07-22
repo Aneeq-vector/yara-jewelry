@@ -52,8 +52,8 @@ export default function OrdersManager() {
   }, []);
 
   const handleStatusChange = async (id: string, newStatus: string) => {
-    setOrders(prev => prev.map(o => o.id === id ? { ...o, status: newStatus } : o));
-    setSelectedOrder(prev => prev && prev.id === id ? { ...prev, status: newStatus } : prev);
+    setOrders((prev: any[]) => prev.map(o => o.id === id ? { ...o, status: newStatus } : o));
+    setSelectedOrder((prev: any) => prev && prev.id === id ? { ...prev, status: newStatus } : prev);
     const res = await updateOrderStatusAction(id, newStatus);
     if (!res?.success) {
       alert("Failed to update status: " + (res?.error || "Unknown error"));
@@ -67,8 +67,8 @@ export default function OrdersManager() {
   };
 
   const handlePaymentStatusChange = async (id: string, newPaymentStatus: string) => {
-    setOrders(prev => prev.map(o => o.id === id ? { ...o, paymentStatus: newPaymentStatus } : o));
-    setSelectedOrder(prev => prev && prev.id === id ? { ...prev, paymentStatus: newPaymentStatus } : prev);
+    setOrders((prev: any[]) => prev.map(o => o.id === id ? { ...o, paymentStatus: newPaymentStatus } : o));
+    setSelectedOrder((prev: any) => prev && prev.id === id ? { ...prev, paymentStatus: newPaymentStatus } : prev);
     const res = await updateOrderPaymentStatusAction(id, newPaymentStatus);
     if (!res?.success) {
       alert("Failed to update payment status: " + (res?.error || "Unknown error"));

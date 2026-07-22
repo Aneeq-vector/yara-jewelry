@@ -101,7 +101,7 @@ export async function duplicateProductAction(id: string) {
     const original = await pb.collection('products').getOne(id);
     
     // Duplicate data
-    const newData = { ...original };
+    const newData: any = { ...original };
     delete newData.id;
     delete newData.created;
     delete newData.updated;
