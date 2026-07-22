@@ -17,8 +17,16 @@ const trendingSearches = ['Pearl Earrings', 'Gold Hoops', 'Layered Necklace', 'S
 
 export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const [query, setQuery] = useState('');
-  const results = query.length > 1 ? searchProducts(query) : [];
+  const [results, setResults] = useState<any[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (query.length > 1) {
+      searchProducts(query).then(setResults);
+    } else {
+      setTimeout(() => setResults([]), 0);
+    }
+  }, [query]);
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
@@ -93,7 +101,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
                           transition={{ delay: i * 0.05 }}
                         >
                           <Link
-                            href={`/shop/${product.slug}`}
+                            href={`/shop/${product.id}`}
                             onClick={handleClose}
                             className="flex items-center gap-4 p-3 rounded-2xl hover:bg-champagne/40 transition-colors group"
                           >

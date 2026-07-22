@@ -1,7 +1,7 @@
 export interface Product {
   id: string;
+  productCode?: string;
   name: string;
-  slug: string;
   price: number;
   originalPrice?: number;
   description: string;
@@ -14,8 +14,27 @@ export interface Product {
   material: string;
   weight: string;
   inStock: boolean;
+  isActive?: boolean;
   colors?: string[];
+  selectedColor?: string;
   tags: string[];
+}
+
+export type GiftBoxType = 'birthday' | 'anniversary' | 'custom';
+
+export interface GiftBox {
+  id: string;
+  name: string;
+  slug: string;
+  type: GiftBoxType;
+  description: string;
+  shortDescription: string;
+  boxPrice: number;
+  images: string[];
+  fixedItems: Product[];
+  categoryId?: string;  // optional category relation for filtering fixed_items
+  isActive: boolean;
+  collectionId?: string;
 }
 
 export type CategoryType =
@@ -78,7 +97,7 @@ export interface Address {
   city: string;
   state: string;
   zipCode: string;
-  country: string;
+  country?: string;
   phone: string;
   isDefault: boolean;
 }

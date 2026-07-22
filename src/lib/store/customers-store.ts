@@ -7,19 +7,15 @@ export interface Customer {
   id: string;
   name: string;
   email: string;
+  phone?: string;
   orders: number;
   spent: string;
   joined: string;
   status: 'Active' | 'Inactive' | 'VIP';
+  addresses?: any[];
 }
 
-const INITIAL_CUSTOMERS: Customer[] = [
-  { id: 'CUST-001', name: 'Emma Thompson', email: 'emma.t@example.com', orders: 12, spent: 'Rs. 450,000', joined: 'Jan 15, 2026', status: 'Active' },
-  { id: 'CUST-002', name: 'James Wilson', email: 'j.wilson@example.com', orders: 3, spent: 'Rs. 185,000', joined: 'Feb 28, 2026', status: 'Active' },
-  { id: 'CUST-003', name: 'Sarah Davis', email: 'sarah.d@example.com', orders: 1, spent: 'Rs. 12,500', joined: 'Mar 10, 2026', status: 'Inactive' },
-  { id: 'CUST-004', name: 'Michael Brown', email: 'mbrown99@example.com', orders: 5, spent: 'Rs. 240,000', joined: 'Apr 02, 2026', status: 'Active' },
-  { id: 'CUST-005', name: 'Emily Chen', email: 'emily.chen@example.com', orders: 8, spent: 'Rs. 520,000', joined: 'May 14, 2026', status: 'VIP' },
-];
+const INITIAL_CUSTOMERS: Customer[] = [];
 
 interface CustomersStore {
   customers: Customer[];
@@ -41,7 +37,8 @@ export const useCustomersStore = create<CustomersStore>()(
       })),
     }),
     {
-      name: 'yara-customers',
+      name: 'yara-customers-v2',
+      version: 1, // Bump version to clear old mock data from localStorage
     }
   )
 );

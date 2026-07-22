@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
@@ -11,6 +11,7 @@ import {
   Star,
   Share2,
   ChevronRight,
+  ChevronLeft,
   Minus,
   Plus,
   Check,
@@ -19,21 +20,58 @@ import {
   Shield,
   Ruler,
   X,
+  AlertCircle,
 } from 'lucide-react';
 import PageWrapper from '@/components/layout/PageWrapper';
 import CustomBoxBuilder from '@/components/shop/CustomBoxBuilder';
-import { getProductBySlug, products } from '@/lib/data/products';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { getProductById, getAllProducts } from '@/lib/data/products';
+import { getAllCategories } from '@/lib/data/categories';
+import { Product, Category } from '@/types';
 import { useCartStore } from '@/lib/store/cart-store';
 import { useWishlistStore } from '@/lib/store/wishlist-store';
 import { formatPrice, calculateDiscount } from '@/lib/utils';
-import { BADGE_CONFIG } from '@/lib/constants';
+import { BADGE_CONFIG, BRAND } from '@/lib/constants';
 
 export default function ProductDetailPage() {
   const params = useParams();
-  const slug = params.slug as string;
-  const product = getProductBySlug(slug);
+  const id = params.id as string;
+  const [product, setProduct] = useState<Product | null>(null);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([getProductById(id), getAllProducts(), getAllCategories()]).then(([prod, prods, cats]) => {
+      setProduct(prod || null);
+      setAllProducts(prods);
+      setCategories(cats);
+      setLoading(false);
+    });
+  }, [id]);
 
   const [selectedImage, setSelectedImage] = useState(0);
+  const thumbnailRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  useEffect(() => {
+    const activeThumbnail = thumbnailRefs.current[selectedImage];
+    if (activeThumbnail) {
+      activeThumbnail.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+  }, [selectedImage]);
+
+  const nextImage = () => {
+    if (product?.images) {
+      setSelectedImage((prev) => (prev + 1) % product.images.length);
+    }
+  };
+
+  const prevImage = () => {
+    if (product?.images) {
+      setSelectedImage((prev) => (prev - 1 + product.images.length) % product.images.length);
+    }
+  };
+
   const [selectedColor, setSelectedColor] = useState<string | undefined>();
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState<'description' | 'details' | 'reviews'>('description');
@@ -41,6 +79,16 @@ export default function ProductDetailPage() {
 
   const addToCart = useCartStore((s) => s.addItem);
   const { isInWishlist, toggleItem } = useWishlistStore();
+
+  if (loading) {
+    return (
+      <PageWrapper>
+        <div className="pt-32 pb-20 text-center">
+          <div className="w-8 h-8 border-2 border-burgundy/20 border-t-burgundy rounded-full animate-spin mx-auto" />
+        </div>
+      </PageWrapper>
+    );
+  }
 
   if (!product) {
     return (
@@ -55,16 +103,16 @@ export default function ProductDetailPage() {
     );
   }
 
-  if (product.slug === 'build-your-own-gift-box') {
+  if (product.name.toLowerCase() === 'build your own gift box') {
     return (
       <PageWrapper>
-        <CustomBoxBuilder baseBox={product} />
+        <CustomBoxBuilder baseBox={product} allProducts={allProducts} />
       </PageWrapper>
     );
   }
 
   const wishlisted = isInWishlist(product.id);
-  const relatedProducts = products
+  const relatedProducts = allProducts
     .filter((p) => p.category === product.category && p.id !== product.id)
     .slice(0, 4);
 
@@ -82,9 +130,14 @@ export default function ProductDetailPage() {
             <ChevronRight size={12} />
             <Link href="/shop" className="hover:text-burgundy transition-colors">Shop</Link>
             <ChevronRight size={12} />
-            <Link href={`/shop?category=${product.category}`} className="hover:text-burgundy transition-colors capitalize">
-              {product.category.replace('-', ' ')}
-            </Link>
+            {(() => {
+              const categoryObj = categories.find(c => c.id === product.category);
+              return (
+                <Link href={`/shop?category=${categoryObj?.slug || product.category}`} className="hover:text-burgundy transition-colors capitalize">
+                  {categoryObj?.name || product.category.replace('-', ' ')}
+                </Link>
+              );
+            })()}
             <ChevronRight size={12} />
             <span className="text-burgundy/70 truncate max-w-[200px]">{product.name}</span>
           </motion.nav>
@@ -98,35 +151,67 @@ export default function ProductDetailPage() {
             >
               {/* Main Image */}
               <div className="relative aspect-square rounded-3xl overflow-hidden bg-champagne/30 mb-4 group cursor-zoom-in">
-                <Image
-                  src={product.images[selectedImage]}
-                  alt={product.name}
-                  fill
-                  className="object-cover group-hover:scale-110 transition-transform duration-700"
-                  priority
-                />
+                <AnimatePresence initial={false}>
+                  <motion.div
+                    key={selectedImage}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="absolute inset-0"
+                  >
+                    <Image
+                      src={product.images[selectedImage]}
+                      alt={product.name}
+                      fill
+                      className="object-cover group-hover:scale-110 transition-transform duration-700"
+                      priority
+                      unoptimized
+                    />
+                  </motion.div>
+                </AnimatePresence>
+
+                {/* Navigation Arrows */}
+                {product.images.length > 1 && (
+                  <div className="absolute inset-0 flex items-center justify-between px-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); prevImage(); }}
+                      className="pointer-events-auto p-2 rounded-full bg-white/80 text-burgundy hover:bg-white transition-colors shadow-md"
+                    >
+                      <ChevronLeft size={20} />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); nextImage(); }}
+                      className="pointer-events-auto p-2 rounded-full bg-white/80 text-burgundy hover:bg-white transition-colors shadow-md"
+                    >
+                      <ChevronRight size={20} />
+                    </button>
+                  </div>
+                )}
+
                 {product.badge && (
-                  <div className="absolute top-4 left-4">
-                    <span className={`px-4 py-2 rounded-full text-xs font-ui font-bold uppercase tracking-wider text-white ${BADGE_CONFIG[product.badge].color}`}>
-                      {BADGE_CONFIG[product.badge].label}
+                  <div className="absolute top-4 left-4 z-20">
+                    <span className={`px-4 py-2 rounded-full text-xs font-ui font-bold uppercase tracking-wider text-white ${BADGE_CONFIG[product.badge as keyof typeof BADGE_CONFIG].color}`}>
+                      {BADGE_CONFIG[product.badge as keyof typeof BADGE_CONFIG].label}
                     </span>
                   </div>
                 )}
               </div>
 
               {/* Thumbnails */}
-              <div className="flex gap-3">
+              <div className="flex gap-3 overflow-x-auto p-1.5 snap-x snap-mandatory no-scrollbar">
                 {product.images.map((img, i) => (
                   <button
                     key={i}
+                    ref={(el) => { thumbnailRefs.current[i] = el; }}
                     onClick={() => setSelectedImage(i)}
-                    className={`relative w-20 h-20 rounded-2xl overflow-hidden transition-all ${
+                    className={`relative shrink-0 w-20 h-20 rounded-2xl overflow-hidden transition-all snap-center ${
                       selectedImage === i
                         ? 'ring-2 ring-burgundy ring-offset-2 ring-offset-ivory'
                         : 'opacity-60 hover:opacity-100'
                     }`}
                   >
-                    <Image src={img} alt="" fill className="object-cover" />
+                    <Image src={img} alt="" fill className="object-cover" unoptimized />
                   </button>
                 ))}
               </div>
@@ -170,13 +255,13 @@ export default function ProductDetailPage() {
                 <span className="font-body tracking-tight text-3xl font-bold text-burgundy">
                   {formatPrice(product.price)}
                 </span>
-                {product.originalPrice && (
+                {(product.originalPrice || 0) > 0 && (
                   <>
                     <span className="font-body text-lg text-burgundy/35 line-through">
-                      {formatPrice(product.originalPrice)}
+                      {formatPrice(product.originalPrice || 0)}
                     </span>
                     <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 font-ui text-xs font-bold">
-                      Save {calculateDiscount(product.price, product.originalPrice)}%
+                      Save {calculateDiscount(product.price, product.originalPrice || 0)}%
                     </span>
                   </>
                 )}
@@ -191,6 +276,19 @@ export default function ProductDetailPage() {
                 <Ruler size={16} />
                 <span className="underline underline-offset-4">Size Guide</span>
               </button>
+
+              {/* Out of Stock Alert */}
+              {!product.inStock && (
+                <Alert variant="destructive" className="mb-8 bg-red-50 py-4 flex items-start gap-3 border-red-200">
+                  <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0 text-red-600" />
+                  <div className="flex flex-col gap-1 mt-0.5">
+                    <AlertTitle className="text-red-700 font-bold mb-0">Out of Stock</AlertTitle>
+                    <AlertDescription className="text-red-600/90 text-sm leading-snug text-wrap">
+                      This item is currently unavailable. Contact us on WhatsApp to check on restocking.
+                    </AlertDescription>
+                  </div>
+                </Alert>
+              )}
 
               {/* Color Selection */}
               {product.colors && product.colors.length > 0 && (
@@ -217,40 +315,58 @@ export default function ProductDetailPage() {
               )}
 
               {/* Quantity */}
-              <div className="mb-8">
-                <h4 className="font-ui font-semibold text-xs uppercase tracking-wider text-burgundy/50 mb-3">
-                  Quantity
-                </h4>
-                <div className="flex items-center gap-1 w-fit">
-                  <button
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="w-10 h-10 rounded-xl border border-nude/50 flex items-center justify-center text-burgundy/60 hover:border-burgundy/30 transition-colors"
-                  >
-                    <Minus size={14} />
-                  </button>
-                  <span className="w-12 text-center font-ui font-semibold text-burgundy">
-                    {quantity}
-                  </span>
-                  <button
-                    onClick={() => setQuantity(quantity + 1)}
-                    className="w-10 h-10 rounded-xl border border-nude/50 flex items-center justify-center text-burgundy/60 hover:border-burgundy/30 transition-colors"
-                  >
-                    <Plus size={14} />
-                  </button>
+              {product.inStock && (
+                <div className="mb-8">
+                  <h4 className="font-ui font-semibold text-xs uppercase tracking-wider text-burgundy/50 mb-3">
+                    Quantity
+                  </h4>
+                  <div className="flex items-center gap-1 w-fit">
+                    <button
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      className="w-10 h-10 rounded-xl border border-nude/50 flex items-center justify-center text-burgundy/60 hover:border-burgundy/30 transition-colors"
+                    >
+                      <Minus size={14} />
+                    </button>
+                    <span className="w-12 text-center font-ui font-semibold text-burgundy">
+                      {quantity}
+                    </span>
+                    <button
+                      onClick={() => setQuantity(quantity + 1)}
+                      className="w-10 h-10 rounded-xl border border-nude/50 flex items-center justify-center text-burgundy/60 hover:border-burgundy/30 transition-colors"
+                    >
+                      <Plus size={14} />
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Actions */}
               <div className="flex gap-3 mb-8">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => addToCart(product, quantity, selectedColor || product.colors?.[0])}
-                  className="btn-primary flex-1 flex items-center justify-center gap-2"
-                >
-                  <ShoppingBag size={16} className="relative z-10" />
-                  <span>Add to Cart</span>
-                </motion.button>
+                {product.inStock ? (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => addToCart(product, quantity, selectedColor || product.colors?.[0])}
+                    className="btn-primary flex-1 flex items-center justify-center gap-2"
+                  >
+                    <ShoppingBag size={16} className="relative z-10" />
+                    <span>Add to Cart</span>
+                  </motion.button>
+                ) : (
+                  <a
+                    href={`https://wa.me/${BRAND.whatsapp}?text=${encodeURIComponent(
+                      `Hi! I'm interested in the "${product.name}"${product.colors?.length ? ` (Color: ${selectedColor || product.colors[0]})` : ''} which is currently out of stock. Could you let me know when it will be restocked?`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 flex items-center justify-center gap-2.5 py-4 rounded-2xl bg-[#25D366] hover:bg-[#20bc5a] transition-colors cursor-pointer"
+                  >
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                    </svg>
+                    <span className="font-ui font-bold text-sm text-white">Ask About Restock on WhatsApp</span>
+                  </a>
+                )}
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -309,9 +425,10 @@ export default function ProductDetailPage() {
                 </div>
 
                 {activeTab === 'description' && (
-                  <p className="font-body text-sm text-burgundy/60 leading-relaxed">
-                    {product.description}
-                  </p>
+                  <div 
+                    className="font-body text-sm text-burgundy/60 leading-relaxed [&>p]:mb-4 last:[&>p]:mb-0"
+                    dangerouslySetInnerHTML={{ __html: product.description }}
+                  />
                 )}
 
                 {activeTab === 'details' && (
@@ -329,10 +446,16 @@ export default function ProductDetailPage() {
                       <span className="font-ui text-sm font-semibold text-burgundy">{product.colors?.join(', ')}</span>
                     </div>
                     <div className="flex justify-between py-2">
-                      <span className="font-ui text-sm text-burgundy/50">In Stock</span>
-                      <span className="font-ui text-sm font-semibold text-emerald-600 flex items-center gap-1">
-                        <Check size={14} /> Available
-                      </span>
+                      <span className="font-ui text-sm text-burgundy/50">Availability</span>
+                      {product.inStock ? (
+                        <span className="font-ui text-sm font-semibold text-emerald-600 flex items-center gap-1">
+                          <Check size={14} /> In Stock
+                        </span>
+                      ) : (
+                        <span className="font-ui text-sm font-semibold text-rose-500 flex items-center gap-1">
+                          <X size={14} /> Out of Stock
+                        </span>
+                      )}
                     </div>
                   </div>
                 )}
@@ -388,9 +511,18 @@ export default function ProductDetailPage() {
                     transition={{ delay: i * 0.1 }}
                     className="group"
                   >
-                    <Link href={`/shop/${p.slug}`}>
+                    <Link href={`/shop/${p.id}`}>
                       <div className="relative aspect-square rounded-3xl overflow-hidden bg-champagne/30 mb-3">
-                        <Image src={p.images[0]} alt={p.name} fill className="object-cover group-hover:scale-105 transition-transform duration-700" />
+                        <Image src={p.images[0]} alt={p.name} fill className={`object-cover group-hover:scale-105 transition-all duration-700 ${
+                          !p.inStock ? 'opacity-40 grayscale-[30%]' : ''
+                        }`} />
+                        {!p.inStock && (
+                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none flex items-center justify-center">
+                            <span className="px-4 py-2 bg-white/90 text-burgundy font-ui font-bold text-xs uppercase tracking-wider rounded-full shadow-lg whitespace-nowrap">
+                              Out of Stock
+                            </span>
+                          </div>
+                        )}
                       </div>
                       <h3 className="font-ui font-semibold text-sm text-burgundy mb-1 line-clamp-1">{p.name}</h3>
                       <span className="font-ui font-bold text-sm text-burgundy">{formatPrice(p.price)}</span>

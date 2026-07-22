@@ -6,16 +6,25 @@ import WhyChooseYara from '@/components/home/WhyChooseYara';
 import FashionInspiration from '@/components/home/FashionInspiration';
 import Testimonials from '@/components/home/Testimonials';
 import InstagramShowcase from '@/components/home/InstagramShowcase';
+import { getTrendingProducts } from '@/lib/data/products';
+import { getAllCategories } from '@/lib/data/categories';
+import { getAllTestimonials } from '@/lib/data/testimonials';
 
-export default function HomePage() {
+export default async function HomePage() {
+  const [trendingProducts, categories, testimonials] = await Promise.all([
+    getTrendingProducts(),
+    getAllCategories(),
+    getAllTestimonials(),
+  ]);
+
   return (
     <PageWrapper>
       <Hero />
-      <FeaturedCollections />
-      <TrendingProducts />
+      <FeaturedCollections categories={categories} />
+      <TrendingProducts products={trendingProducts} />
       <WhyChooseYara />
       <FashionInspiration />
-      <Testimonials />
+      <Testimonials testimonials={testimonials} />
       <InstagramShowcase />
     </PageWrapper>
   );

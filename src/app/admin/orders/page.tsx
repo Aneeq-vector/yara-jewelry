@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Search, Filter, Eye, Download, X } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Search, Filter, Eye, Download, X, Loader2, ChevronDown, FileText, Trash2, RefreshCw } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Pagination,
@@ -12,21 +12,201 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-
-const mockOrders = [
-  { id: '#YR-2455', customer: 'Emma Thompson', email: 'emma.t@example.com', date: 'Oct 24, 2026', total: 'Rs. 45,000', status: 'Processing', items: 2 },
-  { id: '#YR-2454', customer: 'James Wilson', email: 'j.wilson@example.com', date: 'Oct 24, 2026', total: 'Rs. 125,000', status: 'Shipped', items: 1 },
-  { id: '#YR-2453', customer: 'Sarah Davis', email: 'sarah.d@example.com', date: 'Oct 23, 2026', total: 'Rs. 12,500', status: 'Delivered', items: 3 },
-  { id: '#YR-2452', customer: 'Michael Brown', email: 'mbrown99@example.com', date: 'Oct 23, 2026', total: 'Rs. 85,000', status: 'Processing', items: 1 },
-  { id: '#YR-2451', customer: 'Emily Chen', email: 'emily.chen@example.com', date: 'Oct 22, 2026', total: 'Rs. 320,000', status: 'Delivered', items: 4 },
-];
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { getAllOrdersAction, updateOrderStatusAction, updateOrderPaymentStatusAction, deleteOrdersAction } from '@/app/actions/orders';
+import { PB_URL } from '@/lib/pocketbase';
+import * as XLSX from 'xlsx';
 
 export default function OrdersManager() {
-  const [selectedOrder, setSelectedOrder] = useState<typeof mockOrders[0] | null>(null);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All Statuses');
+  const [dateFilter, setDateFilter] = useState('all'); // 'all', 'today', 'yesterday', 'week', 'month', 'custom'
+  const [customDate, setCustomDate] = useState('');
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
+  
+  const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
+  const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
+
+  const fetchOrders = () => {
+    setLoading(true);
+    getAllOrdersAction().then(res => {
+      if (res.success && res.orders) {
+        setOrders(res.orders);
+      }
+      setLoading(false);
+    });
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const handleStatusChange = async (id: string, newStatus: string) => {
+    setOrders(prev => prev.map(o => o.id === id ? { ...o, status: newStatus } : o));
+    setSelectedOrder(prev => prev && prev.id === id ? { ...prev, status: newStatus } : prev);
+    const res = await updateOrderStatusAction(id, newStatus);
+    if (!res?.success) {
+      alert("Failed to update status: " + (res?.error || "Unknown error"));
+      // Revert if failed
+      getAllOrdersAction().then(res => {
+        if (res.success && res.orders) {
+          setOrders(res.orders);
+        }
+      });
+    }
+  };
+
+  const handlePaymentStatusChange = async (id: string, newPaymentStatus: string) => {
+    setOrders(prev => prev.map(o => o.id === id ? { ...o, paymentStatus: newPaymentStatus } : o));
+    setSelectedOrder(prev => prev && prev.id === id ? { ...prev, paymentStatus: newPaymentStatus } : prev);
+    const res = await updateOrderPaymentStatusAction(id, newPaymentStatus);
+    if (!res?.success) {
+      alert("Failed to update payment status: " + (res?.error || "Unknown error"));
+      // Revert if failed
+      getAllOrdersAction().then(res => {
+        if (res.success && res.orders) {
+          setOrders(res.orders);
+        }
+      });
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedOrders.length === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selectedOrders.length} order(s)? This cannot be undone.`)) return;
+
+    const res = await deleteOrdersAction(selectedOrders);
+    if (res?.success) {
+      setOrders(prev => prev.filter(o => !selectedOrders.includes(o.id)));
+      setSelectedOrders([]);
+    } else {
+      alert("Failed to delete orders: " + (res?.error || "Unknown error"));
+    }
+  };
 
   const handleExport = () => {
-    alert('Exporting orders to CSV...');
+    if (filteredOrders.length === 0) {
+      alert("No orders to export.");
+      return;
+    }
+
+    const exportData = filteredOrders.map(order => {
+      const date = new Date(order.orderDate || order.created).toLocaleDateString('en-GB');
+      const items = Array.isArray(order.cartDetails) ? order.cartDetails.join(" | ") : "";
+      const address = [order.shippingStreet, order.shippingCity, order.shippingZip, order.shippingCountry].filter(Boolean).join(", ");
+      
+      return {
+        "Order ID": order.orderId || order.id,
+        "Date": date,
+        "Customer Name": order.shippingName || "Guest",
+        "Customer Email": order.expand?.user?.email || "N/A",
+        "Address": address,
+        "Order Status": order.status,
+        "Payment Status": order.paymentStatus || "pending",
+        "Total (Rs)": order.totalAmount || 0,
+        "Items": items
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Orders");
+    
+    // Generate buffer and trigger download
+    XLSX.writeFile(workbook, `yara_orders_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter(order => {
+      const matchesSearch = 
+        (order.orderId || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (order.shippingName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (order.expand?.user?.email || '').toLowerCase().includes(searchQuery.toLowerCase());
+        
+      const statusMatch = statusFilter === 'All Statuses' || 
+        order.status.toLowerCase() === statusFilter.toLowerCase();
+        
+      let dateMatch = true;
+      if (dateFilter !== 'all') {
+        const orderDate = new Date(order.orderDate || order.created);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const orderDay = new Date(orderDate);
+        orderDay.setHours(0, 0, 0, 0);
+
+        if (dateFilter === 'today') {
+          dateMatch = orderDay.getTime() === today.getTime();
+        } else if (dateFilter === 'yesterday') {
+          const yesterday = new Date(today);
+          yesterday.setDate(yesterday.getDate() - 1);
+          dateMatch = orderDay.getTime() === yesterday.getTime();
+        } else if (dateFilter === 'week') {
+          const lastWeek = new Date(today);
+          lastWeek.setDate(lastWeek.getDate() - 7);
+          dateMatch = orderDate >= lastWeek;
+        } else if (dateFilter === 'month') {
+          const lastMonth = new Date(today);
+          lastMonth.setMonth(lastMonth.getMonth() - 1);
+          dateMatch = orderDate >= lastMonth;
+        } else if (dateFilter === 'custom' && customDate) {
+          const custom = new Date(customDate);
+          custom.setHours(0, 0, 0, 0);
+          dateMatch = orderDay.getTime() === custom.getTime();
+        }
+      }
+        
+      return matchesSearch && statusMatch && dateMatch;
+    });
+  }, [orders, searchQuery, statusFilter, dateFilter, customDate]);
+
+  const totalPages = Math.ceil(filteredOrders.length / rowsPerPage) || 1;
+  const paginatedOrders = useMemo(() => {
+    const start = (currentPage - 1) * rowsPerPage;
+    return filteredOrders.slice(start, start + rowsPerPage);
+  }, [filteredOrders, currentPage, rowsPerPage]);
+
+  const handlePageChange = (page: number) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
+    setSelectedOrders([]);
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedOrders(paginatedOrders.map(o => o.id));
+    } else {
+      setSelectedOrders([]);
+    }
+  };
+
+  const handleSelectOrder = (id: string, checked: boolean) => {
+    if (checked) {
+      setSelectedOrders(prev => [...prev, id]);
+    } else {
+      setSelectedOrders(prev => prev.filter(orderId => orderId !== id));
+    }
+  };
+
+  const isAllSelected = paginatedOrders.length > 0 && selectedOrders.length === paginatedOrders.length;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-burgundy" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-7xl">
@@ -52,21 +232,79 @@ export default function OrdersManager() {
             <input 
               type="text" 
               placeholder="Search by order ID or customer..." 
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
               className="bg-transparent border-none outline-none text-sm text-burgundy placeholder:text-burgundy/40 w-full font-body"
             />
           </div>
           <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 bg-white border border-burgundy/10 text-burgundy px-4 py-2 rounded-xl font-ui text-sm font-medium hover:bg-rose-gold/10 transition-colors">
-              <Filter size={16} />
-              Filter
+            <button 
+              onClick={fetchOrders}
+              className="px-3 py-2 text-burgundy/60 hover:text-burgundy hover:bg-burgundy/5 rounded-full transition-colors flex items-center gap-2 text-sm font-medium disabled:opacity-50"
+              title="Refresh Orders"
+              disabled={loading}
+            >
+              <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+              Refresh
             </button>
-            <select className="bg-white border border-burgundy/10 text-burgundy text-sm rounded-xl px-4 py-2 font-body outline-none focus:border-burgundy/30 transition-colors cursor-pointer">
-              <option>All Statuses</option>
-              <option>Processing</option>
-              <option>Shipped</option>
-              <option>Delivered</option>
-              <option>Cancelled</option>
-            </select>
+            {selectedOrders.length > 0 && (
+              <button 
+                onClick={handleDeleteSelected}
+                className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded-xl font-ui text-sm font-medium hover:bg-red-100 transition-colors"
+              >
+                <Trash2 size={16} />
+                Delete ({selectedOrders.length})
+              </button>
+            )}
+            {dateFilter === 'custom' && (
+              <input 
+                type="date" 
+                value={customDate}
+                onChange={(e) => {
+                  setCustomDate(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="bg-white border border-burgundy/10 text-burgundy text-sm rounded-xl px-3 py-2 font-body outline-none focus:border-burgundy/30 transition-colors"
+              />
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex items-center gap-2 bg-white border border-burgundy/10 text-burgundy px-4 py-2 rounded-xl font-ui text-sm font-medium hover:bg-rose-gold/10 transition-colors outline-none">
+                <Filter size={16} />
+                {dateFilter === 'all' ? 'Filter' : 
+                 dateFilter === 'today' ? 'Today' : 
+                 dateFilter === 'yesterday' ? 'Yesterday' :
+                 dateFilter === 'week' ? 'Last 7 Days' :
+                 dateFilter === 'month' ? 'Last 30 Days' :
+                 'Custom Date'}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => { setDateFilter('all'); setCurrentPage(1); }}>All Time</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setDateFilter('today'); setCurrentPage(1); }}>Today</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setDateFilter('yesterday'); setCurrentPage(1); }}>Yesterday</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setDateFilter('week'); setCurrentPage(1); }}>Last 7 Days</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setDateFilter('month'); setCurrentPage(1); }}>Last 30 Days</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setDateFilter('custom'); setCurrentPage(1); }}>Custom Date...</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger className="bg-white border border-burgundy/10 text-burgundy text-sm rounded-xl px-4 py-2 font-body outline-none focus:border-burgundy/30 transition-colors cursor-pointer flex items-center gap-2">
+                {statusFilter === 'All Statuses' ? 'All Statuses' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)} <ChevronDown size={16} className="text-burgundy/50" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40 bg-white border border-burgundy/10 rounded-xl shadow-lg p-1">
+                {['All Statuses', 'pending', 'processing', 'shipped', 'delivered', 'cancelled'].map((status) => (
+                  <DropdownMenuItem 
+                    key={status}
+                    onClick={() => { setStatusFilter(status); setCurrentPage(1); }}
+                    className="cursor-pointer text-sm text-burgundy focus:bg-rose-gold/10 hover:bg-rose-gold/10 rounded-md px-3 py-2 outline-none"
+                  >
+                    {status === 'All Statuses' ? 'All Statuses' : status.charAt(0).toUpperCase() + status.slice(1)}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -75,55 +313,129 @@ export default function OrdersManager() {
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="border-b border-burgundy/10 text-burgundy/60 font-body text-xs uppercase tracking-wider">
-                <th className="p-4 font-semibold w-12">
-                  <Checkbox className="rounded border-burgundy/20 text-burgundy focus:ring-burgundy" />
+                <th className="p-4 font-semibold w-12 align-middle">
+                  <div className="flex items-center">
+                    <Checkbox 
+                      className="rounded border-burgundy/20 text-burgundy focus:ring-burgundy" 
+                      checked={isAllSelected}
+                      onCheckedChange={handleSelectAll}
+                    />
+                  </div>
                 </th>
-                <th className="p-4 font-semibold">Order ID</th>
-                <th className="p-4 font-semibold">Date</th>
-                <th className="p-4 font-semibold">Customer</th>
-                <th className="p-4 font-semibold">Status</th>
-                <th className="p-4 font-semibold text-right">Total</th>
-                <th className="p-4 font-semibold text-right">Action</th>
+                <th className="p-4 font-semibold text-left align-middle">Order ID</th>
+                <th className="p-4 font-semibold text-center align-middle">Date</th>
+                <th className="p-4 font-semibold text-center align-middle">Customer</th>
+                <th className="p-4 font-semibold text-center align-middle">Status</th>
+                <th className="p-4 font-semibold text-center align-middle">Payment</th>
+                <th className="p-4 font-semibold text-center align-middle">Receipt</th>
+                <th className="p-4 font-semibold text-right align-middle">Total</th>
+                <th className="p-4 font-semibold text-right align-middle">Action</th>
               </tr>
             </thead>
             <tbody className="text-sm font-body">
-              {mockOrders.map((order) => (
-                <tr key={order.id} className="border-b border-burgundy/5 last:border-0 hover:bg-ivory/30 transition-colors cursor-pointer">
-                  <td className="p-4">
-                    <Checkbox className="rounded border-burgundy/20 text-burgundy focus:ring-burgundy" />
-                  </td>
-                  <td className="p-4 font-ui font-bold text-burgundy">
-                    {order.id}
-                    <div className="text-xs text-burgundy/50 font-normal mt-0.5">{order.items} items</div>
-                  </td>
-                  <td className="p-4 font-ui text-burgundy/80">{order.date}</td>
-                  <td className="p-4">
-                    <div className="font-medium text-burgundy">{order.customer}</div>
-                    <div className="text-xs text-burgundy/50">{order.email}</div>
-                  </td>
-                  <td className="p-4">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
-                      order.status === 'Processing' ? 'bg-amber-100 text-amber-700' :
-                      order.status === 'Shipped' ? 'bg-blue-100 text-blue-700' :
-                      'bg-emerald-100 text-emerald-700'
-                    }`}>
-                      {order.status}
-                    </span>
-                  </td>
-                  <td className="p-4 font-ui font-bold text-burgundy text-right">
-                    {order.total}
-                  </td>
-                  <td className="p-4 text-right">
-                    <button 
-                      onClick={() => setSelectedOrder(order)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-burgundy/10 rounded-lg text-burgundy hover:bg-rose-gold/10 transition-colors text-xs font-medium"
-                    >
-                      <Eye size={14} />
-                      View
-                    </button>
+              {paginatedOrders.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="p-8 text-center text-burgundy/50 font-body">
+                    No orders found.
                   </td>
                 </tr>
-              ))}
+              ) : paginatedOrders.map((order) => {
+                const itemsCount = Array.isArray(order.cartDetails) ? order.cartDetails.length : 0;
+                const orderDate = new Date(order.orderDate || order.created).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                const total = Number(order.totalAmount || 0);
+
+                return (
+                  <tr key={order.id} className="border-b border-burgundy/5 last:border-0 hover:bg-ivory/30 transition-colors cursor-pointer">
+                    <td className="p-4 align-middle" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center">
+                        <Checkbox 
+                          className="rounded border-burgundy/20 text-burgundy focus:ring-burgundy" 
+                          checked={selectedOrders.includes(order.id)}
+                          onCheckedChange={(checked) => handleSelectOrder(order.id, checked as boolean)}
+                        />
+                      </div>
+                    </td>
+                    <td className="p-4 font-ui font-bold text-burgundy text-left align-middle">
+                      {order.orderId || order.id}
+                      <div className="text-xs text-burgundy/50 font-normal mt-0.5">{itemsCount} items</div>
+                    </td>
+                    <td className="p-4 font-ui text-burgundy/80 text-center align-middle">{orderDate}</td>
+                    <td className="p-4 text-center align-middle">
+                      <div className="font-medium text-burgundy">{order.shippingName || 'Guest'}</div>
+                      <div className="text-xs text-burgundy/50">{order.expand?.user?.email || 'N/A'}</div>
+                    </td>
+                    <td className="p-4 text-center align-middle">
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold capitalize outline-none cursor-pointer text-center ${
+                              order.status === 'pending' || order.status === 'processing' ? 'bg-amber-100 text-amber-700' :
+                              order.status === 'shipped' ? 'bg-blue-100 text-blue-700' :
+                              order.status === 'delivered' ? 'bg-emerald-100 text-emerald-700' :
+                              'bg-red-100 text-red-700'
+                            }`}>
+                              {order.status}
+                              <ChevronDown className="w-3.5 h-3.5 opacity-70" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleStatusChange(order.id, 'pending')}>Pending</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleStatusChange(order.id, 'processing')}>Processing</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleStatusChange(order.id, 'shipped')}>Shipped</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleStatusChange(order.id, 'delivered')}>Delivered</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleStatusChange(order.id, 'cancelled')}>Cancelled</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </td>
+                    <td className="p-4 text-center align-middle">
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold capitalize outline-none cursor-pointer text-center ${
+                              order.paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-700' :
+                              order.paymentStatus === 'failed' ? 'bg-red-100 text-red-700' :
+                              'bg-amber-100 text-amber-700'
+                            }`}>
+                              {order.paymentStatus || 'pending'}
+                              <ChevronDown className="w-3.5 h-3.5 opacity-70" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handlePaymentStatusChange(order.id, 'pending')}>Pending</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handlePaymentStatusChange(order.id, 'paid')}>Paid</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handlePaymentStatusChange(order.id, 'failed')}>Failed</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </td>
+                    <td className="p-4 text-center align-middle">
+                      {order.receipt ? (
+                        <a 
+                          href={`${PB_URL}/api/files/${order.collectionId}/${order.id}/${order.receipt}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-burgundy/10 rounded-lg text-burgundy hover:bg-rose-gold/10 transition-colors text-xs font-medium"
+                        >
+                          <FileText size={14} />
+                          View
+                        </a>
+                      ) : (
+                        <span className="text-xs text-burgundy/40">N/A</span>
+                      )}
+                    </td>
+                    <td className="p-4 font-ui font-bold text-burgundy text-right align-middle">
+                      Rs. {total.toLocaleString()}
+                    </td>
+                    <td className="p-4 text-right align-middle">
+                      <button 
+                        onClick={() => setSelectedOrder(order)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-burgundy/10 rounded-lg text-burgundy hover:bg-rose-gold/10 transition-colors text-xs font-medium"
+                      >
+                        <Eye size={14} />
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -132,33 +444,75 @@ export default function OrdersManager() {
         <div className="p-4 border-t border-burgundy/5 bg-ivory/20 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-sm text-burgundy/60 font-body">
             <span>Rows per page:</span>
-            <select defaultValue="25" className="bg-transparent border border-burgundy/10 rounded-md px-2 py-1 outline-none focus:border-burgundy/30 cursor-pointer text-burgundy">
-              <option value="10">10</option>
-              <option value="25">25</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-            </select>
-            <span className="ml-4">1-{mockOrders.length} of {mockOrders.length}</span>
+            <DropdownMenu>
+              <DropdownMenuTrigger className="bg-transparent border border-burgundy/10 text-burgundy text-sm rounded-md px-2 py-1 font-body outline-none focus:border-burgundy/30 transition-colors cursor-pointer flex items-center gap-2">
+                {rowsPerPage} <ChevronDown size={14} className="text-burgundy/50" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-20 bg-white border border-burgundy/10 rounded-xl shadow-lg p-1">
+                {[10, 25, 50, 100].map((num) => (
+                  <DropdownMenuItem 
+                    key={num}
+                    onClick={() => { setRowsPerPage(num); setCurrentPage(1); }}
+                    className="cursor-pointer text-sm text-burgundy focus:bg-rose-gold/10 hover:bg-rose-gold/10 rounded-md px-3 py-2 outline-none"
+                  >
+                    {num}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <span className="ml-4">
+              {filteredOrders.length === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1}-
+              {Math.min(currentPage * rowsPerPage, filteredOrders.length)} of {filteredOrders.length}
+            </span>
           </div>
           <Pagination className="mx-0 w-auto">
             <PaginationContent>
               <PaginationItem>
-                <PaginationPrevious href="#" />
+                <PaginationPrevious 
+                  href="#" 
+                  onClick={(e) => { e.preventDefault(); handlePageChange(currentPage - 1); }}
+                  className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
+                />
               </PaginationItem>
+              
+              {Array.from({ length: totalPages }).map((_, i) => {
+                const p = i + 1;
+                // Show first, last, current, and adjacent pages
+                if (
+                  p === 1 || 
+                  p === totalPages || 
+                  (p >= currentPage - 1 && p <= currentPage + 1)
+                ) {
+                  return (
+                    <PaginationItem key={p}>
+                      <PaginationLink 
+                        href="#" 
+                        isActive={currentPage === p}
+                        onClick={(e) => { e.preventDefault(); handlePageChange(p); }}
+                      >
+                        {p}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                } else if (
+                  p === currentPage - 2 || 
+                  p === currentPage + 2
+                ) {
+                  return (
+                    <PaginationItem key={p}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  );
+                }
+                return null;
+              })}
+
               <PaginationItem>
-                <PaginationLink href="#" isActive>1</PaginationLink>
-              </PaginationItem>
-              <PaginationItem>
-                <PaginationLink href="#">2</PaginationLink>
-              </PaginationItem>
-              <PaginationItem>
-                <PaginationLink href="#">3</PaginationLink>
-              </PaginationItem>
-              <PaginationItem>
-                <PaginationEllipsis />
-              </PaginationItem>
-              <PaginationItem>
-                <PaginationNext href="#" />
+                <PaginationNext 
+                  href="#" 
+                  onClick={(e) => { e.preventDefault(); handlePageChange(currentPage + 1); }}
+                  className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
+                />
               </PaginationItem>
             </PaginationContent>
           </Pagination>
@@ -167,8 +521,14 @@ export default function OrdersManager() {
 
       {/* View Order Modal */}
       {selectedOrder && (
-        <div className="fixed inset-0 bg-burgundy/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-xl border border-burgundy/10">
+        <div 
+          className="fixed inset-0 bg-burgundy/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setSelectedOrder(null)}
+        >
+          <div 
+            className="bg-white rounded-3xl p-6 w-full max-w-md shadow-xl border border-burgundy/10"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex justify-between items-center mb-6">
               <h2 className="font-heading font-bold text-xl text-burgundy">Order Details</h2>
               <button onClick={() => setSelectedOrder(null)} className="text-burgundy/50 hover:text-burgundy p-2 rounded-full hover:bg-champagne/50 transition-colors">
@@ -176,36 +536,120 @@ export default function OrdersManager() {
               </button>
             </div>
             
-            <div className="space-y-4 font-body">
+            <div className="space-y-4 font-body max-h-[70vh] overflow-y-auto pr-2 no-scrollbar">
               <div className="flex justify-between pb-3 border-b border-burgundy/10">
                 <span className="text-burgundy/60">Order ID</span>
-                <span className="font-bold text-burgundy">{selectedOrder.id}</span>
+                <span className="font-bold text-burgundy">{selectedOrder.orderId || selectedOrder.id}</span>
               </div>
               <div className="flex justify-between pb-3 border-b border-burgundy/10">
                 <span className="text-burgundy/60">Customer</span>
-                <span className="text-burgundy">{selectedOrder.customer}</span>
+                <span className="text-burgundy text-right">{selectedOrder.shippingName}</span>
               </div>
               <div className="flex justify-between pb-3 border-b border-burgundy/10">
                 <span className="text-burgundy/60">Email</span>
-                <span className="text-burgundy">{selectedOrder.email}</span>
+                <span className="text-burgundy">{selectedOrder.expand?.user?.email || 'N/A'}</span>
               </div>
               <div className="flex justify-between pb-3 border-b border-burgundy/10">
                 <span className="text-burgundy/60">Date</span>
-                <span className="text-burgundy">{selectedOrder.date}</span>
+                <span className="text-burgundy">{new Date(selectedOrder.orderDate || selectedOrder.created).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
               </div>
+              
               <div className="flex justify-between pb-3 border-b border-burgundy/10">
-                <span className="text-burgundy/60">Items</span>
-                <span className="text-burgundy">{selectedOrder.items}</span>
+                <span className="text-burgundy/60">Address</span>
+                <span className="text-burgundy text-right max-w-[200px]">
+                  {[selectedOrder.shippingStreet, selectedOrder.shippingCity, selectedOrder.shippingZip, selectedOrder.shippingCountry].filter(Boolean).join(', ')}
+                </span>
               </div>
+              
               <div className="flex justify-between pb-3 border-b border-burgundy/10">
-                <span className="text-burgundy/60">Total</span>
-                <span className="font-bold text-burgundy">{selectedOrder.total}</span>
+                <span className="text-burgundy/60">Payment</span>
+                <span className="text-burgundy capitalize flex items-center">
+                  {selectedOrder.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Bank Transfer'}
+                  {selectedOrder.paymentMethod === 'bank_transfer' && selectedOrder.receipt && (
+                    <a 
+                      href={`${PB_URL}/api/files/${selectedOrder.collectionId}/${selectedOrder.id}/${selectedOrder.receipt}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 hover:underline border border-blue-200"
+                    >
+                      View Receipt
+                    </a>
+                  )}
+                  <span className={`ml-2 text-[10px] px-2 py-0.5 rounded-full ${selectedOrder.paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                    {selectedOrder.paymentStatus}
+                  </span>
+                </span>
+              </div>
+              
+              <div className="pb-3 border-b border-burgundy/10">
+                <span className="text-burgundy/60 block mb-2">Items</span>
+                <div className="space-y-1">
+                  {Array.isArray(selectedOrder.cartDetails) ? (
+                    selectedOrder.cartDetails.map((item: string, i: number) => {
+                      let rawClean = item.split('[')[0].split(' - Rs.')[0].trim();
+                      let count = "";
+                      let name = rawClean;
+                      const match = rawClean.match(/^(\d+)x\s+(.*)/);
+                      if (match) {
+                        count = match[1];
+                        name = match[2];
+                      }
+                      
+                      name = name.replace(/\s*\([^)]*\)$/, '').trim();
+                      
+                      let productCode = "";
+                      if (selectedOrder.expand?.items) {
+                        const matchedProduct = selectedOrder.expand.items.find((p: any) => name.includes(p.name) || p.name.includes(name));
+                        if (matchedProduct?.productCode) {
+                          productCode = matchedProduct.productCode;
+                        }
+                      }
+                      
+                      const codeMatch = rawClean.match(/\(([^)]+)\)$/);
+                      if (!productCode && codeMatch) {
+                        productCode = codeMatch[1];
+                      }
+
+                      const codePrefix = productCode ? `${productCode} - ` : "";
+                      const countSuffix = count ? ` x ${count}` : "";
+                      const finalItem = `${codePrefix}${name}${countSuffix}`;
+                      
+                      return (
+                        <div key={i} className="text-xs text-burgundy font-medium bg-ivory/50 p-2 rounded">
+                          {finalItem}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-sm text-burgundy">No items recorded</div>
+                  )}
+                </div>
+              </div>
+              
+              <div className="flex justify-between pb-3 border-b border-burgundy/10">
+                <span className="text-burgundy/60">Total Amount</span>
+                <span className="font-bold text-burgundy">Rs. {Number(selectedOrder.totalAmount || 0).toLocaleString()}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-burgundy/60">Status</span>
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
-                  {selectedOrder.status}
-                </span>
+                <span className="text-burgundy/60">Order Status</span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold capitalize outline-none cursor-pointer text-center ${
+                      selectedOrder.status === 'pending' || selectedOrder.status === 'processing' ? 'bg-amber-100 text-amber-700' :
+                      selectedOrder.status === 'shipped' ? 'bg-blue-100 text-blue-700' :
+                      selectedOrder.status === 'delivered' ? 'bg-emerald-100 text-emerald-700' :
+                      'bg-red-100 text-red-700'
+                    }`}>
+                      {selectedOrder.status}
+                      <ChevronDown className="w-3.5 h-3.5 opacity-70" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleStatusChange(selectedOrder.id, 'pending')}>Pending</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleStatusChange(selectedOrder.id, 'processing')}>Processing</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleStatusChange(selectedOrder.id, 'shipped')}>Shipped</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleStatusChange(selectedOrder.id, 'delivered')}>Delivered</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleStatusChange(selectedOrder.id, 'cancelled')}>Cancelled</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
               
               <div className="pt-4 flex justify-end gap-3 border-t border-burgundy/5 mt-6">

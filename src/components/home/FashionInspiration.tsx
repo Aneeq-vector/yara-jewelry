@@ -2,6 +2,7 @@
 
 import { motion, useScroll, useTransform } from 'framer-motion';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRef } from 'react';
 
 const images = [
@@ -59,7 +60,7 @@ export default function FashionInspiration() {
               style={{ y: i % 2 === 0 ? y1 : y2 }}
               className="break-inside-avoid group cursor-pointer"
             >
-              <div className="relative rounded-2xl overflow-hidden">
+              <Link href="/shop" className="block relative rounded-2xl overflow-hidden">
                 <Image
                   src={img.src}
                   alt={`Fashion inspiration ${i + 1}`}
@@ -70,10 +71,10 @@ export default function FashionInspiration() {
                 <div className="absolute inset-0 bg-burgundy/0 group-hover:bg-burgundy/20 transition-colors duration-300" />
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                   <span className="px-4 py-2 rounded-full glass font-ui text-xs font-semibold uppercase tracking-wider text-burgundy">
-                    View Style
+                    Shop The Look
                   </span>
                 </div>
-              </div>
+              </Link>
             </motion.div>
           ))}
         </div>

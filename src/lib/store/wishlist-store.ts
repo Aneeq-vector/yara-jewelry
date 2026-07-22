@@ -11,19 +11,40 @@ interface WishlistStore {
   isInWishlist: (productId: string) => boolean;
   toggleItem: (product: Product) => void;
   clearWishlist: () => void;
+  setWishlist: (items: Product[]) => void;
 }
 
 export const useWishlistStore = create<WishlistStore>()(
   persist(
     (set, get) => ({
       items: [],
-      addItem: (product) => {
+      addItem: async (product) => {
         if (!get().isInWishlist(product.id)) {
           set({ items: [...get().items, product] });
+          
+          try {
+            const { useAuthStore } = await import('./auth-store');
+            if (useAuthStore.getState().isAuthenticated) {
+              const { addToWishlistAction } = await import('@/app/actions/wishlist');
+              await addToWishlistAction(product.id);
+            }
+          } catch (e) {
+            console.error('Failed to sync add to wishlist', e);
+          }
         }
       },
-      removeItem: (productId) => {
+      removeItem: async (productId) => {
         set({ items: get().items.filter((item) => item.id !== productId) });
+        
+        try {
+          const { useAuthStore } = await import('./auth-store');
+          if (useAuthStore.getState().isAuthenticated) {
+            const { removeFromWishlistAction } = await import('@/app/actions/wishlist');
+            await removeFromWishlistAction(productId);
+          }
+        } catch (e) {
+          console.error('Failed to sync remove from wishlist', e);
+        }
       },
       isInWishlist: (productId) => {
         return get().items.some((item) => item.id === productId);
@@ -36,6 +57,7 @@ export const useWishlistStore = create<WishlistStore>()(
         }
       },
       clearWishlist: () => set({ items: [] }),
+      setWishlist: (items) => set({ items }),
     }),
     {
       name: 'yara-wishlist',

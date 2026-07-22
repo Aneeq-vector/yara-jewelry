@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -12,6 +13,16 @@ import { formatPrice } from '@/lib/utils';
 export default function WishlistPage() {
   const { items, removeItem } = useWishlistStore();
   const addToCart = useCartStore((s) => s.addItem);
+
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return null;
+  }
 
   if (items.length === 0) {
     return (
@@ -58,8 +69,8 @@ export default function WishlistPage() {
                   className="group"
                 >
                   <div className="relative rounded-3xl overflow-hidden bg-champagne/30 mb-4">
-                    <Link href={`/shop/${product.slug}`} className="block relative aspect-square">
-                      <Image src={product.images[0]} alt={product.name} fill className="object-cover group-hover:scale-105 transition-transform duration-700" />
+                    <Link href={`/shop/${product.id}`} className="block relative aspect-square">
+                      <Image src={product.images[0]} alt={product.name} fill className="object-cover group-hover:scale-105 transition-transform duration-700" unoptimized />
                     </Link>
 
                     <button
@@ -81,7 +92,7 @@ export default function WishlistPage() {
                     </div>
                   </div>
 
-                  <Link href={`/shop/${product.slug}`}>
+                  <Link href={`/shop/${product.id}`}>
                     <h3 className="font-ui font-semibold text-sm text-burgundy mb-1 line-clamp-1">{product.name}</h3>
                     <div className="flex items-center gap-1 mb-1">
                       {[...Array(5)].map((_, j) => (

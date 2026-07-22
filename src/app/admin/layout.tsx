@@ -25,8 +25,6 @@ const SIDEBAR_ITEMS = [
   { name: 'Products', href: '/admin/products', icon: ShoppingBag },
   { name: 'Orders', href: '/admin/orders', icon: ShoppingCart },
   { name: 'Customers', href: '/admin/customers', icon: Users },
-  { name: 'Home Page CMS', href: '/admin/cms/home', icon: ImageIcon },
-  { name: 'Shop Page CMS', href: '/admin/cms/shop', icon: ImageIcon },
   { name: 'Settings', href: '/admin/settings', icon: Settings },
 ];
 

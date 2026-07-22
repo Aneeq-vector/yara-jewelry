@@ -4,10 +4,11 @@ export const BRAND = {
   name: 'Yara',
   tagline: 'Crafted For Elegance',
   description: 'Premium imitation jewelry designed to elevate every moment.',
-  email: 'supportyara@gmail.com',
+  email: 'contactyarasl@gmail.com',
   phone: '+94 70 733 7711',
   whatsapp: '+94707337711',
-  instagram: 'https://instagram.com/yarajewelry',
+  instagram: 'https://instagram.com/yarashop_sl',
+  tiktok: 'https://tiktok.com/@yarashop_sl',
   facebook: 'https://facebook.com/yarajewelry',
   pinterest: 'https://pinterest.com/yarajewelry',
 } as const;
@@ -27,6 +28,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: 'Home', href: '/' },
   { label: 'Shop', href: '/shop' },
   { label: 'New Arrivals', href: '/shop?category=new-arrivals' },
+  { label: 'Gift Boxes', href: '/gift-boxes' },
   { label: 'About', href: '/about' },
   { label: 'Contact', href: '/contact' },
 ];
@@ -39,6 +41,7 @@ export const FOOTER_LINKS = {
     { label: 'Bracelets', href: '/shop?category=bracelets' },
     { label: 'Sets', href: '/shop?category=sets' },
     { label: 'New Arrivals', href: '/shop?category=new-arrivals' },
+    { label: 'Gift Boxes', href: '/gift-boxes' },
   ],
   company: [
     { label: 'About Us', href: '/about' },

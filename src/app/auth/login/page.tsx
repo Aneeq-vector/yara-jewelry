@@ -6,11 +6,11 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
+import { loginAction } from '@/app/actions/auth';
 import { useAuthStore } from '@/lib/store/auth-store';
 
 export default function LoginPage() {
   const router = useRouter();
-  const login = useAuthStore((s) => s.login);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -21,11 +21,37 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    await login(email, password);
+    
+    const formData = new FormData();
+    formData.append('email', email);
+    formData.append('password', password);
+    
+    const result = await loginAction(formData);
+    
     setLoading(false);
     
-    // Quick role check for redirect (since we just mocked the state)
-    if (email === 'admin@yara.com' && password === 'admin123') {
+    if (result.error) {
+      alert(result.error);
+      return;
+    }
+    
+    // Sync client state
+    useAuthStore.setState({ user: result.user as any, isAuthenticated: true });
+    
+    // Sync wishlist
+    try {
+      const { syncWishlistAction } = await import('@/app/actions/wishlist');
+      const { useWishlistStore } = await import('@/lib/store/wishlist-store');
+      const localItems = useWishlistStore.getState().items.map(i => i.id);
+      const syncRes = await syncWishlistAction(localItems);
+      if (syncRes.success && syncRes.items) {
+        useWishlistStore.getState().setWishlist(syncRes.items);
+      }
+    } catch (e) {
+      console.error('Failed to sync wishlist on login', e);
+    }
+    
+    if (result.user?.role === 'admin') {
       router.push('/admin');
     } else {
       router.push('/dashboard');

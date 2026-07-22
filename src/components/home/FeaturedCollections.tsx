@@ -4,9 +4,16 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowUpRight } from 'lucide-react';
-import { categories } from '@/lib/data/categories';
+import { Category } from '@/types';
 
-export default function FeaturedCollections() {
+export default function FeaturedCollections({ categories = [] }: { categories?: Category[] }) {
+  if (!categories || categories.length === 0) {
+    return null;
+  }
+
+  // Bento grid is designed for exactly 3 items
+  const displayCategories = categories.slice(0, 3);
+
   return (
     <section className="section-padding relative overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -31,7 +38,7 @@ export default function FeaturedCollections() {
 
         {/* Collections Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 md:auto-rows-[280px]">
-          {categories.map((category, i) => (
+          {displayCategories.map((category, i) => (
             <motion.div
               key={category.id}
               initial={{ opacity: 0, y: 40 }}
@@ -48,6 +55,7 @@ export default function FeaturedCollections() {
                   src={category.image}
                   alt={category.name}
                   fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
                 />
 
@@ -75,13 +83,6 @@ export default function FeaturedCollections() {
                       <ArrowUpRight size={18} className="text-ivory" />
                     </motion.div>
                   </div>
-                </div>
-
-                {/* Floating Label */}
-                <div className="absolute top-4 left-4">
-                  <span className="px-3 py-1.5 rounded-full bg-ivory/20 backdrop-blur-sm font-ui text-[10px] font-semibold uppercase tracking-wider text-ivory">
-                    {category.productCount} pieces
-                  </span>
                 </div>
               </Link>
             </motion.div>

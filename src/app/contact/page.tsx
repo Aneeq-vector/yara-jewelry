@@ -43,7 +43,7 @@ export default function ContactPage() {
   const socialLinks = [
     { name: 'Instagram', icon: InstagramIcon, href: BRAND.instagram, color: 'hover:text-pink-600' },
     { name: 'Facebook', icon: FacebookIcon, href: BRAND.facebook, color: 'hover:text-blue-600' },
-    { name: 'TikTok', icon: TiktokIcon, href: 'https://tiktok.com/@yarajewelry', color: 'hover:text-black' },
+    { name: 'TikTok', icon: TiktokIcon, href: BRAND.tiktok, color: 'hover:text-black' },
   ];
 
   return (

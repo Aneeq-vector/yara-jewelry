@@ -25,9 +25,15 @@ interface NavbarProps {
 export default function Navbar({ onSearchOpen }: NavbarProps) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  
   const cartCount = useCartStore((s) => s.getItemCount());
   const wishlistCount = useWishlistStore((s) => s.items.length);
   const { isAuthenticated, user } = useAuthStore();
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -44,14 +50,41 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
     return () => { document.body.style.overflow = ''; };
   }, [mobileOpen]);
 
+  // Sync auth and wishlist with Pocketbase
+  useEffect(() => {
+    const syncWithServer = async () => {
+      try {
+        const { getUserAction } = await import('@/app/actions/auth');
+        const serverUser = await getUserAction();
+        
+        if (serverUser && serverUser.id) {
+          useAuthStore.setState({ user: serverUser as any, isAuthenticated: true });
+          
+          // Sync wishlist
+          try {
+            const { syncWishlistAction } = await import('@/app/actions/wishlist');
+            const localItems = useWishlistStore.getState().items.map(i => i.id);
+            const res = await syncWishlistAction(localItems);
+            if (res.success && res.items) {
+              useWishlistStore.getState().setWishlist(res.items);
+            }
+          } catch (e) {
+            console.error('Failed to sync wishlist on load', e);
+          }
+        } else if (serverUser === null) {
+          useAuthStore.setState({ user: null, isAuthenticated: false });
+        }
+      } catch (err) {}
+    };
+    
+    syncWithServer();
+  }, []);
+
   return (
     <>
-      <motion.header
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+      <header
         className={cn(
-          'fixed top-0 left-0 right-0 z-50 transition-all duration-500',
+          'fixed top-0 left-0 right-0 z-50 transition-all duration-500 transform-gpu',
           scrolled
             ? 'bg-ivory shadow-lg shadow-burgundy/5 py-3'
             : 'bg-ivory py-5'
@@ -95,7 +128,7 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
                   <Link
                     key={link.href}
                     href={link.href}
-                    className="relative font-ui text-[13px] font-semibold uppercase tracking-[0.1em] text-burgundy/80 hover:text-burgundy transition-colors duration-300 group"
+                    className="relative font-ui text-[13px] font-semibold uppercase tracking-[0.1em] text-burgundy/80 hover:text-burgundy transition-colors duration-300 group outline-none focus:outline-none"
                   >
                     {link.label}
                     <span className="absolute -bottom-1 left-0 w-0 h-[1.5px] bg-gradient-to-r from-rose-gold to-burgundy group-hover:w-full transition-all duration-400" />
@@ -104,8 +137,8 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
               </nav>
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center justify-end gap-1 sm:gap-3">
+            {/* Right Icons */}
+            <div className="flex items-center justify-end gap-1 sm:gap-3 text-burgundy">
               <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
@@ -116,14 +149,14 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
                 <Search size={19} strokeWidth={1.8} />
               </motion.button>
 
-              <Link href="/wishlist" className="relative">
+              <Link href="/wishlist" className="hidden sm:block relative outline-none focus:outline-none">
                 <motion.div
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
                   className="p-2.5 rounded-full hover:bg-champagne/60 transition-colors"
                 >
                   <Heart size={19} strokeWidth={1.8} />
-                  {wishlistCount > 0 && (
+                  {isMounted && wishlistCount > 0 && (
                     <motion.span
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
@@ -135,14 +168,14 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
                 </motion.div>
               </Link>
 
-              <Link href="/cart" className="relative">
+              <Link href="/cart" className="relative outline-none focus:outline-none">
                 <motion.div
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
                   className="p-2.5 rounded-full hover:bg-champagne/60 transition-colors"
                 >
                   <ShoppingBag size={19} strokeWidth={1.8} />
-                  {cartCount > 0 && (
+                  {isMounted && cartCount > 0 && (
                     <motion.span
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
@@ -154,8 +187,8 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
                 </motion.div>
               </Link>
 
-              {isAuthenticated && user ? (
-                <Link href={user.role === 'admin' ? '/admin' : '/dashboard'} className="hidden sm:flex items-center pl-1">
+              {isMounted && isAuthenticated && user ? (
+                <Link href={user.role === 'admin' ? '/admin' : '/dashboard'} className="hidden sm:flex items-center pl-1 outline-none focus:outline-none">
                   <motion.div
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
@@ -170,7 +203,7 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
                   </motion.div>
                 </Link>
               ) : (
-                <Link href="/auth/login" className="hidden sm:block">
+                <Link href="/auth/login" className="hidden sm:block outline-none focus:outline-none">
                   <motion.div
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.95 }}
@@ -183,7 +216,7 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
             </div>
           </div>
         </div>
-      </motion.header>
+      </header>
 
       {/* Mobile Menu Overlay */}
       <AnimatePresence>

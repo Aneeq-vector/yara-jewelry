@@ -4,7 +4,7 @@ import { useState, useMemo, Suspense, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import {
   Search,
   SlidersHorizontal,
@@ -14,15 +14,17 @@ import {
   ShoppingBag,
   Star,
   Check,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import PageWrapper from '@/components/layout/PageWrapper';
-import { products } from '@/lib/data/products';
-import { categories } from '@/lib/data/categories';
+import { getAllProducts } from '@/lib/data/products';
+import { getAllCategories } from '@/lib/data/categories';
 import { useCartStore } from '@/lib/store/cart-store';
 import { useWishlistStore } from '@/lib/store/wishlist-store';
 import { formatPrice, calculateDiscount, cn } from '@/lib/utils';
 import { BADGE_CONFIG } from '@/lib/constants';
-import { Product, CategoryType } from '@/types';
+import { Product, CategoryType, Category } from '@/types';
 
 const sortOptions = [
   { value: 'featured', label: 'Featured' },
@@ -44,32 +46,69 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
   const addToCart = useCartStore((s) => s.addItem);
   const { isInWishlist, toggleItem } = useWishlistStore();
   const wishlisted = isInWishlist(product.id);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  const nextImage = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setCurrentImageIndex((prev) => (prev + 1) % product.images.length);
+  };
+
+  const prevImage = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setCurrentImageIndex((prev) => (prev - 1 + product.images.length) % product.images.length);
+  };
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
-      transition={{ opacity: { duration: 0.2, delay: index * 0.01 }, layout: { duration: 0.2 }, default: { duration: 0.2 } }}
+      transition={{ opacity: { duration: 0.4, delay: index * 0.08 }, y: { duration: 0.4, delay: index * 0.08, type: 'spring', stiffness: 200, damping: 20 }, layout: { duration: 0.2 } }}
       className="group"
     >
       <div className="relative rounded-3xl overflow-hidden bg-champagne/30 mb-4">
-        <Link href={`/shop/${product.slug}`} className="block relative aspect-square">
-          <Image
-            src={product.images[0]}
-            alt={product.name}
-            fill
-            className="object-cover group-hover:scale-105 transition-transform duration-700"
-          />
-          {product.images[1] && (
-            <Image
-              src={product.images[1]}
-              alt={product.name}
-              fill
-              className="object-cover absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-            />
+        <div className="block relative aspect-square overflow-hidden">
+          <Link href={`/shop/${product.id}`} className="absolute inset-0 z-0">
+            <AnimatePresence initial={false}>
+              <motion.div
+                key={currentImageIndex}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="absolute inset-0"
+              >
+                <Image
+                  src={product.images[currentImageIndex]}
+                  alt={product.name}
+                  fill
+                  className={`object-cover group-hover:scale-105 transition-all duration-700 ${
+                    !product.inStock ? 'opacity-40 grayscale-[30%]' : ''
+                  }`}
+                  unoptimized
+                />
+              </motion.div>
+            </AnimatePresence>
+          </Link>
+
+          {/* Navigation Arrows */}
+          {product.images.length > 1 && (
+            <div className="absolute inset-0 flex items-center justify-between px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none">
+              <button
+                onClick={prevImage}
+                className="pointer-events-auto p-1.5 rounded-full bg-white/80 text-burgundy hover:bg-white transition-colors shadow-sm"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <button
+                onClick={nextImage}
+                className="pointer-events-auto p-1.5 rounded-full bg-white/80 text-burgundy hover:bg-white transition-colors shadow-sm"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
           )}
-        </Link>
+        </div>
 
         {product.badge && (
           <div className="absolute top-3 left-3 z-10">
@@ -79,24 +118,39 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
           </div>
         )}
 
-        {product.originalPrice && (
+        {!product.inStock && (
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none">
+            <span className="px-4 py-2 bg-white/90 text-burgundy font-ui font-bold text-sm uppercase tracking-wider rounded-full shadow-lg whitespace-nowrap">
+              Out of Stock
+            </span>
+          </div>
+        )}
+
+        {(product.originalPrice || 0) > 0 && (
           <div className="absolute top-3 right-3 z-10">
             <span className="px-2.5 py-1 rounded-full bg-burgundy/90 text-[10px] font-ui font-bold text-ivory">
-              -{calculateDiscount(product.price, product.originalPrice)}%
+              -{calculateDiscount(product.price, product.originalPrice || 0)}%
             </span>
           </div>
         )}
 
         <div className="absolute bottom-3 left-3 right-3 z-10 opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all duration-300">
           <div className="flex items-center gap-2">
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              onClick={() => addToCart(product)}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-burgundy/90 backdrop-blur-sm text-ivory font-ui text-xs font-semibold uppercase tracking-wider hover:bg-burgundy transition-colors"
-            >
-              <ShoppingBag size={14} />
-              Add to Cart
-            </motion.button>
+            {product.inStock ? (
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={() => addToCart(product)}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-burgundy/90 backdrop-blur-sm text-ivory font-ui text-xs font-semibold uppercase tracking-wider hover:bg-burgundy transition-colors"
+              >
+                <ShoppingBag size={14} />
+                Add to Cart
+              </motion.button>
+            ) : (
+              <div className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-nude/50 backdrop-blur-sm text-burgundy/50 font-ui text-xs font-semibold uppercase tracking-wider cursor-not-allowed">
+                <ShoppingBag size={14} />
+                Sold Out
+              </div>
+            )}
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={() => toggleItem(product)}
@@ -110,7 +164,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
         </div>
       </div>
 
-      <Link href={`/shop/${product.slug}`}>
+      <Link href={`/shop/${product.id}`}>
         <h3 className="font-ui font-semibold text-sm text-burgundy group-hover:text-wine transition-colors mb-1 line-clamp-1">
           {product.name}
         </h3>
@@ -122,8 +176,8 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
         </div>
         <div className="flex items-center gap-2">
           <span className="font-ui font-bold text-sm text-burgundy">{formatPrice(product.price)}</span>
-          {product.originalPrice && (
-            <span className="font-body text-xs text-burgundy/35 line-through">{formatPrice(product.originalPrice)}</span>
+          {(product.originalPrice || 0) > 0 && (
+            <span className="font-body text-xs text-burgundy/35 line-through">{formatPrice(product.originalPrice || 0)}</span>
           )}
         </div>
       </Link>
@@ -133,15 +187,44 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
 
 function ShopContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const categoryParam = searchParams.get('category') as CategoryType | null;
   const searchQuery = searchParams.get('search') || '';
 
   const [selectedCategory, setSelectedCategory] = useState<CategoryType | 'all'>(categoryParam || 'all');
+
+  const handleCategoryChange = (slug: string) => {
+    setSelectedCategory(slug as any);
+    const params = new URLSearchParams(searchParams.toString());
+    if (slug === 'all') {
+      params.delete('category');
+    } else {
+      params.set('category', slug);
+    }
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
   const [sortBy, setSortBy] = useState('featured');
   const [priceRange, setPriceRange] = useState(0);
   const [search, setSearch] = useState(searchQuery);
   const [showFilters, setShowFilters] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([getAllProducts(), getAllCategories()]).then(([prods, cats]) => {
+      setProducts(prods);
+      setCategories(cats.sort((a, b) => {
+        if (a.slug === 'new-arrivals') return -1;
+        if (b.slug === 'new-arrivals') return 1;
+        return 0;
+      }));
+      setLoading(false);
+    });
+  }, []);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -156,11 +239,17 @@ function ShopContent() {
   const filteredProducts = useMemo(() => {
     let result = [...products];
 
-    // Category filter
-    if (selectedCategory === 'new-arrivals') {
-      result = result.filter((p) => p.badge === 'new');
-    } else if (selectedCategory !== 'all') {
-      result = result.filter((p) => p.category === selectedCategory);
+    if (selectedCategory !== 'all') {
+      const selectedCategoryObj = categories.find((c) => c.slug === selectedCategory);
+      if (selectedCategoryObj) {
+        if (selectedCategory === 'new-arrivals') {
+          result = result.filter((p) => (p.category && p.category.toLowerCase() === selectedCategoryObj.name.toLowerCase()) || p.badge === 'new');
+        } else {
+          result = result.filter((p) => p.category && p.category.toLowerCase() === selectedCategoryObj.name.toLowerCase());
+        }
+      } else {
+        result = [];
+      }
     }
 
     // Search filter
@@ -195,7 +284,17 @@ function ShopContent() {
     }
 
     return result;
-  }, [selectedCategory, sortBy, priceRange, search]);
+  }, [selectedCategory, sortBy, priceRange, search, products]);
+
+  if (loading) {
+    return (
+      <PageWrapper>
+        <div className="pt-32 pb-20 text-center">
+          <div className="w-8 h-8 border-2 border-burgundy/20 border-t-burgundy rounded-full animate-spin mx-auto" />
+        </div>
+      </PageWrapper>
+    );
+  }
 
   return (
     <PageWrapper>
@@ -205,11 +304,12 @@ function ShopContent() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, type: 'spring', damping: 20 }}
             className="mb-10"
           >
             <h1 className="font-heading text-4xl sm:text-5xl font-bold text-burgundy mb-3">
               {selectedCategory !== 'all'
-                ? categories.find((c) => c.slug === selectedCategory)?.name || 'Shop'
+                ? selectedCategory === 'new-arrivals' ? 'New Arrivals' : (categories.find((c) => c.slug === selectedCategory)?.name || 'Shop')
                 : 'Shop All'}
             </h1>
             <p className="font-body text-burgundy/50">
@@ -218,7 +318,12 @@ function ShopContent() {
           </motion.div>
 
           {/* Toolbar */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 w-full">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1, type: 'spring', damping: 20 }}
+            className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 w-full"
+          >
             {/* Search */}
             <div className="relative flex-1 w-full">
               <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-burgundy/30" />
@@ -285,7 +390,7 @@ function ShopContent() {
                 </AnimatePresence>
               </div>
             </div>
-          </div>
+          </motion.div>
 
           <div className="flex gap-8">
             {/* Sidebar Filters — Desktop */}
@@ -300,7 +405,7 @@ function ShopContent() {
                 </h3>
                 <div className="space-y-1 mb-8">
                   <button
-                    onClick={() => setSelectedCategory('all')}
+                    onClick={() => handleCategoryChange('all')}
                     className={cn(
                       'block w-full text-left px-4 py-2.5 rounded-xl font-ui text-sm transition-all',
                       selectedCategory === 'all'
@@ -313,7 +418,7 @@ function ShopContent() {
                   {categories.map((cat) => (
                     <button
                       key={cat.id}
-                      onClick={() => setSelectedCategory(cat.slug)}
+                      onClick={() => handleCategoryChange(cat.slug)}
                       className={cn(
                         'block w-full text-left px-4 py-2.5 rounded-xl font-ui text-sm transition-all',
                         selectedCategory === cat.slug
@@ -322,7 +427,11 @@ function ShopContent() {
                       )}
                     >
                       {cat.name}
-                      <span className="float-right text-xs opacity-50">{cat.productCount}</span>
+                      <span className="float-right text-xs opacity-50">
+                        {cat.slug === 'new-arrivals'
+                          ? products.filter((p) => (p.category && p.category.toLowerCase() === cat.name.toLowerCase()) || p.badge === 'new').length
+                          : products.filter((p) => p.category && p.category.toLowerCase() === cat.name.toLowerCase()).length}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -377,7 +486,7 @@ function ShopContent() {
                     <h4 className="font-ui font-bold text-xs uppercase tracking-wider text-burgundy/50 mb-4">Categories</h4>
                     <div className="space-y-1 mb-8">
                       <button
-                        onClick={() => { setSelectedCategory('all'); setShowFilters(false); }}
+                        onClick={() => { handleCategoryChange('all'); setShowFilters(false); }}
                         className={cn(
                           'block w-full text-left px-4 py-2.5 rounded-xl font-ui text-sm transition-all',
                           selectedCategory === 'all' ? 'bg-burgundy text-ivory font-semibold' : 'text-burgundy/60 hover:bg-champagne/50'
@@ -388,7 +497,7 @@ function ShopContent() {
                       {categories.map((cat) => (
                         <button
                           key={cat.id}
-                          onClick={() => { setSelectedCategory(cat.slug); setShowFilters(false); }}
+                          onClick={() => { handleCategoryChange(cat.slug); setShowFilters(false); }}
                           className={cn(
                             'block w-full text-left px-4 py-2.5 rounded-xl font-ui text-sm transition-all',
                             selectedCategory === cat.slug ? 'bg-burgundy text-ivory font-semibold' : 'text-burgundy/60 hover:bg-champagne/50'
@@ -424,7 +533,7 @@ function ShopContent() {
               {/* Category Pills (Mobile) */}
               <div className="flex gap-2 overflow-x-auto no-scrollbar mb-6 lg:hidden pb-2">
                 <button
-                  onClick={() => setSelectedCategory('all')}
+                  onClick={() => handleCategoryChange('all')}
                   className={cn(
                     'flex-shrink-0 px-4 py-2 rounded-full font-ui text-xs font-semibold uppercase tracking-wider transition-all',
                     selectedCategory === 'all'
@@ -437,7 +546,7 @@ function ShopContent() {
                 {categories.map((cat) => (
                   <button
                     key={cat.id}
-                    onClick={() => setSelectedCategory(cat.slug)}
+                    onClick={() => handleCategoryChange(cat.slug)}
                     className={cn(
                       'flex-shrink-0 px-4 py-2 rounded-full font-ui text-xs font-semibold uppercase tracking-wider transition-all whitespace-nowrap',
                       selectedCategory === cat.slug
@@ -457,7 +566,7 @@ function ShopContent() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
+                    transition={{ duration: 0.3 }}
                     className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6"
                   >
                     {filteredProducts.map((product, i) => (
@@ -481,7 +590,7 @@ function ShopContent() {
                       Try adjusting your filters or search terms.
                     </p>
                     <button
-                      onClick={() => { setSelectedCategory('all'); setSearch(''); setPriceRange(0); }}
+                      onClick={() => { handleCategoryChange('all'); setSearch(''); setPriceRange(0); }}
                       className="btn-secondary text-sm"
                     >
                       Clear All Filters

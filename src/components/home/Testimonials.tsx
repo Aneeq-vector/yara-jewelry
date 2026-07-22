@@ -4,29 +4,35 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { Star, ChevronLeft, ChevronRight, Quote } from 'lucide-react';
-import { testimonials } from '@/lib/data/testimonials';
+import { Testimonial } from '@/types';
 
-export default function Testimonials() {
+export default function Testimonials({ testimonials = [] }: { testimonials?: Testimonial[] }) {
   const [current, setCurrent] = useState(0);
   const [autoplay, setAutoplay] = useState(true);
 
   useEffect(() => {
-    if (!autoplay) return;
+    if (!autoplay || testimonials.length === 0) return;
     const timer = setInterval(() => {
       setCurrent((prev) => (prev + 1) % testimonials.length);
     }, 5000);
     return () => clearInterval(timer);
-  }, [autoplay]);
+  }, [autoplay, testimonials.length]);
 
   const prev = () => {
+    if (testimonials.length === 0) return;
     setAutoplay(false);
     setCurrent((c) => (c - 1 + testimonials.length) % testimonials.length);
   };
 
   const next = () => {
+    if (testimonials.length === 0) return;
     setAutoplay(false);
     setCurrent((c) => (c + 1) % testimonials.length);
   };
+
+  if (testimonials.length === 0) {
+    return null; // Don't render anything if there are no testimonials
+  }
 
   return (
     <section className="section-padding relative overflow-hidden">
@@ -90,13 +96,12 @@ export default function Testimonials() {
 
                   {/* Customer */}
                   <div className="flex items-center justify-center gap-4">
-                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-rose-gold-light/50">
+                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-rose-gold-light/50 relative">
                       <Image
                         src={testimonials[current].image}
                         alt={testimonials[current].name}
-                        width={48}
-                        height={48}
-                        className="w-full h-full object-cover"
+                        fill
+                        className="object-cover"
                       />
                     </div>
                     <div className="text-left">

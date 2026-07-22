@@ -1,26 +1,42 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Plus, Check } from 'lucide-react';
-
-const mockAddresses = [
-  { id: '1', name: 'Home', street: '42, Rose Garden Apartments, MG Road', city: 'Mumbai', state: 'Maharashtra', zip: '400001', phone: '+91 98765 43210', isDefault: true },
-  { id: '2', name: 'Office', street: '15th Floor, Yara Tower, BKC', city: 'Mumbai', state: 'Maharashtra', zip: '400051', phone: '+91 98765 43211', isDefault: false },
-];
+import { MapPin, Plus, Check, Loader2 } from 'lucide-react';
+import { getAddressesAction, addAddressAction, updateAddressAction, deleteAddressAction } from '@/app/actions/addresses';
+import { Address } from '@/types';
 
 export default function AddressesPage() {
-  const [addresses, setAddresses] = useState(mockAddresses);
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<any>({});
   
   const [isAdding, setIsAdding] = useState(false);
-  const [newForm, setNewForm] = useState({ name: '', street: '', city: '', state: '', zip: '', phone: '', isDefault: false });
+  const [newForm, setNewForm] = useState({ name: '', street: '', city: '', state: '', zipCode: '', phone: '', isDefault: false });
 
   const inputClass = "w-full px-3 py-2 rounded-xl bg-transparent border border-burgundy/20 font-body text-sm text-burgundy placeholder:text-burgundy/50 focus:outline-none focus:border-burgundy transition-colors";
 
-  const deleteAddress = (id: string) => {
-    setAddresses(addresses.filter(a => a.id !== id));
+  useEffect(() => {
+    fetchAddresses();
+  }, []);
+
+  const fetchAddresses = async () => {
+    setLoading(true);
+    const result = await getAddressesAction();
+    if (result.success && result.addresses) {
+      setAddresses(result.addresses);
+    }
+    setLoading(false);
+  };
+
+  const deleteAddress = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this address?')) return;
+    setSaving(true);
+    await deleteAddressAction(id);
+    await fetchAddresses();
+    setSaving(false);
   };
 
   const startEdit = (addr: any) => {
@@ -28,24 +44,39 @@ export default function AddressesPage() {
     setEditForm({ ...addr });
   };
 
-  const saveEdit = () => {
-    // If setting as default, remove default from others
-    let updated = addresses.map(a => a.id === editingId ? editForm : a);
-    if (editForm.isDefault) {
-      updated = updated.map(a => a.id === editingId ? a : { ...a, isDefault: false });
+  const saveEdit = async () => {
+    if (!editForm.name || !editForm.street || !editForm.city || !editForm.zipCode) {
+      alert("Please fill in all required fields (Name, Street, City, and ZIP).");
+      return;
     }
-    setAddresses(updated);
+    setSaving(true);
+    const res = await updateAddressAction(editingId!, editForm);
+    if (!res.success) {
+      alert(res.error);
+      setSaving(false);
+      return;
+    }
+    await fetchAddresses();
     setEditingId(null);
+    setSaving(false);
   };
 
-  const saveNew = () => {
-    let updated = [{ ...newForm, id: Math.random().toString() }, ...addresses];
-    if (newForm.isDefault) {
-      updated = updated.map(a => a.id === updated[0].id ? a : { ...a, isDefault: false });
+  const saveNew = async () => {
+    if (!newForm.name || !newForm.street || !newForm.city || !newForm.zipCode) {
+      alert("Please fill in all required fields (Name, Street, City, and ZIP).");
+      return;
     }
-    setAddresses(updated);
+    setSaving(true);
+    const res = await addAddressAction(newForm);
+    if (!res.success) {
+      alert(res.error);
+      setSaving(false);
+      return;
+    }
+    await fetchAddresses();
     setIsAdding(false);
-    setNewForm({ name: '', street: '', city: '', state: '', zip: '', phone: '', isDefault: false });
+    setNewForm({ name: '', street: '', city: '', state: '', zipCode: '', phone: '', isDefault: false });
+    setSaving(false);
   };
 
   return (
@@ -63,6 +94,20 @@ export default function AddressesPage() {
       </motion.div>
 
       <div className="grid lg:grid-cols-2 gap-4 items-start">
+        {loading && !isAdding && addresses.length === 0 ? (
+          <div className="col-span-2 flex justify-center items-center py-12 text-burgundy">
+            <Loader2 className="animate-spin w-8 h-8" />
+          </div>
+        ) : (!loading && !isAdding && addresses.length === 0 ? (
+          <div className="col-span-2 glass-card rounded-3xl p-10 flex flex-col items-center justify-center text-center">
+            <MapPin size={48} className="text-burgundy/20 mb-4" />
+            <h3 className="font-heading text-xl font-bold text-burgundy mb-2">No addresses saved</h3>
+            <p className="font-body text-burgundy/60 max-w-md">You haven't saved any delivery addresses yet. Add one now to make checkout faster.</p>
+            <button onClick={() => setIsAdding(true)} className="btn-primary mt-6">
+              Add New Address
+            </button>
+          </div>
+        ) : null)}
         {isAdding && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -78,7 +123,7 @@ export default function AddressesPage() {
                 <input value={newForm.state} onChange={(e) => setNewForm(p => ({ ...p, state: e.target.value }))} placeholder="Province" className={inputClass} />
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <input value={newForm.zip} onChange={(e) => setNewForm(p => ({ ...p, zip: e.target.value }))} placeholder="ZIP Code" className={inputClass} />
+                <input value={newForm.zipCode} onChange={(e) => setNewForm(p => ({ ...p, zipCode: e.target.value }))} placeholder="ZIP Code" className={inputClass} />
                 <input value={newForm.phone} onChange={(e) => setNewForm(p => ({ ...p, phone: e.target.value }))} placeholder="Phone Number" className={inputClass} />
               </div>
               <div className="flex items-center gap-2 mt-2">
@@ -87,7 +132,7 @@ export default function AddressesPage() {
               </div>
               <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-nude/30">
                 <button onClick={() => setIsAdding(false)} className="px-4 py-2 rounded-xl font-ui text-xs font-semibold text-burgundy/60 hover:bg-champagne/40 transition-colors">Cancel</button>
-                <button onClick={saveNew} className="px-4 py-2 rounded-xl font-ui text-xs font-semibold bg-burgundy text-white hover:bg-burgundy/90 transition-colors">Save</button>
+                <button onClick={saveNew} disabled={saving} className="px-4 py-2 rounded-xl font-ui text-xs font-semibold bg-burgundy text-white hover:bg-burgundy/90 transition-colors disabled:opacity-50">{saving ? 'Saving...' : 'Save'}</button>
               </div>
             </div>
           </motion.div>
@@ -110,7 +155,7 @@ export default function AddressesPage() {
                   <input value={editForm.state} onChange={(e) => setEditForm((p: any) => ({ ...p, state: e.target.value }))} placeholder="Province" className={inputClass} />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <input value={editForm.zip} onChange={(e) => setEditForm((p: any) => ({ ...p, zip: e.target.value }))} placeholder="ZIP Code" className={inputClass} />
+                  <input value={editForm.zipCode} onChange={(e) => setEditForm((p: any) => ({ ...p, zipCode: e.target.value }))} placeholder="ZIP Code" className={inputClass} />
                   <input value={editForm.phone} onChange={(e) => setEditForm((p: any) => ({ ...p, phone: e.target.value }))} placeholder="Phone Number" className={inputClass} />
                 </div>
                 <div className="flex items-center gap-2 mt-2">
@@ -119,7 +164,7 @@ export default function AddressesPage() {
                 </div>
                 <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-nude/30">
                   <button onClick={() => setEditingId(null)} className="px-4 py-2 rounded-xl font-ui text-xs font-semibold text-burgundy/60 hover:bg-champagne/40 transition-colors">Cancel</button>
-                  <button onClick={saveEdit} className="px-4 py-2 rounded-xl font-ui text-xs font-semibold bg-burgundy text-white hover:bg-burgundy/90 transition-colors">Save</button>
+                  <button onClick={saveEdit} disabled={saving} className="px-4 py-2 rounded-xl font-ui text-xs font-semibold bg-burgundy text-white hover:bg-burgundy/90 transition-colors disabled:opacity-50">{saving ? 'Saving...' : 'Save'}</button>
                 </div>
               </div>
             ) : (
@@ -134,14 +179,14 @@ export default function AddressesPage() {
                   <div>
                     <h3 className="font-ui font-semibold text-sm text-burgundy">{addr.name}</h3>
                     <p className="font-body text-sm text-burgundy/60 mt-1">{addr.street}</p>
-                    <p className="font-body text-sm text-burgundy/60">{addr.city}, {addr.state} {addr.zip}</p>
+                    <p className="font-body text-sm text-burgundy/60">{addr.city}, {addr.state} {addr.zipCode}</p>
                     <p className="font-body text-xs text-burgundy/40 mt-2">{addr.phone}</p>
                   </div>
                 </div>
                 <div className="flex gap-2 mt-4 pt-3 border-t border-nude/30">
                   <button onClick={() => startEdit(addr)} className="font-ui text-xs font-semibold text-burgundy/50 hover:text-burgundy transition-colors">Edit</button>
                   <span className="text-nude">•</span>
-                  <button onClick={() => deleteAddress(addr.id)} className="font-ui text-xs font-semibold text-red-400 hover:text-red-500 transition-colors">Delete</button>
+                  <button onClick={() => deleteAddress(addr.id)} disabled={saving} className="font-ui text-xs font-semibold text-red-400 hover:text-red-500 transition-colors disabled:opacity-50">Delete</button>
                 </div>
               </>
             )}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -8,14 +8,29 @@ import { Minus, Plus, X, ShoppingBag, ArrowRight, Tag } from 'lucide-react';
 import PageWrapper from '@/components/layout/PageWrapper';
 import { useCartStore } from '@/lib/store/cart-store';
 import { formatPrice } from '@/lib/utils';
+import { getAllCategories } from '@/lib/data/categories';
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, getTotal } = useCartStore();
   const [coupon, setCoupon] = useState('');
   const [discount, setDiscount] = useState(0);
+  const [categories, setCategories] = useState<any[]>([]);
+
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    getAllCategories().then(setCategories);
+    setMounted(true);
+  }, []);
+
+  const getCategoryName = (id: string) => {
+    const cat = categories.find((c) => c.id === id);
+    return cat ? cat.name : '';
+  };
 
   const subtotal = getTotal();
-  const shipping = subtotal >= 999 ? 0 : 99;
+  const FREE_DELIVERY_THRESHOLD = 10000;
+  const shipping = subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : 450;
   const total = subtotal - discount + shipping;
 
   const applyCoupon = () => {
@@ -23,6 +38,8 @@ export default function CartPage() {
       setDiscount(Math.round(subtotal * 0.1));
     }
   };
+
+  if (!mounted) return null;
 
   if (items.length === 0) {
     return (
@@ -77,7 +94,7 @@ export default function CartPage() {
                   >
                     <div className="flex gap-4 sm:gap-6">
                       {/* Image */}
-                      <Link href={`/shop/${item.product.slug}`} className="flex-shrink-0">
+                      <Link href={`/shop/${item.product.id}`} className="flex-shrink-0">
                         <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl overflow-hidden bg-champagne/30">
                           <Image
                             src={item.product.images[0]}
@@ -85,6 +102,7 @@ export default function CartPage() {
                             width={128}
                             height={128}
                             className="w-full h-full object-cover"
+                            unoptimized
                           />
                         </div>
                       </Link>
@@ -93,7 +111,7 @@ export default function CartPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <Link href={`/shop/${item.product.slug}`}>
+                            <Link href={`/shop/${item.product.id}`}>
                               <h3 className="font-ui font-semibold text-sm sm:text-base text-burgundy hover:text-wine transition-colors line-clamp-1">
                                 {item.product.name}
                               </h3>
@@ -102,7 +120,7 @@ export default function CartPage() {
                               <div className="mt-1 space-y-1">
                                 {item.boxItems?.slice(0, 3).map((boxItem, idx) => (
                                   <p key={idx} className="font-body text-xs text-burgundy/60">
-                                    • {boxItem.name}
+                                    • {boxItem.name}{boxItem.selectedColor ? ` (${boxItem.selectedColor})` : ''}
                                   </p>
                                 ))}
                                 {(item.boxItems?.length || 0) > 3 && (
@@ -113,8 +131,8 @@ export default function CartPage() {
                               </div>
                             ) : (
                               <p className="font-body text-xs text-burgundy/40 capitalize mt-0.5">
-                                {item.product.category.replace('-', ' ')}
-                                {item.selectedColor && ` • ${item.selectedColor}`}
+                                {getCategoryName(item.product.category)}
+                                {item.selectedColor && ` • Color: ${item.selectedColor}`}
                               </p>
                             )}
                           </div>
@@ -212,9 +230,16 @@ export default function CartPage() {
                     </div>
                   )}
                   <div className="flex justify-between">
-                    <span className="font-body text-sm text-burgundy/50">Shipping</span>
+                    <span className="font-body text-sm text-burgundy/50">Delivery</span>
                     <span className="font-ui font-semibold text-sm text-burgundy">
-                      {shipping === 0 ? 'Free' : formatPrice(shipping)}
+                      {shipping === 0 ? (
+                        <span className="flex items-center gap-2">
+                          <span className="line-through text-burgundy/40 opacity-70">Rs. 450</span>
+                          <span>Free</span>
+                        </span>
+                      ) : (
+                        formatPrice(shipping)
+                      )}
                     </span>
                   </div>
                   <div className="flex justify-between pt-3 border-t border-nude/30">
@@ -229,11 +254,13 @@ export default function CartPage() {
                   <ArrowRight size={16} className="relative z-10" />
                 </Link>
 
-                {shipping > 0 && (
-                  <p className="font-body text-xs text-burgundy/40 text-center mt-4">
-                    Add {formatPrice(999 - subtotal)} more for free shipping!
-                  </p>
-                )}
+                <p className="font-body text-xs text-burgundy/60 text-center mt-4">
+                  {shipping === 0 
+                    ? "✨ Free delivery unlocked for orders over Rs. 10,000!" 
+                    : `Orders over Rs. 10,000 are eligible for free delivery.`}
+                </p>
+
+
               </div>
             </motion.div>
           </div>

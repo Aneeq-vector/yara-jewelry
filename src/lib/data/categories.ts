@@ -1,60 +1,71 @@
 import { Category } from '@/types';
+import { createClient, PB_URL } from '@/lib/pocketbase';
+import { RecordModel } from 'pocketbase';
 
 export const categories: Category[] = [
   {
-    id: 'cat-1',
-    name: 'Earrings',
-    slug: 'earrings',
-    description: 'Elegant drops, studs & hoops crafted for everyday luxury.',
-    image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=600&h=800&fit=crop',
-    productCount: 8,
-  },
-  {
-    id: 'cat-2',
+    id: 'mock-cat-1',
     name: 'Necklaces',
-    slug: 'necklaces',
-    description: 'Statement chains & delicate pendants to complete any look.',
-    image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&h=800&fit=crop',
-    productCount: 7,
+    slug: 'necklaces' as any,
+    description: 'Elegant necklaces for every occasion.',
+    image: '/images/mock-imgs/necklace/necklace1.jpg',
+    productCount: 15
   },
   {
-    id: 'cat-3',
+    id: 'mock-cat-2',
     name: 'Rings',
-    slug: 'rings',
-    description: 'Stackable bands & cocktail rings for every occasion.',
-    image: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=600&h=800&fit=crop',
-    productCount: 6,
+    slug: 'rings' as any,
+    description: 'Beautiful rings crafted with perfection.',
+    image: '/images/mock-imgs/rings/ring1.jpg',
+    productCount: 24
   },
   {
-    id: 'cat-4',
-    name: 'Bracelets',
-    slug: 'bracelets',
-    description: 'Dainty chains & bold cuffs to adorn your wrist.',
-    image: 'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=600&h=800&fit=crop',
-    productCount: 5,
-  },
-  {
-    id: 'cat-5',
-    name: 'Sets',
-    slug: 'sets',
-    description: 'Curated jewelry sets designed to be worn together.',
-    image: 'https://images.unsplash.com/photo-1588444837495-c6cfeb53f32d?w=600&h=800&fit=crop',
-    productCount: 4,
-  },
-  {
-    id: 'cat-6',
-    name: 'New Arrivals',
-    slug: 'new-arrivals',
-    description: 'Fresh designs just dropped — be the first to wear them.',
-    image: 'https://images.unsplash.com/photo-1611085583191-a3b181a88401?w=600&h=800&fit=crop',
-    productCount: 6,
-  },
-  {
-    id: 'cat-7',
-    name: 'Gift Boxes',
-    slug: 'gift-boxes',
-    description: 'Beautifully curated gift boxes and the option to build your own.',
-    image: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=600&h=800&fit=crop',
-    productCount: 3,
-  },
+    id: 'mock-cat-3',
+    name: 'Earrings',
+    slug: 'earrings' as any,
+    description: 'Stunning earrings to match your style.',
+    image: '/images/mock-imgs/earings/earing1.jpg',
+    productCount: 12
+  }
 ];
+
+// Helper to map PocketBase record to Category type
+function mapRecordToCategory(record: RecordModel): Category {
+  const getFallbackImage = (slug: string) => {
+    switch (slug) {
+      case 'necklaces': return '/images/mock-imgs/necklace/necklace1.jpg';
+      case 'rings': return '/images/mock-imgs/rings/ring1.jpg';
+      case 'earrings': return '/images/mock-imgs/earings/earing1.jpg';
+      case 'bracelets': return '/images/mock-imgs/bracelets/bracelet1.jpg';
+      case 'anklets':
+      case 'anklet': return '/images/mock-imgs/anklet/ankler1.jpg';
+      default: return '/placeholder.png';
+    }
+  };
+
+  const imageUrl = record.image 
+    ? (record.image.startsWith('http') || record.image.startsWith('/') 
+        ? record.image 
+        : `${PB_URL}/api/files/${record.collectionId}/${record.id}/${record.image}`)
+    : getFallbackImage(record.slug);
+
+  return {
+    id: record.id,
+    name: record.name,
+    slug: record.slug as any,
+    description: record.description,
+    image: imageUrl,
+    productCount: record.productCount || 0,
+  };
+}
+
+export async function getAllCategories(): Promise<Category[]> {
+  try {
+    const pb = createClient();
+    const records = await pb.collection('categories').getFullList();
+    return records.map(mapRecordToCategory);
+  } catch (error) {
+    console.error('getAllCategories Error:', error);
+    return categories;
+  }
+}

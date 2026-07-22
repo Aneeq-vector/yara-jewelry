@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { Heart, Gem, Sparkles, Target } from 'lucide-react';
 import PageWrapper from '@/components/layout/PageWrapper';
+import WhyChooseYara from '@/components/home/WhyChooseYara';
 
 const values = [
   { icon: Gem, title: 'Premium Craftsmanship', description: 'Each piece is meticulously crafted with attention to the finest details, ensuring a premium finish that rivals fine jewelry.' },
@@ -121,42 +122,8 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* Values */}
-        <section className="section-padding">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="text-center mb-16"
-            >
-              <span className="font-ui text-xs font-semibold uppercase tracking-[0.2em] text-rose-gold mb-3 block">Why Yara</span>
-              <h2 className="font-heading text-4xl sm:text-5xl font-bold text-burgundy">What Sets Us Apart</h2>
-            </motion.div>
-
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {values.map((value, i) => {
-                const Icon = value.icon;
-                return (
-                  <motion.div
-                    key={value.title}
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: i * 0.1 }}
-                    className="text-center"
-                  >
-                    <div className="w-16 h-16 rounded-2xl gradient-rose-gold flex items-center justify-center mx-auto mb-5 shadow-lg shadow-rose-gold/20">
-                      <Icon size={28} className="text-white" />
-                    </div>
-                    <h3 className="font-heading text-lg font-semibold text-burgundy mb-2">{value.title}</h3>
-                    <p className="font-body text-sm text-burgundy/50 leading-relaxed">{value.description}</p>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
+        {/* Values - Replaced with the global WhyChooseYara component */}
+        <WhyChooseYara />
       </div>
     </PageWrapper>
   );

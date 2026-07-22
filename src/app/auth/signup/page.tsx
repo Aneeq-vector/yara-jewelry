@@ -8,9 +8,10 @@ import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, ArrowRight, Loader2, Sparkles } from 'lucide-react';
 import { useAuthStore } from '@/lib/store/auth-store';
 
+import { registerAction } from '@/app/actions/auth';
+
 export default function SignupPage() {
   const router = useRouter();
-  const signup = useAuthStore((s) => s.signup);
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirmPassword: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -21,10 +22,44 @@ export default function SignupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (form.password !== form.confirmPassword) return;
+    if (form.password !== form.confirmPassword) {
+      alert("Passwords do not match");
+      return;
+    }
     setLoading(true);
-    await signup(form.name, form.email, form.phone, form.password);
+    
+    const formData = new FormData();
+    formData.append('name', form.name);
+    formData.append('email', form.email);
+    formData.append('phone', form.phone);
+    formData.append('password', form.password);
+    formData.append('passwordConfirm', form.confirmPassword);
+
+    const result = await registerAction(formData);
+    
     setLoading(false);
+    
+    if (result.error) {
+      alert(result.error);
+      return;
+    }
+    
+    // Sync client state
+    useAuthStore.setState({ user: result.user as any, isAuthenticated: true });
+    
+    // Sync wishlist
+    try {
+      const { syncWishlistAction } = await import('@/app/actions/wishlist');
+      const { useWishlistStore } = await import('@/lib/store/wishlist-store');
+      const localItems = useWishlistStore.getState().items.map(i => i.id);
+      const syncRes = await syncWishlistAction(localItems);
+      if (syncRes.success && syncRes.items) {
+        useWishlistStore.getState().setWishlist(syncRes.items);
+      }
+    } catch (e) {
+      console.error('Failed to sync wishlist on signup', e);
+    }
+    
     setSuccess(true);
     setTimeout(() => router.push('/dashboard'), 2000);
   };

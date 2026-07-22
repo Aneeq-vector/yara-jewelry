@@ -1,63 +1,110 @@
-'use client';
-
-import { motion } from 'framer-motion';
 import { ShoppingBag } from 'lucide-react';
+import { getServerClient } from '@/lib/pocketbase-server';
+import { redirect } from 'next/navigation';
 
-const orders = [
-  { id: 'YRA-A1B2C3', date: '2026-06-25', status: 'delivered' as const, total: 3498, items: 2, products: ['Aurora Pearl Drop Earrings', 'Serenity Layered Chain'] },
-  { id: 'YRA-D4E5F6', date: '2026-06-20', status: 'shipped' as const, total: 1799, items: 1, products: ['Lumière Pendant Necklace'] },
-  { id: 'YRA-G7H8I9', date: '2026-06-15', status: 'processing' as const, total: 5998, items: 3, products: ['Empress Collection Set', 'Celestial Crystal Studs', 'Petal Rose Gold Ring'] },
-];
+export const dynamic = 'force-dynamic';
 
-const statusColors = {
+const statusColors: Record<string, string> = {
   processing: 'bg-amber-100 text-amber-700',
+  pending: 'bg-amber-100 text-amber-700',
   shipped: 'bg-blue-100 text-blue-700',
   delivered: 'bg-emerald-100 text-emerald-700',
   cancelled: 'bg-red-100 text-red-700',
 };
 
-export default function OrdersPage() {
+export default async function OrdersPage() {
+  const pb = await getServerClient();
+  
+  if (!pb.authStore.isValid || !pb.authStore.record) {
+    redirect('/auth/login');
+  }
+
+  const userId = pb.authStore.record.id;
+  let orders: any[] = [];
+
+  try {
+    const res = await pb.collection('orders').getList(1, 50, {
+      filter: `user="${userId}"`,
+      expand: 'items'
+    });
+    orders = res.items;
+  } catch (err) {}
+
   return (
     <>
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
+      <div className="mb-10">
         <h1 className="font-heading text-4xl font-bold text-burgundy mb-2">My Orders</h1>
         <p className="font-body text-burgundy/50">View and track your recent orders.</p>
-      </motion.div>
+      </div>
 
       <div className="space-y-4">
-        {orders.map((order, i) => (
-          <motion.div
-            key={order.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            className="glass-card rounded-3xl p-6"
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <p className="font-ui font-bold text-sm text-burgundy">{order.id}</p>
-                <p className="font-body text-xs text-burgundy/40">
-                  {new Date(order.date).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}
-                </p>
-              </div>
-              <span className={`px-3 py-1 rounded-full text-[10px] font-ui font-bold uppercase tracking-wider ${statusColors[order.status]}`}>
-                {order.status}
-              </span>
-            </div>
-            <div className="space-y-2 mb-4">
-              {order.products.map((name) => (
-                <div key={name} className="flex items-center gap-3 p-2 rounded-xl bg-champagne/20">
-                  <ShoppingBag size={14} className="text-burgundy/30" />
-                  <span className="font-body text-sm text-burgundy/60">{name}</span>
+        {orders.length === 0 ? (
+          <p className="text-sm text-burgundy/60 font-body">You have no orders yet.</p>
+        ) : (
+          orders.map((order) => (
+            <div key={order.id} className="glass-card rounded-3xl p-6">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <p className="font-ui font-bold text-sm text-burgundy">{order.orderId || `#${order.id.slice(0, 8)}`}</p>
+                  <p className="font-body text-xs text-burgundy/40">
+                    {new Date(order.orderDate ? order.orderDate.replace(' ', 'T') : (order.created ? order.created.replace(' ', 'T') : Date.now())).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}
+                  </p>
                 </div>
-              ))}
+                <span className={`px-3 py-1 rounded-full text-[10px] font-ui font-bold uppercase tracking-wider ${statusColors[order.status] || 'bg-gray-100 text-gray-700'}`}>
+                  {order.status || 'Pending'}
+                </span>
+              </div>
+              <div className="space-y-2 mb-4">
+                {(order.cartDetails || []).map((detail: string, idx: number) => {
+                  let rawClean = detail.split('[')[0].split(' - Rs.')[0].trim();
+                  let count = "";
+                  let name = rawClean;
+                  const match = rawClean.match(/^(\d+)x\s+(.*)/);
+                  if (match) {
+                    count = match[1];
+                    name = match[2];
+                  }
+                  
+                  name = name.replace(/\s*\([^)]*\)$/, '').trim();
+                  
+                  let productCode = "";
+                  if (order.expand?.items) {
+                    const matchedProduct = order.expand.items.find((p: any) => name.includes(p.name) || p.name.includes(name));
+                    if (matchedProduct?.productCode) {
+                      productCode = matchedProduct.productCode;
+                    }
+                  }
+                  
+                  const codeMatch = rawClean.match(/\(([^)]+)\)$/);
+                  if (!productCode && codeMatch) {
+                    productCode = codeMatch[1];
+                  }
+
+                  const codePrefix = productCode ? `${productCode} - ` : "";
+                  const countSuffix = count ? ` x ${count}` : "";
+                  const finalItem = `${codePrefix}${name}${countSuffix}`;
+                  
+                  return (
+                    <div key={idx} className="flex items-center gap-3 p-2 rounded-xl bg-champagne/20 overflow-hidden">
+                      <ShoppingBag size={14} className="text-burgundy/30 flex-shrink-0" />
+                      <span className="font-body text-sm text-burgundy/60 truncate" title={finalItem}>{finalItem}</span>
+                    </div>
+                  );
+                })}
+                {!(order.cartDetails?.length) && order.expand?.items?.map((item: any, idx: number) => (
+                  <div key={`fallback-${idx}`} className="flex items-center gap-3 p-2 rounded-xl bg-champagne/20">
+                    <ShoppingBag size={14} className="text-burgundy/30" />
+                    <span className="font-body text-sm text-burgundy/60 truncate">{item.name}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-between pt-3 border-t border-nude/30">
+                <span className="font-body text-sm text-burgundy/50">{(order.cartDetails || order.items || []).length} items</span>
+                <span className="font-ui font-bold text-burgundy">Rs. {order.totalAmount?.toLocaleString()}</span>
+              </div>
             </div>
-            <div className="flex items-center justify-between pt-3 border-t border-nude/30">
-              <span className="font-body text-sm text-burgundy/50">{order.items} items</span>
-              <span className="font-ui font-bold text-burgundy">Rs. {order.total.toLocaleString()}</span>
-            </div>
-          </motion.div>
-        ))}
+          ))
+        )}
       </div>
     </>
   );

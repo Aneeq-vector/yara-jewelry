@@ -7,8 +7,13 @@ import Image from 'next/image';
 import { MapPin, Truck, CreditCard, ClipboardCheck, Check, ChevronRight, Info, Upload, FileTextIcon, XIcon, Loader2, RefreshCwIcon, FileWarningIcon, CheckIcon } from 'lucide-react';
 import PageWrapper from '@/components/layout/PageWrapper';
 import { useCartStore } from '@/lib/store/cart-store';
+import { useWishlistStore } from '@/lib/store/wishlist-store';
+import { useAuthStore } from '@/lib/store/auth-store';
 import { formatPrice } from '@/lib/utils';
 import { COUNTRIES } from '@/lib/countries';
+import { getAddressesAction } from '@/app/actions/addresses';
+import { createOrderAction } from '@/app/actions/orders';
+import { Address } from '@/types';
 import {
   Select,
   SelectContent,
@@ -42,6 +47,50 @@ export default function CheckoutPage() {
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [uploadState, setUploadState] = useState<'idle' | 'uploading' | 'processing' | 'error' | 'done'>('idle');
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const { user } = useAuthStore();
+  const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (user) {
+      setForm(prev => ({
+        ...prev,
+        email: prev.email || user.email || '',
+        name: prev.name || user.name || '',
+        phone: prev.phone || user.phone || '',
+      }));
+    }
+  }, [user]);
+
+  useEffect(() => {
+    getAddressesAction().then(res => {
+      if (res.success && res.addresses) {
+        setSavedAddresses(res.addresses);
+        const def = res.addresses.find(a => a.isDefault);
+        if (def) {
+          handleSelectAddress(def);
+        }
+      }
+    });
+  }, []);
+
+  const handleSelectAddress = (addr: Address) => {
+    setSelectedAddressId(addr.id);
+    setForm(prev => ({
+      ...prev,
+      name: addr.name,
+      phone: addr.phone || '',
+      street: addr.street,
+      city: addr.city,
+      state: addr.state || '',
+      zip: addr.zipCode,
+      country: addr.country || 'Sri Lanka',
+    }));
+    setErrors({});
+  };
 
   useEffect(() => {
     if (uploadState === 'uploading') {
@@ -77,9 +126,9 @@ export default function CheckoutPage() {
     setUploadProgress(0);
   };
   const { items, getTotal, clearCart } = useCartStore();
+  const wishlistItems = useWishlistStore(s => s.items);
+  const removeFromWishlist = useWishlistStore(s => s.removeItem);
   const subtotal = getTotal();
-  const shipping = subtotal >= 999 ? 0 : 99;
-  const total = subtotal + shipping;
 
   const [form, setForm] = useState({
     name: '', email: '', phone: '', street: '', city: '', state: '', zip: '', country: '',
@@ -87,18 +136,130 @@ export default function CheckoutPage() {
     paymentMethod: '',
   });
 
-  const updateForm = (field: string, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
+  const FREE_DELIVERY_THRESHOLD = 10000;
+
+  const getShippingFee = (method: string) => {
+    if (subtotal >= FREE_DELIVERY_THRESHOLD && method === 'standard') return 0;
+    switch (method) {
+      case 'standard': return 450;
+      case 'express': return 1000;
+      case 'premium': return 1450;
+      default: return 450;
+    }
   };
 
-  const nextStep = () => setCurrentStep((s) => Math.min(s + 1, 4));
-  const prevStep = () => setCurrentStep((s) => Math.max(s - 1, 1));
+  const shipping = getShippingFee(form.deliveryMethod);
+  const total = subtotal + shipping;
 
-  const placeOrder = () => {
-    setOrderId(Math.random().toString(36).substr(2, 8).toUpperCase());
-    setOrderPlaced(true);
-    clearCart();
+  const updateForm = (field: string, value: string) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+  };
+
+  const nextStep = () => {
+    const newErrors: Record<string, string> = {};
+    if (currentStep === 1) {
+      if (!form.name) newErrors.name = 'Required';
+      if (!form.phone) newErrors.phone = 'Required';
+      if (!form.street) newErrors.street = 'Required';
+      if (!form.city) newErrors.city = 'Required';
+      if (!form.state) newErrors.state = 'Required';
+      if (!form.zip) newErrors.zip = 'Required';
+      
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
+        return;
+      }
+    }
+    if (currentStep === 3) {
+      if (!form.paymentMethod) {
+        alert("Please select a payment method to continue.");
+        return;
+      }
+    }
+    setErrors({});
+    setCurrentStep((s) => Math.min(s + 1, 4));
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  const prevStep = () => {
+    setCurrentStep((s) => Math.max(s - 1, 1));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const placeOrder = async () => {
+    setIsSubmitting(true);
+    
+    const formData = new FormData();
+    formData.append('totalAmount', total.toString());
+    formData.append('shippingName', form.name);
+    formData.append('shippingStreet', form.street);
+    formData.append('shippingCity', form.city);
+    formData.append('shippingZip', form.zip);
+    formData.append('shippingCountry', form.country || 'Sri Lanka');
+    formData.append('paymentMethod', form.paymentMethod);
+    
+    const productIds = Array.from(new Set(
+      items
+        .filter(item => item.product.category !== 'gift-boxes' && !item.isCustomBox)
+        .map(item => item.product.id)
+    ));
+    productIds.forEach(id => formData.append('items', id));
+    
+    const formattedCartDetails = items.map(item => {
+      if (item.isCustomBox) {
+        return `${item.quantity}x Custom Box (Rs. ${item.customPrice ?? item.product.price}) - Items: ${item.boxItems?.map(b => b.name).join(', ')}`;
+      }
+      
+      const extras = [
+        item.selectedColor ? `Color: ${item.selectedColor}` : '',
+        item.product.material ? `Material: ${item.product.material}` : '',
+        item.product.weight ? `Weight: ${item.product.weight}` : ''
+      ].filter(Boolean).join(', ');
+      
+      const extraDetails = extras ? ` [${extras}]` : '';
+      const codeStr = item.product.productCode ? ` (${item.product.productCode})` : '';
+      return `${item.quantity}x ${item.product.name}${codeStr}${extraDetails} - Rs. ${item.customPrice ?? item.product.price}`;
+    });
+    
+    formData.append('cartDetails', JSON.stringify(formattedCartDetails));
+
+    const generatedOrderId = `YRA-${Math.floor(100000 + Math.random() * 900000)}`;
+    formData.append('orderId', generatedOrderId);
+    formData.append('orderDate', new Date().toISOString());
+    
+    if (form.paymentMethod === 'bank_transfer' && receiptFile) {
+      formData.append('receipt', receiptFile);
+    }
+
+    try {
+      const res = await createOrderAction(formData);
+      
+      if (res.success) {
+        // Remove purchased items from wishlist
+        productIds.forEach(id => {
+          if (wishlistItems.some(wi => wi.id === id)) {
+            removeFromWishlist(id);
+          }
+        });
+
+        setOrderId(res.orderId || '');
+        setOrderPlaced(true);
+        clearCart();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        alert(res.error || "Failed to place order.");
+      }
+    } catch (e: any) {
+      alert("Error: " + e.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (orderPlaced) {
@@ -116,7 +277,7 @@ export default function CheckoutPage() {
             <h1 className="font-heading text-4xl font-bold text-burgundy mb-3">Order Placed!</h1>
             <p className="font-body text-burgundy/50 mb-2">Thank you for shopping with Yara.</p>
             <p className="font-body text-sm text-burgundy/40 mb-8">
-              Order #YRA-{orderId} — A confirmation email has been sent.
+              Order #{orderId} — A confirmation email has been sent.
             </p>
             <Link href="/shop" className="btn-primary inline-flex items-center gap-2">
               <span>Continue Shopping</span>
@@ -138,7 +299,7 @@ export default function CheckoutPage() {
     );
   }
 
-  const inputClass = "w-full px-4 py-3 rounded-xl bg-transparent border border-burgundy/20 font-body text-sm text-burgundy placeholder:text-burgundy/50 focus:outline-none focus:border-burgundy transition-colors";
+  const getInputClass = (field: string) => `w-full px-4 py-3 rounded-xl bg-transparent border ${errors[field] ? 'border-red-400 focus:border-red-500' : 'border-burgundy/20 focus:border-burgundy'} font-body text-sm text-burgundy placeholder:text-burgundy/50 focus:outline-none transition-colors`;
 
   return (
     <PageWrapper>
@@ -203,32 +364,80 @@ export default function CheckoutPage() {
                     className="glass-card rounded-3xl p-6 sm:p-8"
                   >
                     <h2 className="font-heading text-xl font-bold text-burgundy mb-6">Shipping Address</h2>
+                    
+                    {savedAddresses.length > 0 && (
+                      <div className="mb-6">
+                        <label className="font-ui text-sm font-semibold text-burgundy mb-3 block">Saved Addresses</label>
+                        <div className="grid sm:grid-cols-2 gap-3">
+                          {savedAddresses.map(addr => (
+                            <button
+                              key={addr.id}
+                              onClick={() => handleSelectAddress(addr)}
+                              className={`text-left p-3 rounded-xl border transition-all ${
+                                selectedAddressId === addr.id 
+                                  ? 'border-burgundy bg-burgundy/5' 
+                                  : 'border-burgundy/10 hover:border-burgundy/30'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 mb-1">
+                                <MapPin size={14} className={selectedAddressId === addr.id ? 'text-burgundy' : 'text-burgundy/50'} />
+                                <span className="font-ui font-bold text-sm text-burgundy">{addr.name}</span>
+                                {addr.isDefault && <span className="ml-auto text-[10px] font-bold uppercase tracking-wider text-rose-gold bg-rose-gold/10 px-2 py-0.5 rounded-full">Default</span>}
+                              </div>
+                              <p className="font-body text-xs text-burgundy/70 truncate">{addr.street}, {addr.city}</p>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="grid sm:grid-cols-2 gap-4">
                       <div className="sm:col-span-2">
-                        <input value={form.name} onChange={(e) => updateForm('name', e.target.value)} placeholder="Full Name" className={inputClass} />
+                        <input value={form.name} onChange={(e) => updateForm('name', e.target.value)} placeholder="Full Name" className={getInputClass('name')} />
+                        {errors.name && <p className="text-red-400 text-xs mt-1 ml-1 font-body">{errors.name}</p>}
                       </div>
                       <div className="sm:col-span-2">
-                        <input value={form.email} onChange={(e) => updateForm('email', e.target.value)} placeholder="Email" type="email" className={inputClass} />
+                        <input value={form.email} onChange={(e) => updateForm('email', e.target.value)} placeholder="Email" type="email" className={getInputClass('email')} />
+                        {errors.email && <p className="text-red-400 text-xs mt-1 ml-1 font-body">{errors.email}</p>}
                       </div>
-                      <input value={form.phone} onChange={(e) => updateForm('phone', e.target.value)} placeholder="Phone Number" className={inputClass} />
-                      <Select value={form.country} onValueChange={(val) => updateForm('country', val || '')}>
-                        <SelectTrigger className={inputClass}>
-                          <SelectValue placeholder="Country" />
-                        </SelectTrigger>
-                        <SelectContent alignItemWithTrigger={false} sideOffset={8} className="max-h-64 bg-ivory border-nude/20 rounded-2xl">
-                          {COUNTRIES.map((c) => (
-                            <SelectItem key={c} value={c} className="font-body text-sm text-burgundy cursor-pointer hover:bg-champagne/40">
-                              {c}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div>
+                        <input value={form.phone} onChange={(e) => updateForm('phone', e.target.value)} placeholder="Phone Number" className={getInputClass('phone')} />
+                        {errors.phone && <p className="text-red-400 text-xs mt-1 ml-1 font-body">{errors.phone}</p>}
+                      </div>
+                      <div>
+                        <Select value={form.country} onValueChange={(val) => updateForm('country', val || '')}>
+                          <SelectTrigger className={getInputClass('country')}>
+                            <SelectValue placeholder="Country" />
+                          </SelectTrigger>
+                          <SelectContent alignItemWithTrigger={false} sideOffset={8} className="bg-ivory border border-burgundy/10 shadow-xl rounded-2xl z-[100] outline-none focus:outline-none overflow-hidden p-0">
+                            <ScrollArea className="h-64 rounded-2xl">
+                              <div className="p-1.5">
+                                {COUNTRIES.map((c) => (
+                                  <SelectItem key={c} value={c} className="font-body text-sm text-burgundy cursor-pointer focus:bg-champagne/50 focus:text-burgundy rounded-xl pl-3 pr-8 py-2.5 transition-colors">
+                                    {c}
+                                  </SelectItem>
+                                ))}
+                              </div>
+                            </ScrollArea>
+                          </SelectContent>
+                        </Select>
+                      </div>
                       <div className="sm:col-span-2">
-                        <input value={form.street} onChange={(e) => updateForm('street', e.target.value)} placeholder="Delivery Address" className={inputClass} />
+                        <input value={form.street} onChange={(e) => updateForm('street', e.target.value)} placeholder="Delivery Address" className={getInputClass('street')} />
+                        {errors.street && <p className="text-red-400 text-xs mt-1 ml-1 font-body">{errors.street}</p>}
                       </div>
-                      <input value={form.city} onChange={(e) => updateForm('city', e.target.value)} placeholder="City" className={inputClass} />
-                      <input value={form.state} onChange={(e) => updateForm('state', e.target.value)} placeholder="Province" className={inputClass} />
-                      <input value={form.zip} onChange={(e) => updateForm('zip', e.target.value)} placeholder="ZIP Code" className={inputClass} />
+                      <div>
+                        <input value={form.city} onChange={(e) => updateForm('city', e.target.value)} placeholder="City" className={getInputClass('city')} />
+                        {errors.city && <p className="text-red-400 text-xs mt-1 ml-1 font-body">{errors.city}</p>}
+                      </div>
+                      <div>
+                        <input value={form.state} onChange={(e) => updateForm('state', e.target.value)} placeholder="Province" className={getInputClass('state')} />
+                        {errors.state && <p className="text-red-400 text-xs mt-1 ml-1 font-body">{errors.state}</p>}
+                      </div>
+                      <div>
+                        <input value={form.zip} onChange={(e) => updateForm('zip', e.target.value)} placeholder="ZIP Code" className={getInputClass('zip')} />
+                        {errors.zip && <p className="text-red-400 text-xs mt-1 ml-1 font-body">{errors.zip}</p>}
+                      </div>
                     </div>
                   </motion.div>
                 )}
@@ -245,9 +454,9 @@ export default function CheckoutPage() {
                     <h2 className="font-heading text-xl font-bold text-burgundy mb-6">Delivery Method</h2>
                     <div className="space-y-3">
                       {[
-                        { id: 'standard', label: 'Standard Delivery', time: '5-7 business days', price: 'Free' },
-                        { id: 'express', label: 'Express Delivery', time: '2-3 business days', price: 'Rs. 199' },
-                        { id: 'premium', label: 'Premium Delivery', time: 'Next day', price: 'Rs. 399' },
+                        { id: 'standard', label: 'Standard Delivery', time: '5-7 business days', price: subtotal >= FREE_DELIVERY_THRESHOLD ? 'Free' : 'Rs. 450' },
+                        { id: 'express', label: 'Express Delivery', time: '2-3 business days', price: 'Rs. 1,000' },
+                        { id: 'premium', label: 'Premium Delivery', time: 'Within Colombo', price: 'Rs. 1,450' },
                       ].map((method) => (
                         <button
                           key={method.id}
@@ -453,14 +662,22 @@ export default function CheckoutPage() {
                   <div />
                 )}
                 {currentStep < 4 ? (
-                  <button onClick={nextStep} className="btn-primary flex items-center gap-2">
+                  <button 
+                    onClick={nextStep} 
+                    disabled={currentStep === 3 && !form.paymentMethod}
+                    className={`btn-primary flex items-center gap-2 ${currentStep === 3 && !form.paymentMethod ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
                     <span>Continue</span>
                     <ChevronRight size={16} className="relative z-10" />
                   </button>
                 ) : (
-                  <button onClick={placeOrder} disabled={!form.paymentMethod} className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <span>Place Order</span>
-                    <Check size={16} className="relative z-10" />
+                  <button 
+                    onClick={placeOrder} 
+                    disabled={!form.paymentMethod || (form.paymentMethod === 'bank_transfer' && uploadState !== 'done') || isSubmitting} 
+                    className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span>{isSubmitting ? 'Processing...' : 'Place Order'}</span>
+                    {isSubmitting ? <Loader2 size={16} className="relative z-10 animate-spin" /> : <Check size={16} className="relative z-10" />}
                   </button>
                 )}
               </div>
@@ -473,16 +690,24 @@ export default function CheckoutPage() {
                 <ScrollArea className="h-48 mb-4 pr-4">
                   <div className="space-y-3">
                     {items.map((item) => (
-                      <div key={item.product.id} className="flex items-center gap-3">
+                      <div key={item.cartItemId} className="flex items-center gap-3">
                         <div className="relative w-12 h-12 rounded-xl bg-champagne/30 overflow-hidden flex-shrink-0">
-                          <Image src={item.product.images[0]} alt="" fill className="object-cover" />
+                          <Image src={item.product.images[0]} alt="" fill className="object-cover" unoptimized />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-ui text-xs font-semibold text-burgundy truncate">{item.product.name}</p>
-                          <p className="font-body text-[10px] text-burgundy/40">Qty: {item.quantity}</p>
+                          {item.isCustomBox ? (
+                            <p className="font-body text-[10px] text-burgundy/40">
+                              Qty: {item.quantity} • {item.boxItems?.length || 0} items
+                            </p>
+                          ) : (
+                            <p className="font-body text-[10px] text-burgundy/40">
+                              Qty: {item.quantity}{item.selectedColor ? ` • ${item.selectedColor}` : ''}
+                            </p>
+                          )}
                         </div>
                         <span className="font-ui text-xs font-bold text-burgundy">
-                          {formatPrice(item.product.price * item.quantity)}
+                          {formatPrice((item.customPrice ?? item.product.price) * item.quantity)}
                         </span>
                       </div>
                     ))}
@@ -494,8 +719,17 @@ export default function CheckoutPage() {
                     <span className="font-ui text-sm font-semibold text-burgundy">{formatPrice(subtotal)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="font-body text-sm text-burgundy/50">Shipping</span>
-                    <span className="font-ui text-sm font-semibold text-burgundy">{shipping === 0 ? 'Free' : formatPrice(shipping)}</span>
+                    <span className="font-body text-sm text-burgundy/50">Delivery</span>
+                    <span className="font-ui text-sm font-semibold text-burgundy">
+                      {shipping === 0 ? (
+                        <span className="flex items-center gap-2">
+                          <span className="line-through text-burgundy/40 opacity-70">Rs. 450</span>
+                          <span>Free</span>
+                        </span>
+                      ) : (
+                        formatPrice(shipping)
+                      )}
+                    </span>
                   </div>
                   <div className="flex justify-between pt-2 border-t border-nude/30">
                     <span className="font-ui font-bold text-burgundy">Total</span>

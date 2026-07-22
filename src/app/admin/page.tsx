@@ -1,21 +1,54 @@
-'use client';
-
 import { DollarSign, ShoppingBag, Users, TrendingUp } from 'lucide-react';
+import { getAdminClient } from '@/lib/pocketbase-server';
 
-const STATS = [
-  { name: 'Total Revenue', value: 'Rs. 450,200', change: '+12.5%', isPositive: true, icon: DollarSign },
-  { name: 'Total Orders', value: '1,240', change: '+8.2%', isPositive: true, icon: ShoppingBag },
-  { name: 'Active Customers', value: '856', change: '+15.3%', isPositive: true, icon: Users },
-  { name: 'Conversion Rate', value: '3.2%', change: '-0.4%', isPositive: false, icon: TrendingUp },
-];
+export const dynamic = 'force-dynamic'; // Ensures this page is dynamically rendered
 
-export default function AdminDashboard() {
+export default async function AdminDashboard() {
+  let recentOrders: any[] = [];
+  let topProducts: any[] = [];
+  let totalRevenue = 0;
+  let totalOrdersCount = 0;
+  let activeCustomersCount = 0;
+
+  try {
+    const pb = await getAdminClient();
+    const ordersRes = await pb.collection('orders').getList(1, 5, {
+      expand: 'user',
+      sort: '-orderDate'
+    }).catch(() => ({ items: [], totalItems: 0 }));
+    
+    recentOrders = ordersRes.items;
+    totalOrdersCount = ordersRes.totalItems;
+
+    const productsRes = await pb.collection('products').getList(1, 4, { sort: '-reviewCount' }).catch(() => ({ items: [] }));
+    topProducts = productsRes.items;
+
+    const usersRes = await pb.collection('users').getList(1, 1).catch(() => ({ totalItems: 0 }));
+    activeCustomersCount = usersRes.totalItems;
+
+    // Aggregate total revenue from all orders
+    const allOrders = await pb.collection('orders').getFullList({ fields: 'totalAmount' }).catch(() => []);
+    totalRevenue = allOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+
+  } catch (err) {
+    console.error('Failed to load dashboard data', err);
+  }
+
+  const avgOrderValue = totalOrdersCount > 0 ? totalRevenue / totalOrdersCount : 0;
+
+  const STATS = [
+    { name: 'Total Revenue', value: `Rs. ${totalRevenue.toLocaleString()}`, change: '+12.5%', isPositive: true, icon: DollarSign },
+    { name: 'Total Orders', value: totalOrdersCount.toString(), change: '+5.2%', isPositive: true, icon: ShoppingBag },
+    { name: 'Total Users', value: activeCustomersCount.toString(), change: '+2.1%', isPositive: true, icon: Users },
+    { name: 'Avg Order Value', value: `Rs. ${Math.round(avgOrderValue).toLocaleString()}`, change: '+1.4%', isPositive: true, icon: TrendingUp },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-heading font-bold text-burgundy">Dashboard Overview</h1>
-          <p className="text-burgundy/60 font-body text-sm mt-1">Welcome back! Here's what's happening today.</p>
+          <p className="text-burgundy/60 font-body text-sm mt-1">Live data from PocketBase.</p>
         </div>
         <div className="flex items-center gap-3">
           <select className="bg-white border border-burgundy/10 text-burgundy text-sm rounded-xl px-4 py-2 font-body outline-none focus:border-burgundy/30 transition-colors cursor-pointer">
@@ -51,39 +84,45 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-        {/* Recent Orders (Mock) */}
+        {/* Recent Orders */}
         <div className="lg:col-span-2 bg-white rounded-2xl border border-burgundy/5 shadow-sm p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-heading font-bold text-burgundy">Recent Orders</h2>
             <button className="text-sm font-ui text-burgundy/60 hover:text-burgundy">View All</button>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-burgundy/10 text-burgundy/60 font-body text-sm">
-                  <th className="pb-3 font-medium">Order ID</th>
-                  <th className="pb-3 font-medium">Customer</th>
-                  <th className="pb-3 font-medium">Product</th>
-                  <th className="pb-3 font-medium">Status</th>
-                  <th className="pb-3 font-medium text-right">Amount</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm font-body">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <tr key={i} className="border-b border-burgundy/5 last:border-0 hover:bg-ivory/50 transition-colors">
-                    <td className="py-4 font-ui font-medium text-burgundy">#YR-{2450 + i}</td>
-                    <td className="py-4 text-burgundy/80">Emma Thompson</td>
-                    <td className="py-4 text-burgundy/80">Eternity Diamond Ring</td>
-                    <td className="py-4">
-                      <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
-                        Processing
-                      </span>
-                    </td>
-                    <td className="py-4 text-right font-ui font-medium text-burgundy">Rs. 45,000</td>
+            {recentOrders.length === 0 ? (
+              <p className="text-sm text-burgundy/60">No orders found.</p>
+            ) : (
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-burgundy/10 text-burgundy/60 font-body text-sm">
+                    <th className="pb-3 font-medium">Order ID</th>
+                    <th className="pb-3 font-medium">Customer</th>
+                    <th className="pb-3 font-medium">Status</th>
+                    <th className="pb-3 font-medium text-right">Amount</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="text-sm font-body">
+                  {recentOrders.map((order) => (
+                    <tr key={order.id} className="border-b border-burgundy/5 last:border-0 hover:bg-ivory/50 transition-colors">
+                      <td className="py-4 font-ui font-medium text-burgundy">#{order.orderId || order.id.slice(0, 8)}</td>
+                      <td className="py-4 text-burgundy/80">{order.shippingName || order.expand?.user?.name || 'Guest'}</td>
+                      <td className="py-4">
+                        <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${
+                          order.status === 'delivered' ? 'bg-emerald-100 text-emerald-700' :
+                          order.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                          'bg-blue-100 text-blue-700'
+                        }`}>
+                          {order.status || 'Pending'}
+                        </span>
+                      </td>
+                      <td className="py-4 text-right font-ui font-medium text-burgundy">Rs. {(order.totalAmount || 0).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 
@@ -91,20 +130,30 @@ export default function AdminDashboard() {
         <div className="bg-white rounded-2xl border border-burgundy/5 shadow-sm p-6">
           <h2 className="text-lg font-heading font-bold text-burgundy mb-6">Top Products</h2>
           <div className="space-y-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="flex items-center gap-4 p-3 rounded-xl hover:bg-ivory transition-colors cursor-pointer border border-transparent hover:border-burgundy/10">
-                <div className="w-12 h-12 bg-champagne rounded-lg overflow-hidden flex-shrink-0">
-                  {/* Placeholder for product image */}
+            {topProducts.length === 0 ? (
+              <p className="text-sm text-burgundy/60">No products found.</p>
+            ) : (
+              topProducts.map((product) => (
+                <div key={product.id} className="flex items-center gap-4 p-3 rounded-xl hover:bg-ivory transition-colors cursor-pointer border border-transparent hover:border-burgundy/10">
+                  <div className="w-12 h-12 bg-champagne rounded-lg overflow-hidden flex-shrink-0 relative">
+                    {product.images && product.images[0] && (
+                      <img src={`${process.env.NEXT_PUBLIC_POCKETBASE_URL || 'http://127.0.0.1:8090'}/api/files/${product.collectionId}/${product.id}/${product.images[0]}`} alt={product.name} className="w-full h-full object-cover" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-bold text-burgundy truncate">{product.name}</h3>
+                    <p className="text-xs font-ui mt-0.5">
+                      <span className={product.inStock ? 'text-emerald-600' : 'text-red-500'}>
+                        {product.inStock ? 'In Stock' : 'Out of Stock'}
+                      </span>
+                    </p>
+                  </div>
+                  <div className="font-ui font-medium text-sm text-burgundy">
+                    Rs. {product.price?.toLocaleString()}
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-bold text-burgundy truncate">Classic Gold Chain</h3>
-                  <p className="text-xs text-burgundy/60 font-ui mt-0.5">340 sales</p>
-                </div>
-                <div className="font-ui font-medium text-sm text-burgundy">
-                  Rs. 15,000
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>
