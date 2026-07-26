@@ -111,7 +111,9 @@ export default function DashboardLayout({
                     );
                   })}
                   <button
-                    onClick={() => {
+                    onClick={async () => {
+                      const { logoutAction } = await import('@/app/actions/auth');
+                      await logoutAction();
                       logout();
                       router.push('/');
                     }}

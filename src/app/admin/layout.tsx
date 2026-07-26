@@ -66,7 +66,9 @@ export default function AdminLayout({
     return null;
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const { logoutAction } = await import('@/app/actions/auth');
+    await logoutAction();
     logout();
     router.push('/auth/login');
   };
