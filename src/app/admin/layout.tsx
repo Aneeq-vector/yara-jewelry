@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { useAuthStore } from '@/lib/store/auth-store';
+import { logoutAction } from '@/app/actions/auth';
 
 const SIDEBAR_ITEMS = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
@@ -67,9 +68,14 @@ export default function AdminLayout({
   }
 
   const handleLogout = async () => {
-    const { logoutAction } = await import('@/app/actions/auth');
-    await logoutAction();
+    try {
+      await logoutAction();
+    } catch (err) {
+      console.error('Logout action failed:', err);
+    }
+    document.cookie = "pb_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     logout();
+    router.refresh();
     router.push('/auth/login');
   };
 

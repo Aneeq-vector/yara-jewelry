@@ -7,6 +7,7 @@ import { User, Package, Heart, MapPin, Settings, LogOut, ChevronRight, LayoutDas
 import PageWrapper from '@/components/layout/PageWrapper';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { useEffect, useState } from 'react';
+import { logoutAction } from '@/app/actions/auth';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Overview', href: '/dashboard' },
@@ -112,9 +113,14 @@ export default function DashboardLayout({
                   })}
                   <button
                     onClick={async () => {
-                      const { logoutAction } = await import('@/app/actions/auth');
-                      await logoutAction();
+                      try {
+                        await logoutAction();
+                      } catch (err) {
+                        console.error('Logout action failed:', err);
+                      }
+                      document.cookie = "pb_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
                       logout();
+                      router.refresh();
                       router.push('/');
                     }}
                     className="flex items-center gap-3 p-3 rounded-xl hover:bg-red-50 transition-colors w-full text-left group mt-2"
