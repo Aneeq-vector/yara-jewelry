@@ -137,7 +137,7 @@ export default async function AdminDashboard() {
                 <div key={product.id} className="flex items-center gap-4 p-3 rounded-xl hover:bg-ivory transition-colors cursor-pointer border border-transparent hover:border-burgundy/10">
                   <div className="w-12 h-12 bg-champagne rounded-lg overflow-hidden flex-shrink-0 relative">
                     {product.images && product.images[0] && (
-                      <img src={`${process.env.NEXT_PUBLIC_POCKETBASE_URL || 'http://127.0.0.1:8090'}/api/files/${product.collectionId}/${product.id}/${product.images[0]}`} alt={product.name} className="w-full h-full object-cover" />
+                      <img src={`${process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pb.yarasl.shop'}/api/files/${product.collectionId}/${product.id}/${product.images[0]}`} alt={product.name} className="w-full h-full object-cover" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
