@@ -58,7 +58,8 @@ export async function registerAction(formData: FormData) {
       passwordConfirm: parsed.data.passwordConfirm,
       name: parsed.data.name,
       phone: parsed.data.phone,
-      role: 'customer'
+      role: 'customer',
+      status: 'Active'
     });
     
     // Auto-login after registration
