@@ -16,6 +16,7 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Loader2,
 } from 'lucide-react';
 import PageWrapper from '@/components/layout/PageWrapper';
 import { getAllProducts } from '@/lib/data/products';
@@ -47,6 +48,15 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
   const { isInWishlist, toggleItem } = useWishlistStore();
   const wishlisted = isInWishlist(product.id);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isAdding, setIsAdding] = useState(false);
+
+  const handleAddToCart = () => {
+    setIsAdding(true);
+    setTimeout(() => {
+      addToCart(product);
+      setIsAdding(false);
+    }, 600);
+  };
 
   const nextImage = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -139,11 +149,16 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
             {product.inStock ? (
               <motion.button
                 whileTap={{ scale: 0.9 }}
-                onClick={() => addToCart(product)}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-burgundy/90 backdrop-blur-sm text-ivory font-ui text-xs font-semibold uppercase tracking-wider hover:bg-burgundy transition-colors"
+                onClick={handleAddToCart}
+                disabled={isAdding}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-burgundy/90 backdrop-blur-sm text-ivory font-ui text-xs font-semibold uppercase tracking-wider hover:bg-burgundy transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                <ShoppingBag size={14} />
-                Add to Cart
+                {isAdding ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <ShoppingBag size={14} />
+                )}
+                {isAdding ? 'Adding...' : 'Add to Cart'}
               </motion.button>
             ) : (
               <div className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-nude/50 backdrop-blur-sm text-burgundy/50 font-ui text-xs font-semibold uppercase tracking-wider cursor-not-allowed">

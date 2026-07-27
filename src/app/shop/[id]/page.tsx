@@ -21,6 +21,7 @@ import {
   Ruler,
   X,
   AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import PageWrapper from '@/components/layout/PageWrapper';
 import CustomBoxBuilder from '@/components/shop/CustomBoxBuilder';
@@ -74,11 +75,23 @@ export default function ProductDetailPage() {
 
   const [selectedColor, setSelectedColor] = useState<string | undefined>();
   const [quantity, setQuantity] = useState(1);
+  const [isAdding, setIsAdding] = useState(false);
   const [activeTab, setActiveTab] = useState<'description' | 'details' | 'reviews'>('description');
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
 
   const addToCart = useCartStore((s) => s.addItem);
   const { isInWishlist, toggleItem } = useWishlistStore();
+
+  const handleAddToCart = () => {
+    setIsAdding(true);
+    // Simulate network delay for UX
+    setTimeout(() => {
+      if (product) {
+        addToCart(product, quantity, selectedColor || product.colors?.[0]);
+      }
+      setIsAdding(false);
+    }, 600);
+  };
 
   if (loading) {
     return (
@@ -346,11 +359,16 @@ export default function ProductDetailPage() {
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={() => addToCart(product, quantity, selectedColor || product.colors?.[0])}
-                    className="btn-primary flex-1 flex items-center justify-center gap-2"
+                    onClick={handleAddToCart}
+                    disabled={isAdding}
+                    className="btn-primary flex-1 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                   >
-                    <ShoppingBag size={16} className="relative z-10" />
-                    <span>Add to Cart</span>
+                    {isAdding ? (
+                      <Loader2 size={16} className="animate-spin relative z-10" />
+                    ) : (
+                      <ShoppingBag size={16} className="relative z-10" />
+                    )}
+                    <span>{isAdding ? 'Adding...' : 'Add to Cart'}</span>
                   </motion.button>
                 ) : (
                   <a
