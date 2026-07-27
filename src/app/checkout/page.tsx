@@ -213,7 +213,11 @@ export default function CheckoutPage() {
     
     const formattedCartDetails = items.map(item => {
       if (item.isCustomBox) {
-        return `${item.quantity}x Custom Box (Rs. ${item.customPrice ?? item.product.price}) - Items: ${item.boxItems?.map(b => b.name).join(', ')}`;
+        const boxItemsStr = item.boxItems?.map((b: any) => {
+          const colorStr = b.selectedColor ? ` (${b.selectedColor})` : '';
+          return `${b.name}${colorStr}`;
+        }).join(', ');
+        return `${item.quantity}x Custom Box (Rs. ${item.customPrice ?? item.product.price}) - Items: ${boxItemsStr}`;
       }
       
       const extras = [
