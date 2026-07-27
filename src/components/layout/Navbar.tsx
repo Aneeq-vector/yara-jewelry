@@ -188,7 +188,7 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
               </Link>
 
               {isMounted && isAuthenticated && user ? (
-                <Link href={user.role === 'admin' ? '/admin' : '/dashboard'} className="hidden sm:flex items-center pl-1 outline-none focus:outline-none">
+                <Link href={user.role === 'admin' ? '/yara-admin' : '/dashboard'} className="hidden sm:flex items-center pl-1 outline-none focus:outline-none">
                   <motion.div
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
@@ -275,7 +275,7 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
                 <div className="mt-10 pt-8 border-t border-nude/60">
                   {isAuthenticated && user ? (
                     <Link
-                      href={user.role === 'admin' ? '/admin' : '/dashboard'}
+                      href={user.role === 'admin' ? '/yara-admin' : '/dashboard'}
                       onClick={() => setMobileOpen(false)}
                       className="flex items-center gap-3 py-3 px-4 rounded-xl font-ui text-sm font-semibold text-burgundy hover:bg-champagne/50 transition-all"
                     >

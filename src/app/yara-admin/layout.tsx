@@ -22,11 +22,11 @@ import { useAuthStore } from '@/lib/store/auth-store';
 import { logoutAction } from '@/app/actions/auth';
 
 const SIDEBAR_ITEMS = [
-  { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-  { name: 'Products', href: '/admin/products', icon: ShoppingBag },
-  { name: 'Orders', href: '/admin/orders', icon: ShoppingCart },
-  { name: 'Customers', href: '/admin/customers', icon: Users },
-  { name: 'Settings', href: '/admin/settings', icon: Settings },
+  { name: 'Dashboard', href: '/yara-admin', icon: LayoutDashboard },
+  { name: 'Products', href: '/yara-admin/products', icon: ShoppingBag },
+  { name: 'Orders', href: '/yara-admin/orders', icon: ShoppingCart },
+  { name: 'Customers', href: '/yara-admin/customers', icon: Users },
+  { name: 'Settings', href: '/yara-admin/settings', icon: Settings },
 ];
 
 export default function AdminLayout({
@@ -96,7 +96,7 @@ export default function AdminLayout({
         } flex flex-col`}
       >
         <div className="p-6 flex items-center justify-between">
-          <Link href="/admin" className="flex items-center gap-2">
+          <Link href="/yara-admin" className="flex items-center gap-2">
             <span className="font-heading text-2xl font-bold text-burgundy">Yara Admin</span>
           </Link>
           <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-burgundy/50 hover:text-burgundy">

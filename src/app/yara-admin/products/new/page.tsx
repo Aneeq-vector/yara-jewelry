@@ -150,7 +150,7 @@ export default function AddProductPage() {
       
       setShowSuccess(true);
       setTimeout(() => {
-        router.push('/admin/products');
+        router.push('/yara-admin/products');
         router.refresh(); // Force refresh to see new product
       }, 2000);
     } catch (err: any) {
@@ -164,7 +164,7 @@ export default function AddProductPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-12">
       <div className="flex items-center gap-4">
-        <Link href="/admin/products" className="p-2 hover:bg-burgundy/5 rounded-full transition-colors">
+        <Link href="/yara-admin/products" className="p-2 hover:bg-burgundy/5 rounded-full transition-colors">
           <ArrowLeft size={20} className="text-burgundy" />
         </Link>
         <div>

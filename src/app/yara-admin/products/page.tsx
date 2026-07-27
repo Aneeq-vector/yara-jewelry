@@ -215,7 +215,7 @@ export default function ProductsManager() {
           <p className="text-burgundy/60 font-body text-sm mt-1">Manage your jewelry inventory, pricing, and details.</p>
         </div>
         <Link 
-          href="/admin/products/new"
+          href="/yara-admin/products/new"
           className="flex items-center gap-2 bg-burgundy text-white px-4 py-2 rounded-xl font-ui text-sm font-semibold hover:bg-wine transition-colors shadow-md shadow-burgundy/20 self-start sm:self-auto"
         >
           <Plus size={16} />

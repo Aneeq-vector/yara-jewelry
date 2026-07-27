@@ -52,7 +52,7 @@ export default function LoginPage() {
     }
     
     if (result.user?.role === 'admin') {
-      router.push('/admin');
+      router.push('/yara-admin');
     } else {
       router.push('/dashboard');
     }

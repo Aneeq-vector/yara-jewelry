@@ -60,7 +60,7 @@ export async function updateOrderStatusAction(orderId: string, status: string) {
       body: { status }
     });
 
-    revalidatePath('/admin/orders');
+    revalidatePath('/yara-admin/orders');
     return { success: true };
   } catch (error: any) {
     console.error('Failed to update order status:', error?.message || error);
@@ -78,7 +78,7 @@ export async function updateOrderPaymentStatusAction(orderId: string, paymentSta
       body: { paymentStatus }
     });
 
-    revalidatePath('/admin/orders');
+    revalidatePath('/yara-admin/orders');
     return { success: true };
   } catch (error: any) {
     console.error('Failed to update order payment status:', error?.message || error);
@@ -95,7 +95,7 @@ export async function deleteOrdersAction(orderIds: string[]) {
       orderIds.map(id => pb.collection('orders').delete(id))
     );
 
-    revalidatePath('/admin/orders');
+    revalidatePath('/yara-admin/orders');
     return { success: true };
   } catch (error: any) {
     console.error('Failed to delete orders:', error?.message || error);
