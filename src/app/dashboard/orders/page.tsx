@@ -80,9 +80,12 @@ export default async function OrdersPage() {
                     productCode = codeMatch[1];
                   }
 
+                  const extrasMatch = detail.match(/\[(.*?)\]/);
+                  const extras = extrasMatch ? ` (${extrasMatch[1]})` : "";
+
                   const codePrefix = productCode ? `${productCode} - ` : "";
                   const countSuffix = count ? ` x ${count}` : "";
-                  const finalItem = `${codePrefix}${name}${countSuffix}`;
+                  const finalItem = `${codePrefix}${name}${countSuffix}${extras}`;
                   
                   return (
                     <div key={idx} className="flex items-center gap-3 p-2 rounded-xl bg-champagne/20 overflow-hidden">

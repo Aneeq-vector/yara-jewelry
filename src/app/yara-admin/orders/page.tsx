@@ -610,9 +610,12 @@ export default function OrdersManager() {
                         productCode = codeMatch[1];
                       }
 
+                      const extrasMatch = item.match(/\[(.*?)\]/);
+                      const extras = extrasMatch ? ` (${extrasMatch[1]})` : "";
+
                       const codePrefix = productCode ? `${productCode} - ` : "";
                       const countSuffix = count ? ` x ${count}` : "";
-                      const finalItem = `${codePrefix}${name}${countSuffix}`;
+                      const finalItem = `${codePrefix}${name}${countSuffix}${extras}`;
                       
                       return (
                         <div key={i} className="text-xs text-burgundy font-medium bg-ivory/50 p-2 rounded">
