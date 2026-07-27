@@ -593,7 +593,7 @@ export default function OrdersManager() {
                             <div className="font-bold mb-1.5">{mainPart}</div>
                             {itemsPart && (
                               <ul className="list-disc pl-4 space-y-1 text-[11px] opacity-80">
-                                {itemsPart.split(', ').map((boxItem, idx) => (
+                                {(itemsPart.includes(' | ') ? itemsPart.split(' | ') : itemsPart.split(', ')).map((boxItem, idx) => (
                                   <li key={idx}>{boxItem}</li>
                                 ))}
                               </ul>

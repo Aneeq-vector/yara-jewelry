@@ -214,9 +214,15 @@ export default function CheckoutPage() {
     const formattedCartDetails = items.map(item => {
       if (item.isCustomBox) {
         const boxItemsStr = item.boxItems?.map((b: any) => {
-          const colorStr = b.selectedColor ? ` (${b.selectedColor})` : '';
-          return `${b.name}${colorStr}`;
-        }).join(', ');
+          const itemExtras = [
+            b.selectedColor ? `Color: ${b.selectedColor}` : '',
+            b.material ? `Material: ${b.material}` : '',
+            b.weight ? `Weight: ${b.weight}` : ''
+          ].filter(Boolean).join(', ');
+          
+          const extraStr = itemExtras ? ` [${itemExtras}]` : '';
+          return `${b.name}${extraStr}`;
+        }).join(' | ');
         return `${item.quantity}x Custom Box (Rs. ${item.customPrice ?? item.product.price}) - Items: ${boxItemsStr}`;
       }
       

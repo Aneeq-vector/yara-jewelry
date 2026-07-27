@@ -63,7 +63,7 @@ export default async function OrdersPage() {
                         <div className="font-semibold">{mainPart}</div>
                         {itemsPart && (
                           <ul className="list-disc pl-5 opacity-80 space-y-1">
-                            {itemsPart.split(', ').map((boxItem, itemIdx) => (
+                            {(itemsPart.includes(' | ') ? itemsPart.split(' | ') : itemsPart.split(', ')).map((boxItem, itemIdx) => (
                               <li key={itemIdx}>{boxItem}</li>
                             ))}
                           </ul>
