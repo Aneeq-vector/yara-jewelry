@@ -56,6 +56,22 @@ export default async function OrdersPage() {
               </div>
               <div className="space-y-2 mb-4">
                 {(order.cartDetails || []).map((detail: string, idx: number) => {
+                  if (detail.includes('Custom Box')) {
+                    const [mainPart, itemsPart] = detail.split(' - Items: ');
+                    return (
+                      <div key={idx} className="flex flex-col gap-1 p-3 rounded-xl bg-champagne/20 overflow-hidden text-sm text-burgundy">
+                        <div className="font-semibold">{mainPart}</div>
+                        {itemsPart && (
+                          <ul className="list-disc pl-5 opacity-80 space-y-1">
+                            {itemsPart.split(', ').map((boxItem, itemIdx) => (
+                              <li key={itemIdx}>{boxItem}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    );
+                  }
+
                   let rawClean = detail.split('[')[0].split(' - Rs.')[0].trim();
                   let count = "";
                   let name = rawClean;

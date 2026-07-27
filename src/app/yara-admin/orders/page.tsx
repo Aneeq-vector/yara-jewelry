@@ -586,6 +586,22 @@ export default function OrdersManager() {
                 <div className="space-y-1">
                   {Array.isArray(selectedOrder.cartDetails) ? (
                     selectedOrder.cartDetails.map((item: string, i: number) => {
+                      if (item.includes('Custom Box')) {
+                        const [mainPart, itemsPart] = item.split(' - Items: ');
+                        return (
+                          <div key={i} className="text-xs text-burgundy font-medium bg-ivory/50 p-3 rounded-lg border border-burgundy/10">
+                            <div className="font-bold mb-1.5">{mainPart}</div>
+                            {itemsPart && (
+                              <ul className="list-disc pl-4 space-y-1 text-[11px] opacity-80">
+                                {itemsPart.split(', ').map((boxItem, idx) => (
+                                  <li key={idx}>{boxItem}</li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        );
+                      }
+
                       let rawClean = item.split('[')[0].split(' - Rs.')[0].trim();
                       let count = "";
                       let name = rawClean;
