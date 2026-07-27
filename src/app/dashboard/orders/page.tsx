@@ -59,14 +59,21 @@ export default async function OrdersPage() {
                   if (detail.includes('Custom Box')) {
                     const [mainPart, itemsPart] = detail.split(' - Items: ');
                     return (
-                      <div key={idx} className="flex flex-col gap-1 p-3 rounded-xl bg-champagne/20 overflow-hidden text-sm text-burgundy">
-                        <div className="font-semibold">{mainPart}</div>
+                      <div key={idx} className="flex flex-col gap-2 p-3 rounded-xl bg-champagne/20 overflow-hidden text-sm text-burgundy">
+                        <div className="font-bold px-1">{mainPart}</div>
                         {itemsPart && (
-                          <ul className="list-disc pl-5 opacity-80 space-y-1">
+                          <div className="flex flex-col gap-2">
                             {(itemsPart.includes(' | ') ? itemsPart.split(' | ') : itemsPart.split(', ')).map((boxItem, itemIdx) => (
-                              <li key={itemIdx}>{boxItem}</li>
+                              <div key={itemIdx} className="flex items-center gap-3 p-2 rounded-xl bg-champagne/40 overflow-hidden">
+                                <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-ivory rounded-lg text-burgundy/40">
+                                  <ShoppingBag size={14} />
+                                </div>
+                                <p className="font-body text-sm text-burgundy/80 font-medium truncate">
+                                  {boxItem}
+                                </p>
+                              </div>
                             ))}
-                          </ul>
+                          </div>
                         )}
                       </div>
                     );
