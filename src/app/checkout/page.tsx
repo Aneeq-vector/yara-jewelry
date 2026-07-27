@@ -206,7 +206,9 @@ export default function CheckoutPage() {
     
     const productIdsSet = new Set<string>();
     items.forEach(item => {
-      productIdsSet.add(item.product.id);
+      if (item.product.category !== 'gift-boxes' && !item.isCustomBox) {
+        productIdsSet.add(item.product.id);
+      }
       if (item.isCustomBox && item.boxItems) {
         item.boxItems.forEach((b: any) => {
           if (b.id) productIdsSet.add(b.id);
