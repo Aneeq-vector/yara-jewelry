@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
 import { loginAction } from '@/app/actions/auth';
 import { useAuthStore } from '@/lib/store/auth-store';
+import { useAdminAuthStore } from '@/lib/store/admin-auth-store';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -35,8 +36,12 @@ export default function LoginPage() {
       return;
     }
     
-    // Sync client state
-    useAuthStore.setState({ user: result.user as any, isAuthenticated: true });
+    // Sync client state depending on role
+    if (result.user?.role === 'admin') {
+      useAdminAuthStore.setState({ user: result.user as any, isAuthenticated: true });
+    } else {
+      useAuthStore.setState({ user: result.user as any, isAuthenticated: true });
+    }
     
     // Sync wishlist
     try {

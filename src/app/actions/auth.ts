@@ -1,6 +1,6 @@
 'use server';
 
-import { getServerClient } from '@/lib/pocketbase-server';
+import { getServerClient, getAdminPanelClient } from '@/lib/pocketbase-server';
 import { loginSchema, registerSchema } from '@/lib/schemas';
 import { cookies } from 'next/headers';
 
@@ -21,11 +21,11 @@ export async function loginAction(formData: FormData) {
       return { error: 'cannot login kindly contact customer support' };
     }
     
-    // Explicitly set the cookie here to guarantee it gets saved
     const cookieStore = await cookies();
     const authPayload = JSON.stringify({ token: pb.authStore.token, model: pb.authStore.record });
     
-    cookieStore.set('pb_auth', authPayload, {
+    const cookieName = authData.record.role === 'admin' ? 'pb_admin_auth' : 'pb_auth';
+    cookieStore.set(cookieName, authPayload, {
       path: '/',
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -90,6 +90,13 @@ export async function logoutAction() {
   cookieStore.delete('pb_auth');
 }
 
+export async function adminLogoutAction() {
+  const pb = await getAdminPanelClient();
+  pb.authStore.clear();
+  const cookieStore = await cookies();
+  cookieStore.delete('pb_admin_auth');
+}
+
 export async function getUserAction() {
   const pb = await getServerClient();
   if (!pb.authStore.isValid || !pb.authStore.record) return null;
@@ -146,7 +153,7 @@ export async function updateUserAction(id: string, updates: Record<string, any>)
 }
 export async function getAdminUsersAction() {
   try {
-    const pb = await getServerClient();
+    const pb = await getAdminPanelClient();
     if (!pb.authStore.isValid || pb.authStore.record?.role !== 'admin') {
       return { error: 'Unauthorized' };
     }

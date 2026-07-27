@@ -18,8 +18,8 @@ import {
   ChevronDown
 } from 'lucide-react';
 import Image from 'next/image';
-import { useAuthStore } from '@/lib/store/auth-store';
-import { logoutAction } from '@/app/actions/auth';
+import { useAdminAuthStore } from '@/lib/store/admin-auth-store';
+import { adminLogoutAction } from '@/app/actions/auth';
 
 const SIDEBAR_ITEMS = [
   { name: 'Dashboard', href: '/yara-admin', icon: LayoutDashboard },
@@ -37,15 +37,15 @@ export default function AdminLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const { user, isAuthenticated, logout } = useAuthStore();
+  const { user, isAuthenticated, logout } = useAdminAuthStore();
   const [isClient, setIsClient] = useState(false);
   const [hasHydrated, setHasHydrated] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
-    setHasHydrated(useAuthStore.persist.hasHydrated());
+    setHasHydrated(useAdminAuthStore.persist.hasHydrated());
     
-    const unsub = useAuthStore.persist.onFinishHydration(() => {
+    const unsub = useAdminAuthStore.persist.onFinishHydration(() => {
       setHasHydrated(true);
     });
     
@@ -69,11 +69,11 @@ export default function AdminLayout({
 
   const handleLogout = async () => {
     try {
-      await logoutAction();
+      await adminLogoutAction();
     } catch (err) {
       console.error('Logout action failed:', err);
     }
-    document.cookie = "pb_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    document.cookie = "pb_admin_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     logout();
     router.refresh();
     router.push('/auth/login');

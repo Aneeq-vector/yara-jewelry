@@ -34,6 +34,33 @@ export async function getServerClient() {
   return pb;
 }
 
+// Client for Admin Panel users, bound to the admin's cookie
+export async function getAdminPanelClient() {
+  const cookieStore = await cookies();
+  const pb = new PocketBase(PB_URL);
+  
+  const pbAuthCookie = cookieStore.get('pb_admin_auth');
+  if (pbAuthCookie && pbAuthCookie.value) {
+    pb.authStore.loadFromCookie(`pb_admin_auth=${pbAuthCookie.value}`);
+  }
+
+  pb.authStore.onChange(() => {
+    try {
+      const authPayload = JSON.stringify({ token: pb.authStore.token, model: pb.authStore.record });
+      cookieStore.set('pb_admin_auth', authPayload, {
+        path: '/',
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+      });
+    } catch (e) {
+      // Ignoring error if we are in a server component rendering phase
+    }
+  });
+
+  return pb;
+}
+
 // Client for Admin-only operations using env credentials
 export async function getAdminClient() {
   const pb = new PocketBase(PB_URL);

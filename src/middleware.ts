@@ -6,7 +6,7 @@ export function middleware(request: NextRequest) {
 
   // Protect /yara-admin and all subpaths
   if (path.startsWith('/yara-admin')) {
-    const authCookie = request.cookies.get('pb_auth');
+    const authCookie = request.cookies.get('pb_admin_auth');
 
     if (!authCookie || !authCookie.value) {
       // If no cookie, redirect to home page so it's completely hidden
@@ -33,7 +33,7 @@ export function middleware(request: NextRequest) {
       // If valid admin, allow the request to proceed
       return NextResponse.next();
     } catch (error) {
-      console.error('Middleware: Error parsing pb_auth cookie:', error);
+      console.error('Middleware: Error parsing pb_admin_auth cookie:', error);
       console.error('Middleware: Cookie value was:', authCookie.value);
       // If parsing fails, redirect to home
       return NextResponse.redirect(new URL('/', request.url));
