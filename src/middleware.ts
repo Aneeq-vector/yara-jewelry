@@ -15,17 +15,26 @@ export function middleware(request: NextRequest) {
 
     try {
       // The cookie is URI encoded or raw JSON depending on how it was set.
-      const payloadString = decodeURIComponent(authCookie.value);
+      let payloadString = authCookie.value;
+      
+      // Try decoding if it looks URI encoded
+      if (payloadString.includes('%7B')) {
+        payloadString = decodeURIComponent(payloadString);
+      }
+      
       const payload = JSON.parse(payloadString);
 
       // Verify if the user is an admin
       if (!payload?.model || payload.model.role !== 'admin') {
+        console.log('Middleware: User is not admin. Role is:', payload?.model?.role);
         return NextResponse.redirect(new URL('/', request.url));
       }
 
       // If valid admin, allow the request to proceed
       return NextResponse.next();
     } catch (error) {
+      console.error('Middleware: Error parsing pb_auth cookie:', error);
+      console.error('Middleware: Cookie value was:', authCookie.value);
       // If parsing fails, redirect to home
       return NextResponse.redirect(new URL('/', request.url));
     }
