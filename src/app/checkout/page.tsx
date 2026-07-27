@@ -204,11 +204,16 @@ export default function CheckoutPage() {
     formData.append('shippingCountry', form.country || 'Sri Lanka');
     formData.append('paymentMethod', form.paymentMethod);
     
-    const productIds = Array.from(new Set(
-      items
-        .filter(item => item.product.category !== 'gift-boxes' && !item.isCustomBox)
-        .map(item => item.product.id)
-    ));
+    const productIdsSet = new Set<string>();
+    items.forEach(item => {
+      productIdsSet.add(item.product.id);
+      if (item.isCustomBox && item.boxItems) {
+        item.boxItems.forEach((b: any) => {
+          if (b.id) productIdsSet.add(b.id);
+        });
+      }
+    });
+    const productIds = Array.from(productIdsSet);
     productIds.forEach(id => formData.append('items', id));
     
     const formattedCartDetails = items.map(item => {
