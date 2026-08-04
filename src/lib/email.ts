@@ -112,37 +112,49 @@ export async function sendInvoiceEmail(details: InvoiceDetails) {
     <html>
     <head>
       <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Invoice - Yara</title>
+      <style>
+        @media only screen and (max-width: 600px) {
+          .main-container { width: 100% !important; border-radius: 0 !important; }
+          .header-cell { padding: 30px 20px 25px 20px !important; }
+          .content-cell { padding: 30px 20px !important; }
+          .footer-cell { padding: 30px 20px !important; }
+          .desktop-split { display: block !important; width: 100% !important; }
+          .mobile-margin { margin-top: 25px !important; }
+          .totals-table { width: 100% !important; }
+        }
+      </style>
     </head>
-    <body style="margin: 0; padding: 0; background-color: #f8f5f3; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
-      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8f5f3; padding: 50px 0;">
+    <body style="margin: 0; padding: 0; background-color: #f8f5f3; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-text-size-adjust: 100%;">
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8f5f3; padding: 20px 0;">
         <tr>
-          <td align="center">
-            <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 10px 30px rgba(74, 28, 39, 0.05); overflow: hidden;">
+          <td align="center" style="padding: 0 10px;">
+            <table class="main-container" width="600" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 10px 30px rgba(74, 28, 39, 0.05); overflow: hidden; width: 100%; max-width: 600px; margin: 0 auto;">
               <!-- Header -->
               <tr>
-                <td style="background-color: #fdf9f6; padding: 30px 40px 25px 40px; text-align: center; border-bottom: 1px solid #eee;">
-                  <img src="https://www.yarasl.shop/images/yara-logo.png" alt="Yara" width="160" style="display: block; margin: 0 auto;" />
-                  <p style="color: #c9856a; margin: -15px 0 0 0; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">Official Invoice</p>
+                <td class="header-cell" style="background-color: #fdf9f6; padding: 30px 40px 25px 40px; text-align: center; border-bottom: 1px solid #eee;">
+                  <img src="https://www.yarasl.shop/images/yara-logo.png" alt="Yara" width="140" style="display: block; margin: 0 auto; max-width: 100%;" />
+                  <p style="color: #c9856a; margin: -10px 0 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 2px;">Official Invoice</p>
                 </td>
               </tr>
               
               <!-- Content -->
               <tr>
-                <td style="padding: 50px 40px;">
+                <td class="content-cell" style="padding: 50px 40px;">
                   <p style="color: #4a1c27; font-size: 18px; margin-top: 0; font-weight: 300;">Dear ${details.customerName},</p>
                   <p style="color: #666666; font-size: 15px; line-height: 1.6;">Thank you for shopping with Yara. We are delighted to confirm that your order has been successfully placed. Please find your order details and official invoice below.</p>
                   
-                  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 40px; margin-bottom: 40px; background-color: #fdf9f6; padding: 25px; border-radius: 6px;">
+                  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 35px; margin-bottom: 35px; background-color: #fdf9f6; padding: 25px; border-radius: 6px;">
                     <tr>
-                      <td width="50%" style="vertical-align: top;">
+                      <td class="desktop-split" width="50%" style="vertical-align: top; display: inline-block;">
                         <h3 style="color: #c9856a; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; margin-top: 0;">Order Number</h3>
                         <p style="color: #4a1c27; font-size: 14px; font-weight: 600; margin: 0;">${details.orderId}</p>
                         
                         <h3 style="color: #c9856a; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; margin-top: 25px;">Order Date</h3>
                         <p style="color: #4a1c27; font-size: 14px; font-weight: 500; margin: 0;">${new Date(details.orderDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
                       </td>
-                      <td width="50%" style="vertical-align: top;">
+                      <td class="desktop-split mobile-margin" width="50%" style="vertical-align: top; display: inline-block;">
                         <h3 style="color: #c9856a; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; margin-top: 0;">Shipping Address</h3>
                         <p style="color: #4a1c27; font-size: 14px; margin: 0; line-height: 1.5;">${details.shippingAddress.replace(/, /g, '<br>')}</p>
                         
@@ -166,17 +178,17 @@ export async function sendInvoiceEmail(details: InvoiceDetails) {
                   <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 0;">
                     <tr>
                       <td align="right" style="padding-top: 25px; border-top: 1px solid #eee;">
-                        <table border="0" cellspacing="0" cellpadding="0" style="display: inline-table;">
+                        <table class="totals-table" border="0" cellspacing="0" cellpadding="0" style="display: inline-table; min-width: 200px;">
                           <tr>
-                            <td align="right" style="padding-right: 20px; color: #666666; font-size: 14px;">Subtotal</td>
+                            <td align="left" style="padding-right: 20px; color: #666666; font-size: 14px;">Subtotal</td>
                             <td align="right" style="color: #4a1c27; font-size: 14px; font-weight: 500;">${subtotalDisplay}</td>
                           </tr>
                           <tr>
-                            <td align="right" style="padding-right: 20px; color: #666666; font-size: 14px; padding-top: 10px;">Shipping</td>
+                            <td align="left" style="padding-right: 20px; color: #666666; font-size: 14px; padding-top: 10px;">Shipping</td>
                             <td align="right" style="color: #4a1c27; font-size: 14px; font-weight: 500; padding-top: 10px;">${shippingDisplay}</td>
                           </tr>
                           <tr>
-                            <td align="right" style="padding-right: 20px; color: #4a1c27; font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; padding-top: 20px;">Total</td>
+                            <td align="left" style="padding-right: 20px; color: #4a1c27; font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; padding-top: 20px;">Total</td>
                             <td align="right" style="color: #4a1c27; font-size: 22px; font-weight: bold; padding-top: 20px;">Rs. ${numericTotal.toLocaleString()}</td>
                           </tr>
                         </table>
@@ -189,7 +201,7 @@ export async function sendInvoiceEmail(details: InvoiceDetails) {
               
               <!-- Footer -->
               <tr>
-                <td style="background-color: #4a1c27; padding: 40px; text-align: center;">
+                <td class="footer-cell" style="background-color: #4a1c27; padding: 40px; text-align: center;">
                   <p style="color: #e8d9d0; font-size: 13px; margin: 0; letter-spacing: 0.5px;">YARA</p>
                   <p style="color: #e8d9d0; font-size: 12px; margin: 10px 0 0 0; opacity: 0.7;">Sri Lanka</p>
                   <p style="color: #e8d9d0; font-size: 12px; margin: 10px 0 0 0; opacity: 0.7;">If you have any questions regarding your order, please reply directly to this email.</p>
