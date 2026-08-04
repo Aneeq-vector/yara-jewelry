@@ -1,4 +1,6 @@
 import PageWrapper from '@/components/layout/PageWrapper';
+
+export const revalidate = 60; // Revalidate the page every 60 seconds to pick up new PocketBase data
 import Hero from '@/components/home/Hero';
 import FeaturedCollections from '@/components/home/FeaturedCollections';
 import TrendingProducts from '@/components/home/TrendingProducts';
