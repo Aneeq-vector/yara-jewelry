@@ -50,60 +50,72 @@ export async function sendInvoiceEmail(details: InvoiceDetails) {
       <meta charset="utf-8">
       <title>Invoice - Yara Jewelry</title>
     </head>
-    <body style="margin: 0; padding: 0; background-color: #fdf9f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #fdf9f6; padding: 40px 0;">
+    <body style="margin: 0; padding: 0; background-color: #f8f5f3; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8f5f3; padding: 50px 0;">
         <tr>
           <td align="center">
-            <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); overflow: hidden;">
+            <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 10px 30px rgba(74, 28, 39, 0.05); overflow: hidden;">
               <!-- Header -->
               <tr>
-                <td style="background-color: #4a1c27; padding: 40px 40px; text-align: center;">
-                  <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 300; letter-spacing: 2px;">YARA</h1>
-                  <p style="color: #e8d9d0; margin: 10px 0 0 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Official Invoice</p>
+                <td style="background-color: #fdf9f6; padding: 40px 40px; text-align: center; border-bottom: 1px solid #eee;">
+                  <img src="https://www.yarasl.shop/images/yara-logo.png" alt="Yara Jewelry" width="160" style="display: block; margin: 0 auto; margin-bottom: 15px;" />
+                  <p style="color: #c9856a; margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">Official Invoice</p>
                 </td>
               </tr>
               
               <!-- Content -->
               <tr>
-                <td style="padding: 40px;">
-                  <p style="color: #4a1c27; font-size: 16px; margin-top: 0;">Hi ${details.customerName},</p>
-                  <p style="color: #4a1c27; font-size: 15px; line-height: 1.6; color: #666;">Thank you for your elegant purchase. Your order has been confirmed. Below is your official invoice.</p>
+                <td style="padding: 50px 40px;">
+                  <p style="color: #4a1c27; font-size: 18px; margin-top: 0; font-weight: 300;">Dear ${details.customerName},</p>
+                  <p style="color: #666666; font-size: 15px; line-height: 1.6;">Thank you for shopping with Yara Jewelry. We are delighted to confirm that your order has been successfully placed. Please find your order details and official invoice below.</p>
                   
-                  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 30px; margin-bottom: 30px;">
+                  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 40px; margin-bottom: 40px; background-color: #fdf9f6; padding: 25px; border-radius: 6px;">
                     <tr>
                       <td width="50%" style="vertical-align: top;">
-                        <h3 style="color: #c9856a; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Order Number</h3>
+                        <h3 style="color: #c9856a; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; margin-top: 0;">Order Number</h3>
                         <p style="color: #4a1c27; font-size: 14px; font-weight: 600; margin: 0;">${details.orderId}</p>
                         
-                        <h3 style="color: #c9856a; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; margin-top: 20px;">Date</h3>
-                        <p style="color: #4a1c27; font-size: 14px; font-weight: 600; margin: 0;">${new Date(details.orderDate).toLocaleDateString()}</p>
+                        <h3 style="color: #c9856a; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; margin-top: 25px;">Order Date</h3>
+                        <p style="color: #4a1c27; font-size: 14px; font-weight: 500; margin: 0;">${new Date(details.orderDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
                       </td>
                       <td width="50%" style="vertical-align: top;">
-                        <h3 style="color: #c9856a; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Shipping Address</h3>
+                        <h3 style="color: #c9856a; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; margin-top: 0;">Shipping Address</h3>
                         <p style="color: #4a1c27; font-size: 14px; margin: 0; line-height: 1.5;">${details.shippingAddress.replace(/, /g, '<br>')}</p>
                         
-                        <h3 style="color: #c9856a; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; margin-top: 20px;">Payment Method</h3>
-                        <p style="color: #4a1c27; font-size: 14px; margin: 0; text-transform: uppercase;">${details.paymentMethod.replace('_', ' ')}</p>
+                        <h3 style="color: #c9856a; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; margin-top: 25px;">Payment Method</h3>
+                        <p style="color: #4a1c27; font-size: 14px; font-weight: 500; margin: 0; text-transform: uppercase;">${details.paymentMethod.replace('_', ' ')}</p>
                       </td>
                     </tr>
                   </table>
                   
                   <!-- Items -->
-                  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border-top: 2px solid #fdf9f6; padding-top: 20px;">
+                  <table width="100%" border="0" cellspacing="0" cellpadding="0">
                     <tr>
-                      <td style="padding-bottom: 15px;">
-                        <h3 style="color: #c9856a; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin: 0;">Order Summary</h3>
+                      <td style="padding-bottom: 15px; border-bottom: 2px solid #f8f5f3;">
+                        <h3 style="color: #c9856a; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 0;">Order Summary</h3>
                       </td>
                     </tr>
                     ${itemsHtml}
                   </table>
                   
                   <!-- Total -->
-                  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 20px;">
+                  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 0;">
                     <tr>
-                      <td align="right" style="padding-top: 20px;">
-                        <span style="color: #c9856a; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin-right: 15px;">Total Amount</span>
-                        <span style="color: #4a1c27; font-size: 24px; font-weight: 600;">Rs. ${Number(details.totalAmount).toLocaleString()}</span>
+                      <td align="right" style="padding-top: 25px; border-top: 1px solid #eee;">
+                        <table border="0" cellspacing="0" cellpadding="0" style="display: inline-table;">
+                          <tr>
+                            <td align="right" style="padding-right: 20px; color: #666666; font-size: 14px;">Subtotal</td>
+                            <td align="right" style="color: #4a1c27; font-size: 14px; font-weight: 500;">Rs. ${Number(details.totalAmount).toLocaleString()}</td>
+                          </tr>
+                          <tr>
+                            <td align="right" style="padding-right: 20px; color: #666666; font-size: 14px; padding-top: 10px;">Shipping</td>
+                            <td align="right" style="color: #4a1c27; font-size: 14px; font-weight: 500; padding-top: 10px;">Calculated at checkout</td>
+                          </tr>
+                          <tr>
+                            <td align="right" style="padding-right: 20px; color: #4a1c27; font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; padding-top: 20px;">Total</td>
+                            <td align="right" style="color: #4a1c27; font-size: 22px; font-weight: bold; padding-top: 20px;">Rs. ${Number(details.totalAmount).toLocaleString()}</td>
+                          </tr>
+                        </table>
                       </td>
                     </tr>
                   </table>
@@ -113,9 +125,10 @@ export async function sendInvoiceEmail(details: InvoiceDetails) {
               
               <!-- Footer -->
               <tr>
-                <td style="background-color: #fdf9f6; padding: 30px 40px; text-align: center; border-top: 1px solid #e8d9d0;">
-                  <p style="color: #4a1c27; font-size: 12px; margin: 0; opacity: 0.7;">Yara Jewelry, Sri Lanka</p>
-                  <p style="color: #4a1c27; font-size: 12px; margin: 5px 0 0 0; opacity: 0.7;">If you have any questions, reply to this email.</p>
+                <td style="background-color: #4a1c27; padding: 40px; text-align: center;">
+                  <p style="color: #e8d9d0; font-size: 13px; margin: 0; letter-spacing: 0.5px;">YARA JEWELRY</p>
+                  <p style="color: #e8d9d0; font-size: 12px; margin: 10px 0 0 0; opacity: 0.7;">Sri Lanka</p>
+                  <p style="color: #e8d9d0; font-size: 12px; margin: 10px 0 0 0; opacity: 0.7;">If you have any questions regarding your order, please reply directly to this email.</p>
                 </td>
               </tr>
             </table>
