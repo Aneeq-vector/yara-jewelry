@@ -29,9 +29,8 @@ export default function LoginPage() {
     
     const result = await loginAction(formData);
     
-    setLoading(false);
-    
     if (result.error) {
+      setLoading(false);
       alert(result.error);
       return;
     }

@@ -37,9 +37,8 @@ export default function SignupPage() {
 
     const result = await registerAction(formData);
     
-    setLoading(false);
-    
     if (result.error) {
+      setLoading(false);
       alert(result.error);
       return;
     }
