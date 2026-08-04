@@ -128,7 +128,7 @@ export async function sendInvoiceEmail(details: InvoiceDetails) {
 
   try {
     const info = await transporter.sendMail({
-      from: `"Yara Jewelry" <${process.env.SMTP_USER}>`,
+      from: '"Yara Jewelry" <orders@yarasl.shop>',
       to: details.customerEmail,
       subject: `Invoice for Order ${details.orderId} - Yara Jewelry`,
       html: htmlTemplate,
