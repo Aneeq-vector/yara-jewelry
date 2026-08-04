@@ -30,25 +30,89 @@ export async function sendInvoiceEmail(details: InvoiceDetails) {
 
   // Parse cart details for the HTML template
   let itemsHtml = '';
+  let computedSubtotal = 0;
+  
   try {
     const items = JSON.parse(details.cartDetails);
     items.forEach((itemStr: string) => {
+      let quantity = '1';
+      let title = itemStr;
+      let price = '';
+      
+      // Parse quantity: "1x ..."
+      const qtyMatch = itemStr.match(/^(\d+)x\s+(.*)/);
+      if (qtyMatch) {
+        quantity = qtyMatch[1];
+        title = qtyMatch[2];
+      }
+      
+      // Parse price: "... - Rs. 1200"
+      const priceMatch = title.match(/(.*)\s+-\s+Rs\.\s+([\d,.]+)/);
+      if (priceMatch) {
+        title = priceMatch[1];
+        price = priceMatch[2];
+        
+        // Add to computed subtotal
+        const numericPrice = parseFloat(price.replace(/,/g, ''));
+        if (!isNaN(numericPrice)) {
+          computedSubtotal += numericPrice * parseInt(quantity, 10);
+        }
+      }
+      
+      // Parse attributes
+      let titleMain = title;
+      let meta = '';
+      if (title.includes('Custom Box')) {
+         const boxMatch = title.match(/(Custom Box.*?)\s+-\s+Items:\s+(.*)/);
+         if (boxMatch) {
+           titleMain = boxMatch[1];
+           meta = boxMatch[2];
+         }
+      } else {
+         const attrMatch = title.match(/(.*?)\s+\[(.*?)\]$/);
+         if (attrMatch) {
+           titleMain = attrMatch[1];
+           meta = attrMatch[2];
+         }
+      }
+
       itemsHtml += `
         <tr>
-          <td style="padding: 12px 0; border-bottom: 1px solid #eee; color: #4a1c27; font-family: sans-serif; font-size: 14px;">${itemStr}</td>
+          <td style="padding: 20px 0; border-bottom: 1px solid #eee;">
+            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+              <tr>
+                <td width="40" valign="top">
+                  <div style="background-color: #fdf9f6; border: 1px solid #e8d9d0; color: #4a1c27; font-size: 11px; font-weight: bold; width: 26px; height: 26px; border-radius: 50%; text-align: center; line-height: 26px;">${quantity}</div>
+                </td>
+                <td valign="top" style="padding-right: 15px;">
+                  <p style="margin: 0; color: #4a1c27; font-size: 14px; font-weight: 600;">${titleMain}</p>
+                  ${meta ? `<p style="margin: 5px 0 0 0; color: #888888; font-size: 12px; line-height: 1.4;">${meta}</p>` : ''}
+                </td>
+                <td width="90" valign="top" align="right">
+                  <p style="margin: 0; color: #4a1c27; font-size: 14px; font-weight: 600;">Rs. ${price}</p>
+                </td>
+              </tr>
+            </table>
+          </td>
         </tr>
       `;
     });
   } catch (e) {
     itemsHtml = `<tr><td style="padding: 12px 0; color: #4a1c27; font-family: sans-serif;">${details.cartDetails}</td></tr>`;
   }
+  
+  // Calculate Shipping
+  const numericTotal = Number(details.totalAmount) || 0;
+  const shippingFee = Math.max(0, numericTotal - computedSubtotal);
+  const shippingDisplay = shippingFee > 0 ? `Rs. ${shippingFee.toLocaleString()}` : 'Free';
+  const subtotalDisplay = computedSubtotal > 0 ? `Rs. ${computedSubtotal.toLocaleString()}` : `Rs. ${numericTotal.toLocaleString()}`;
 
   const htmlTemplate = `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="utf-8">
-      <title>Invoice - Yara Jewelry</title>
+      <title>Invoice - Yara</title>
     </head>
     <body style="margin: 0; padding: 0; background-color: #f8f5f3; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
       <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8f5f3; padding: 50px 0;">
@@ -57,9 +121,9 @@ export async function sendInvoiceEmail(details: InvoiceDetails) {
             <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 10px 30px rgba(74, 28, 39, 0.05); overflow: hidden;">
               <!-- Header -->
               <tr>
-                <td style="background-color: #fdf9f6; padding: 40px 40px; text-align: center; border-bottom: 1px solid #eee;">
-                  <img src="https://www.yarasl.shop/images/yara-logo.png" alt="Yara Jewelry" width="160" style="display: block; margin: 0 auto; margin-bottom: 15px;" />
-                  <p style="color: #c9856a; margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">Official Invoice</p>
+                <td style="background-color: #fdf9f6; padding: 30px 40px 25px 40px; text-align: center; border-bottom: 1px solid #eee;">
+                  <img src="https://www.yarasl.shop/images/yara-logo.png" alt="Yara" width="160" style="display: block; margin: 0 auto;" />
+                  <p style="color: #c9856a; margin: -15px 0 0 0; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">Official Invoice</p>
                 </td>
               </tr>
               
@@ -67,7 +131,7 @@ export async function sendInvoiceEmail(details: InvoiceDetails) {
               <tr>
                 <td style="padding: 50px 40px;">
                   <p style="color: #4a1c27; font-size: 18px; margin-top: 0; font-weight: 300;">Dear ${details.customerName},</p>
-                  <p style="color: #666666; font-size: 15px; line-height: 1.6;">Thank you for shopping with Yara Jewelry. We are delighted to confirm that your order has been successfully placed. Please find your order details and official invoice below.</p>
+                  <p style="color: #666666; font-size: 15px; line-height: 1.6;">Thank you for shopping with Yara. We are delighted to confirm that your order has been successfully placed. Please find your order details and official invoice below.</p>
                   
                   <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 40px; margin-bottom: 40px; background-color: #fdf9f6; padding: 25px; border-radius: 6px;">
                     <tr>
@@ -105,15 +169,15 @@ export async function sendInvoiceEmail(details: InvoiceDetails) {
                         <table border="0" cellspacing="0" cellpadding="0" style="display: inline-table;">
                           <tr>
                             <td align="right" style="padding-right: 20px; color: #666666; font-size: 14px;">Subtotal</td>
-                            <td align="right" style="color: #4a1c27; font-size: 14px; font-weight: 500;">Rs. ${Number(details.totalAmount).toLocaleString()}</td>
+                            <td align="right" style="color: #4a1c27; font-size: 14px; font-weight: 500;">${subtotalDisplay}</td>
                           </tr>
                           <tr>
                             <td align="right" style="padding-right: 20px; color: #666666; font-size: 14px; padding-top: 10px;">Shipping</td>
-                            <td align="right" style="color: #4a1c27; font-size: 14px; font-weight: 500; padding-top: 10px;">Calculated at checkout</td>
+                            <td align="right" style="color: #4a1c27; font-size: 14px; font-weight: 500; padding-top: 10px;">${shippingDisplay}</td>
                           </tr>
                           <tr>
                             <td align="right" style="padding-right: 20px; color: #4a1c27; font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; padding-top: 20px;">Total</td>
-                            <td align="right" style="color: #4a1c27; font-size: 22px; font-weight: bold; padding-top: 20px;">Rs. ${Number(details.totalAmount).toLocaleString()}</td>
+                            <td align="right" style="color: #4a1c27; font-size: 22px; font-weight: bold; padding-top: 20px;">Rs. ${numericTotal.toLocaleString()}</td>
                           </tr>
                         </table>
                       </td>
@@ -126,7 +190,7 @@ export async function sendInvoiceEmail(details: InvoiceDetails) {
               <!-- Footer -->
               <tr>
                 <td style="background-color: #4a1c27; padding: 40px; text-align: center;">
-                  <p style="color: #e8d9d0; font-size: 13px; margin: 0; letter-spacing: 0.5px;">YARA JEWELRY</p>
+                  <p style="color: #e8d9d0; font-size: 13px; margin: 0; letter-spacing: 0.5px;">YARA</p>
                   <p style="color: #e8d9d0; font-size: 12px; margin: 10px 0 0 0; opacity: 0.7;">Sri Lanka</p>
                   <p style="color: #e8d9d0; font-size: 12px; margin: 10px 0 0 0; opacity: 0.7;">If you have any questions regarding your order, please reply directly to this email.</p>
                 </td>
@@ -141,9 +205,9 @@ export async function sendInvoiceEmail(details: InvoiceDetails) {
 
   try {
     const info = await transporter.sendMail({
-      from: '"Yara Jewelry" <orders@yarasl.shop>',
+      from: '"Yara" <orders@yarasl.shop>',
       to: details.customerEmail,
-      subject: `Invoice for Order ${details.orderId} - Yara Jewelry`,
+      subject: `Invoice for Order ${details.orderId} - Yara`,
       html: htmlTemplate,
     });
     
