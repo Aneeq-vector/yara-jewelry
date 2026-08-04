@@ -46,7 +46,7 @@ function mapRecordToCategory(record: RecordModel): Category {
   const imageUrl = record.image 
     ? (record.image.startsWith('http') || record.image.startsWith('/') 
         ? record.image 
-        : `${PB_URL}/api/files/${record.collectionId}/${record.id}/${record.image}`)
+        : `${PB_URL}/api/files/${record.collectionId}/${record.id}/${encodeURIComponent(record.image)}`)
     : getFallbackImage(record.slug);
 
   return {

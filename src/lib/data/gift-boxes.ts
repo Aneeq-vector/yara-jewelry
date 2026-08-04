@@ -8,7 +8,7 @@ function mapProductRecord(record: RecordModel): Product {
     (filename: string) =>
       filename.startsWith('http')
         ? filename
-        : `${PB_URL}/api/files/${record.collectionId}/${record.id}/${filename}`
+        : `${PB_URL}/api/files/${record.collectionId}/${record.id}/${encodeURIComponent(filename)}`
   );
   return {
     id: record.id,
@@ -36,7 +36,7 @@ function mapRecordToGiftBox(record: RecordModel): GiftBox {
     ? record.images.map((filename: string) =>
         filename.startsWith('http')
           ? filename
-          : `${PB_URL}/api/files/${record.collectionId}/${record.id}/${filename}`
+          : `${PB_URL}/api/files/${record.collectionId}/${record.id}/${encodeURIComponent(filename)}`
       )
     : [];
 

@@ -6,7 +6,7 @@ export const testimonials: Testimonial[] = [];
 
 function mapRecordToTestimonial(record: RecordModel): Testimonial {
   const imageUrl = record.image
-    ? `${PB_URL}/api/files/${record.collectionId}/${record.id}/${record.image}`
+    ? `${PB_URL}/api/files/${record.collectionId}/${record.id}/${encodeURIComponent(record.image)}`
     : '/placeholder.png';
 
   return {

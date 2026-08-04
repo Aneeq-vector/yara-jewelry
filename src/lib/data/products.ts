@@ -7,7 +7,7 @@ export const products: Product[] = [];
 // Helper to map PocketBase record to Product type
 export function mapRecordToProduct(record: RecordModel): Product {
   const images = (record.images || []).map(
-    (filename: string) => filename.startsWith('http') || filename.startsWith('/') ? filename : `${PB_URL}/api/files/${record.collectionId}/${record.id}/${filename}`
+    (filename: string) => filename.startsWith('http') || filename.startsWith('/') ? filename : `${PB_URL}/api/files/${record.collectionId}/${record.id}/${encodeURIComponent(filename)}`
   );
 
   return {
