@@ -38,7 +38,7 @@ function ProductCard({ product, index, isViewAll }: { product: Product; index: n
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-50px' }}
       transition={{ duration: 0.5, delay: index * 0.08 }}
-      className="group shrink-0 min-w-[75vw] sm:min-w-[280px] max-w-[320px] snap-center"
+      className="group shrink-0 w-[75vw] sm:w-[280px] snap-center"
     >
       <div className="relative rounded-3xl overflow-hidden bg-champagne/30 mb-4">
         <div className="block relative aspect-square overflow-hidden">
