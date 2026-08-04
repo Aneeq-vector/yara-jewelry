@@ -271,10 +271,7 @@ function ShopContent() {
     if (search) {
       const lower = search.toLowerCase();
       result = result.filter(
-        (p) =>
-          p.name.toLowerCase().includes(lower) ||
-          p.tags.some((t) => t.includes(lower)) ||
-          p.shortDescription.toLowerCase().includes(lower)
+        (p) => p.name.toLowerCase().includes(lower)
       );
     }
 

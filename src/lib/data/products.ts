@@ -126,7 +126,7 @@ export async function searchProducts(query: string): Promise<Product[]> {
   try {
     const pb = createClient();
     const records = await pb.collection('products').getFullList({
-      filter: `name ~ "${query}" || shortDescription ~ "${query}" || tags ~ "${query}"`,
+      filter: `name ~ "${query}"`,
       expand: 'category'
     });
     return records.map(mapRecordToProduct);

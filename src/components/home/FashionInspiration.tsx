@@ -49,7 +49,7 @@ export default function FashionInspiration() {
         </motion.div>
 
         {/* Masonry Grid */}
-        <div className="columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
+        <div className="columns-2 md:columns-3 lg:columns-4 gap-4">
           {images.map((img, i) => (
             <motion.div
               key={i}
@@ -57,8 +57,7 @@ export default function FashionInspiration() {
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true, margin: '-30px' }}
               transition={{ duration: 0.5, delay: i * 0.06 }}
-              style={{ y: i % 2 === 0 ? y1 : y2 }}
-              className="break-inside-avoid group cursor-pointer"
+              className="break-inside-avoid group cursor-pointer inline-block w-full mb-4"
             >
               <Link href="/shop" className="block relative rounded-2xl overflow-hidden">
                 <Image
