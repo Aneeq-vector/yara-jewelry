@@ -203,6 +203,8 @@ export default function CheckoutPage() {
     formData.append('shippingZip', form.zip);
     formData.append('shippingCountry', form.country || 'Sri Lanka');
     formData.append('paymentMethod', form.paymentMethod);
+    formData.append('email', form.email);
+    formData.append('phone', form.phone);
     
     const productIdsSet = new Set<string>();
     items.forEach(item => {

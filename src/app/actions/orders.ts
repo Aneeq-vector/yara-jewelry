@@ -26,6 +26,34 @@ export async function createOrderAction(formData: FormData) {
     // Create the order in PocketBase
     const record = await pb.collection('orders').create(formData);
     
+    // Send Invoice Email
+    try {
+      const email = formData.get('email') as string;
+      if (email) {
+        const { sendInvoiceEmail } = await import('@/lib/email');
+        const fullAddress = [
+          formData.get('shippingStreet'),
+          formData.get('shippingCity'),
+          formData.get('shippingZip'),
+          formData.get('shippingCountry')
+        ].filter(Boolean).join(', ');
+
+        // Fire and forget the email, or await it. Awaiting is safer for serverless.
+        await sendInvoiceEmail({
+          orderId: record.orderId || record.id,
+          orderDate: record.orderDate || new Date().toISOString(),
+          customerName: formData.get('shippingName') as string || 'Customer',
+          customerEmail: email,
+          shippingAddress: fullAddress,
+          paymentMethod: formData.get('paymentMethod') as string || 'Unknown',
+          totalAmount: formData.get('totalAmount') as string || '0',
+          cartDetails: formData.get('cartDetails') as string || '[]',
+        });
+      }
+    } catch (emailError) {
+      console.error('Failed to send invoice email:', emailError);
+    }
+    
     // Revalidate dashboard orders page so it shows the new order
     revalidatePath('/dashboard/orders');
 
