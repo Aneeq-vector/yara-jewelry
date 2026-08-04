@@ -194,7 +194,7 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
                     whileTap={{ scale: 0.95 }}
                     className="flex items-center gap-2 p-1 pr-3 rounded-full hover:bg-champagne/40 transition-colors"
                   >
-                    <div className="w-7 h-7 rounded-full gradient-rose-gold flex items-center justify-center text-[11px] font-heading font-bold text-white shadow-sm">
+                    <div className="shrink-0 w-7 h-7 rounded-full gradient-rose-gold flex items-center justify-center text-[11px] font-heading font-bold text-white shadow-sm">
                       {user.name?.charAt(0)}
                     </div>
                     <span className="font-ui text-xs font-semibold text-burgundy truncate max-w-[100px]">
@@ -279,7 +279,7 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
                       onClick={() => setMobileOpen(false)}
                       className="flex items-center gap-3 py-3 px-4 rounded-xl font-ui text-sm font-semibold text-burgundy hover:bg-champagne/50 transition-all"
                     >
-                      <div className="w-7 h-7 rounded-full gradient-rose-gold flex items-center justify-center text-[11px] font-heading font-bold text-white shadow-sm">
+                      <div className="shrink-0 w-7 h-7 rounded-full gradient-rose-gold flex items-center justify-center text-[11px] font-heading font-bold text-white shadow-sm">
                         {user.name?.charAt(0)}
                       </div>
                       {user.name}

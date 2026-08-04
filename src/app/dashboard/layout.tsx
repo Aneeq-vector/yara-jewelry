@@ -75,8 +75,8 @@ export default function DashboardLayout({
             <div className="lg:col-span-3 space-y-6">
               {/* Profile Card Sidebar */}
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card rounded-3xl p-6">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-14 h-14 rounded-full gradient-rose-gold flex items-center justify-center text-white font-heading text-xl font-bold">
+                <div className="flex items-center gap-4 mb-6 overflow-hidden">
+                  <div className="shrink-0 w-14 h-14 rounded-full gradient-rose-gold flex items-center justify-center text-white font-heading text-xl font-bold">
                     {user?.name?.charAt(0)}
                   </div>
                   <div>
