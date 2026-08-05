@@ -138,7 +138,7 @@ export default function CartPage() {
                           </div>
                           <button
                             onClick={() => removeItem(item.cartItemId)}
-                            className="p-1.5 rounded-full hover:bg-champagne/60 text-burgundy/40 hover:text-burgundy transition-colors"
+                            className="p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-champagne/60 text-burgundy/40 hover:text-burgundy transition-colors"
                           >
                             <X size={16} />
                           </button>
@@ -149,7 +149,7 @@ export default function CartPage() {
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => updateQuantity(item.cartItemId, item.quantity - 1)}
-                              className="w-8 h-8 rounded-lg border border-nude/50 flex items-center justify-center text-burgundy/50 hover:border-burgundy/30 transition-colors"
+                              className="w-11 h-11 sm:w-8 sm:h-8 min-w-[44px] sm:min-w-0 min-h-[44px] sm:min-h-0 rounded-lg border border-nude/50 flex items-center justify-center text-burgundy/50 hover:border-burgundy/30 transition-colors"
                             >
                               <Minus size={12} />
                             </button>
@@ -158,7 +158,7 @@ export default function CartPage() {
                             </span>
                             <button
                               onClick={() => updateQuantity(item.cartItemId, item.quantity + 1)}
-                              className="w-8 h-8 rounded-lg border border-nude/50 flex items-center justify-center text-burgundy/50 hover:border-burgundy/30 transition-colors"
+                              className="w-11 h-11 sm:w-8 sm:h-8 min-w-[44px] sm:min-w-0 min-h-[44px] sm:min-h-0 rounded-lg border border-nude/50 flex items-center justify-center text-burgundy/50 hover:border-burgundy/30 transition-colors"
                             >
                               <Plus size={12} />
                             </button>
@@ -206,7 +206,7 @@ export default function CartPage() {
                   </div>
                   <button
                     onClick={applyCoupon}
-                    className="px-4 py-2.5 rounded-xl bg-burgundy text-ivory font-ui text-xs font-semibold uppercase tracking-wider hover:bg-wine transition-colors"
+                    className="px-4 py-2.5 min-h-[44px] rounded-xl bg-burgundy text-ivory font-ui text-xs font-semibold uppercase tracking-wider hover:bg-wine transition-colors"
                   >
                     Apply
                   </button>

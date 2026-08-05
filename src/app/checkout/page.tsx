@@ -318,7 +318,7 @@ export default function CheckoutPage() {
     );
   }
 
-  const getInputClass = (field: string) => `w-full px-4 py-3 rounded-xl bg-transparent border ${errors[field] ? 'border-red-400 focus:border-red-500' : 'border-burgundy/20 focus:border-burgundy'} font-body text-sm text-burgundy placeholder:text-burgundy/50 focus:outline-none transition-colors`;
+  const getInputClass = (field: string) => `w-full px-4 py-3 rounded-xl bg-transparent border ${errors[field] ? 'border-red-400 focus:border-red-500' : 'border-burgundy/20 focus:border-burgundy'} font-body text-base sm:text-sm text-burgundy placeholder:text-burgundy/50 focus:outline-none transition-colors`;
 
   return (
     <PageWrapper>
@@ -420,7 +420,7 @@ export default function CheckoutPage() {
                         {errors.email && <p className="text-red-400 text-xs mt-1 ml-1 font-body">{errors.email}</p>}
                       </div>
                       <div>
-                        <input value={form.phone} onChange={(e) => updateForm('phone', e.target.value)} placeholder="Phone Number" className={getInputClass('phone')} />
+                        <input value={form.phone} onChange={(e) => updateForm('phone', e.target.value)} placeholder="Phone Number" type="tel" className={getInputClass('phone')} />
                         {errors.phone && <p className="text-red-400 text-xs mt-1 ml-1 font-body">{errors.phone}</p>}
                       </div>
                       <div>
@@ -432,7 +432,7 @@ export default function CheckoutPage() {
                             <ScrollArea className="h-64 rounded-2xl">
                               <div className="p-1.5">
                                 {COUNTRIES.map((c) => (
-                                  <SelectItem key={c} value={c} className="font-body text-sm text-burgundy cursor-pointer focus:bg-champagne/50 focus:text-burgundy rounded-xl pl-3 pr-8 py-2.5 transition-colors">
+                                  <SelectItem key={c} value={c} className="font-body text-base sm:text-sm text-burgundy cursor-pointer focus:bg-champagne/50 focus:text-burgundy rounded-xl pl-3 pr-8 py-2.5 transition-colors">
                                     {c}
                                   </SelectItem>
                                 ))}
@@ -454,7 +454,7 @@ export default function CheckoutPage() {
                         {errors.state && <p className="text-red-400 text-xs mt-1 ml-1 font-body">{errors.state}</p>}
                       </div>
                       <div>
-                        <input value={form.zip} onChange={(e) => updateForm('zip', e.target.value)} placeholder="ZIP Code" className={getInputClass('zip')} />
+                        <input value={form.zip} onChange={(e) => updateForm('zip', e.target.value)} placeholder="ZIP Code" inputMode="numeric" className={getInputClass('zip')} />
                         {errors.zip && <p className="text-red-400 text-xs mt-1 ml-1 font-body">{errors.zip}</p>}
                       </div>
                     </div>

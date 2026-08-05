@@ -1,7 +1,9 @@
 import PocketBase from 'pocketbase';
 
 
-export const PB_URL = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pb.yarasl.shop';
+export const PB_URL = typeof window !== 'undefined' 
+  ? '/pb'
+  : (process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pb.yarasl.shop');
 
 export function createClient() {
   const pb = new PocketBase(PB_URL);

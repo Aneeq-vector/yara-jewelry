@@ -106,13 +106,13 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
             <div className="absolute inset-0 flex items-center justify-between px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none">
               <button
                 onClick={prevImage}
-                className="pointer-events-auto p-1.5 rounded-full bg-white/80 text-burgundy hover:bg-white transition-colors shadow-sm"
+                className="pointer-events-auto p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-white/80 text-burgundy hover:bg-white transition-colors shadow-sm"
               >
                 <ChevronLeft size={16} />
               </button>
               <button
                 onClick={nextImage}
-                className="pointer-events-auto p-1.5 rounded-full bg-white/80 text-burgundy hover:bg-white transition-colors shadow-sm"
+                className="pointer-events-auto p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-white/80 text-burgundy hover:bg-white transition-colors shadow-sm"
               >
                 <ChevronRight size={16} />
               </button>
@@ -151,7 +151,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
                 whileTap={{ scale: 0.9 }}
                 onClick={handleAddToCart}
                 disabled={isAdding}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-burgundy/90 backdrop-blur-sm text-ivory font-ui text-xs font-semibold uppercase tracking-wider hover:bg-burgundy transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 min-h-[44px] rounded-xl bg-burgundy/90 backdrop-blur-sm text-ivory font-ui text-xs font-semibold uppercase tracking-wider hover:bg-burgundy transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {isAdding ? (
                   <Loader2 size={14} className="animate-spin" />
@@ -161,7 +161,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
                 {isAdding ? 'Adding...' : 'Add to Cart'}
               </motion.button>
             ) : (
-              <div className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-nude/50 backdrop-blur-sm text-burgundy/50 font-ui text-xs font-semibold uppercase tracking-wider cursor-not-allowed">
+              <div className="flex-1 flex items-center justify-center gap-2 py-2.5 min-h-[44px] rounded-xl bg-nude/50 backdrop-blur-sm text-burgundy/50 font-ui text-xs font-semibold uppercase tracking-wider cursor-not-allowed">
                 <ShoppingBag size={14} />
                 Sold Out
               </div>
@@ -169,7 +169,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={() => toggleItem(product)}
-              className={`p-2.5 rounded-xl backdrop-blur-sm transition-colors ${
+              className={`p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl backdrop-blur-sm transition-colors ${
                 wishlisted ? 'bg-rose-gold text-white' : 'bg-ivory/80 text-burgundy hover:bg-ivory'
               }`}
             >
@@ -352,7 +352,7 @@ function ShopContent() {
               {/* Filter Toggle (Mobile) */}
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="lg:hidden flex items-center gap-2 px-4 py-3 rounded-2xl bg-champagne/40 border border-nude/30 font-ui text-xs font-semibold uppercase tracking-wider text-burgundy/70"
+                className="lg:hidden flex items-center gap-2 px-4 py-3 min-h-[44px] rounded-2xl bg-champagne/40 border border-nude/30 font-ui text-xs font-semibold uppercase tracking-wider text-burgundy/70"
               >
                 <SlidersHorizontal size={14} />
                 Filters
@@ -362,7 +362,7 @@ function ShopContent() {
               <div className="relative">
                 <button
                   onClick={() => setIsSortOpen(!isSortOpen)}
-                  className="flex items-center justify-between gap-2 px-4 py-3 w-[170px] rounded-2xl bg-champagne/40 border border-nude/30 font-ui text-xs font-semibold text-burgundy/70 focus:outline-none cursor-pointer hover:bg-champagne/60 transition-colors"
+                  className="flex items-center justify-between gap-2 px-4 py-3 min-h-[44px] w-[170px] rounded-2xl bg-champagne/40 border border-nude/30 font-ui text-xs font-semibold text-burgundy/70 focus:outline-none cursor-pointer hover:bg-champagne/60 transition-colors"
                 >
                   <span className="truncate">{sortOptions.find(opt => opt.value === sortBy)?.label || 'Sort By'}</span>
                   <ChevronDown size={14} className={`text-burgundy/40 transition-transform shrink-0 ${isSortOpen ? 'rotate-180' : ''}`} />
@@ -490,7 +490,7 @@ function ShopContent() {
                   >
                     <div className="flex items-center justify-between mb-8">
                       <h3 className="font-heading text-xl font-bold text-burgundy">Filters</h3>
-                      <button onClick={() => setShowFilters(false)} className="p-2 rounded-full hover:bg-champagne">
+                      <button onClick={() => setShowFilters(false)} className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-champagne">
                         <X size={18} />
                       </button>
                     </div>
@@ -500,7 +500,7 @@ function ShopContent() {
                       <button
                         onClick={() => { handleCategoryChange('all'); setShowFilters(false); }}
                         className={cn(
-                          'block w-full text-left px-4 py-2.5 rounded-xl font-ui text-sm transition-all',
+                          'block w-full text-left px-4 py-2.5 min-h-[44px] rounded-xl font-ui text-sm transition-all',
                           selectedCategory === 'all' ? 'bg-burgundy text-ivory font-semibold' : 'text-burgundy/60 hover:bg-champagne/50'
                         )}
                       >
@@ -511,7 +511,7 @@ function ShopContent() {
                           key={cat.id}
                           onClick={() => { handleCategoryChange(cat.slug); setShowFilters(false); }}
                           className={cn(
-                            'block w-full text-left px-4 py-2.5 rounded-xl font-ui text-sm transition-all',
+                            'block w-full text-left px-4 py-2.5 min-h-[44px] rounded-xl font-ui text-sm transition-all',
                             selectedCategory === cat.slug ? 'bg-burgundy text-ivory font-semibold' : 'text-burgundy/60 hover:bg-champagne/50'
                           )}
                         >
@@ -527,7 +527,7 @@ function ShopContent() {
                           key={i}
                           onClick={() => { setPriceRange(i); setShowFilters(false); }}
                           className={cn(
-                            'block w-full text-left px-4 py-2.5 rounded-xl font-ui text-sm transition-all',
+                            'block w-full text-left px-4 py-2.5 min-h-[44px] rounded-xl font-ui text-sm transition-all',
                             priceRange === i ? 'bg-burgundy text-ivory font-semibold' : 'text-burgundy/60 hover:bg-champagne/50'
                           )}
                         >

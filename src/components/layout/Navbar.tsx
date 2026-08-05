@@ -96,7 +96,7 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
               {/* Mobile Menu Button */}
               <button
                 onClick={() => setMobileOpen(true)}
-                className="lg:hidden p-2 -ml-2 text-burgundy hover:text-wine transition-colors"
+                className="lg:hidden p-2 -ml-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-burgundy hover:text-wine transition-colors"
                 aria-label="Open menu"
               >
                 <Menu size={22} />
@@ -143,7 +143,7 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={onSearchOpen}
-                className="p-2.5 rounded-full hover:bg-champagne/60 transition-colors"
+                className="p-2.5 rounded-full hover:bg-champagne/60 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                 aria-label="Search"
               >
                 <Search size={19} strokeWidth={1.8} />
@@ -153,7 +153,7 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
                 <motion.div
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
-                  className="p-2.5 rounded-full hover:bg-champagne/60 transition-colors"
+                  className="p-2.5 rounded-full hover:bg-champagne/60 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                 >
                   <Heart size={19} strokeWidth={1.8} />
                   {isMounted && wishlistCount > 0 && (
@@ -172,7 +172,7 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
                 <motion.div
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
-                  className="p-2.5 rounded-full hover:bg-champagne/60 transition-colors"
+                  className="p-2.5 rounded-full hover:bg-champagne/60 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                 >
                   <ShoppingBag size={19} strokeWidth={1.8} />
                   {isMounted && cartCount > 0 && (
@@ -207,7 +207,7 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
                   <motion.div
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.95 }}
-                    className="p-2.5 rounded-full hover:bg-champagne/60 transition-colors"
+                    className="p-2.5 rounded-full hover:bg-champagne/60 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                   >
                     <User size={19} strokeWidth={1.8} />
                   </motion.div>
@@ -247,7 +247,7 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
                   />
                   <button
                     onClick={() => setMobileOpen(false)}
-                    className="p-2 rounded-full hover:bg-champagne transition-colors"
+                    className="p-2 rounded-full hover:bg-champagne transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                   >
                     <X size={20} />
                   </button>

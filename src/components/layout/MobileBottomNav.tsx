@@ -43,7 +43,7 @@ export default function MobileBottomNav({ onSearchOpen }: MobileBottomNavProps) 
       transition={{ delay: 0.5, type: 'spring', stiffness: 200, damping: 25 }}
       className="fixed bottom-0 left-0 right-0 z-50 lg:hidden"
     >
-      <div className="mx-3 mb-3">
+      <div className="mx-3 mb-4 pb-[env(safe-area-inset-bottom)]">
         <div className="glass-strong rounded-2xl px-2 py-2 shadow-lg shadow-burgundy/10">
           <div className="flex items-center justify-around">
             {navItems.map((item) => {
@@ -56,7 +56,7 @@ export default function MobileBottomNav({ onSearchOpen }: MobileBottomNavProps) 
                   <button
                     key={item.label}
                     onClick={onSearchOpen}
-                    className="flex flex-col items-center gap-0.5 py-1.5 px-3 relative"
+                    className="flex flex-col items-center justify-center gap-0.5 py-1.5 px-3 min-w-[44px] min-h-[44px] relative"
                   >
                     <Icon
                       size={20}
@@ -74,7 +74,7 @@ export default function MobileBottomNav({ onSearchOpen }: MobileBottomNavProps) 
                 <Link
                   key={item.label}
                   href={item.href}
-                  className="flex flex-col items-center gap-0.5 py-1.5 px-3 relative"
+                  className="flex flex-col items-center justify-center gap-0.5 py-1.5 px-3 min-w-[44px] min-h-[44px] relative"
                 >
                   <div className="relative">
                     <Icon

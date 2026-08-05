@@ -123,7 +123,7 @@ export default function Testimonials({ testimonials = [] }: { testimonials?: Tes
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={prev}
-                className="w-10 h-10 rounded-full glass flex items-center justify-center text-burgundy/60 hover:text-burgundy transition-colors"
+                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full glass flex items-center justify-center text-burgundy/60 hover:text-burgundy transition-colors"
               >
                 <ChevronLeft size={18} />
               </motion.button>
@@ -137,12 +137,15 @@ export default function Testimonials({ testimonials = [] }: { testimonials?: Tes
                       setCurrent(i);
                       setAutoplay(false);
                     }}
-                    className={`h-2 rounded-full transition-all duration-300 ${
+                    className="py-2 min-h-[44px] flex items-center"
+                    aria-label={`Testimonial ${i + 1}`}
+                  >
+                    <div className={`h-2 rounded-full transition-all duration-300 ${
                       i === current
                         ? 'w-8 gradient-rose-gold'
                         : 'w-2 bg-nude hover:bg-rose-gold-light'
-                    }`}
-                  />
+                    }`} />
+                  </button>
                 ))}
               </div>
 
@@ -150,7 +153,7 @@ export default function Testimonials({ testimonials = [] }: { testimonials?: Tes
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={next}
-                className="w-10 h-10 rounded-full glass flex items-center justify-center text-burgundy/60 hover:text-burgundy transition-colors"
+                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full glass flex items-center justify-center text-burgundy/60 hover:text-burgundy transition-colors"
               >
                 <ChevronRight size={18} />
               </motion.button>

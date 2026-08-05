@@ -24,7 +24,20 @@ const nextConfig: NextConfig = {
         port: '8090',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'pb.yarasl.shop',
+        pathname: '/**',
+      }
     ],
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/pb/:path*',
+        destination: 'https://pb.yarasl.shop/:path*',
+      },
+    ];
   },
 };
 

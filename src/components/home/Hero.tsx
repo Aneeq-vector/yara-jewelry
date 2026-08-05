@@ -54,7 +54,7 @@ export default function Hero() {
       
       {/* Island Banner Container */}
       <div 
-        className="relative w-[96%] max-w-[1800px] h-[82vh] rounded-[2.5rem] lg:rounded-[3.5rem] overflow-hidden shadow-2xl shadow-burgundy/15"
+        className="relative w-[96%] max-w-[1800px] h-[75vh] md:h-[82vh] rounded-[2rem] sm:rounded-[2.5rem] lg:rounded-[3.5rem] overflow-hidden shadow-2xl shadow-burgundy/15"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
       >
@@ -106,7 +106,7 @@ export default function Hero() {
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.8, delay: 0.4 }}
-                  className="font-heading text-5xl sm:text-7xl lg:text-[6rem] font-bold leading-[0.95] text-white mb-6 drop-shadow-md"
+                  className="font-heading text-4xl sm:text-6xl lg:text-[6rem] font-bold leading-[0.95] text-white mb-6 drop-shadow-md"
                 >
                   {BANNERS[active].title}
                 </motion.h1>
@@ -158,8 +158,8 @@ export default function Hero() {
                 <button
                   key={i}
                   onClick={() => setActive(i)}
-                  className={`h-1 rounded-full transition-all duration-500 ${
-                    active === i ? 'w-6 bg-white' : 'w-1.5 bg-white/30 hover:bg-white/50'
+                  className={`h-1.5 rounded-full transition-all duration-500 py-2 min-h-[44px] flex items-center ${
+                    active === i ? 'w-6 bg-white' : 'w-2 bg-white/30 hover:bg-white/50'
                   }`}
                   aria-label={`Go to slide ${i + 1}`}
                 />
@@ -172,13 +172,13 @@ export default function Hero() {
           <div className="flex items-center gap-2">
             <button 
               onClick={prev}
-              className="w-10 h-10 rounded-full border border-white/30 text-white flex items-center justify-center backdrop-blur-md hover:bg-white hover:text-burgundy transition-colors"
+              className="w-11 h-11 rounded-full border border-white/30 text-white flex items-center justify-center backdrop-blur-md hover:bg-white hover:text-burgundy transition-colors"
             >
               <ChevronLeft size={16} />
             </button>
             <button 
               onClick={next}
-              className="w-10 h-10 rounded-full border border-white/30 text-white flex items-center justify-center backdrop-blur-md hover:bg-white hover:text-burgundy transition-colors"
+              className="w-11 h-11 rounded-full border border-white/30 text-white flex items-center justify-center backdrop-blur-md hover:bg-white hover:text-burgundy transition-colors"
             >
               <ChevronRight size={16} />
             </button>
