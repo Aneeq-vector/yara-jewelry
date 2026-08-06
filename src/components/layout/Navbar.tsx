@@ -114,7 +114,7 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
                     alt="Yara"
                     width={320}
                     height={128}
-                    className="h-24 sm:h-28 w-auto object-contain pointer-events-none -my-6 sm:-my-8 translate-y-2"
+                    className="h-24 sm:h-28 w-auto object-contain pointer-events-none -my-6 sm:-my-8"
                     priority
                   />
                 </motion.div>

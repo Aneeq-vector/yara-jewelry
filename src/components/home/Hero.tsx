@@ -153,14 +153,14 @@ export default function Hero() {
           {/* Progress / Pagination */}
           <div className="flex items-center gap-3">
             <span className="font-heading text-white font-medium text-sm w-4">0{active + 1}</span>
-            <div className="flex gap-1.5">
+            <div className="flex items-center gap-1.5">
               {BANNERS.map((_, i) => (
                 <button
                   key={i}
                   onClick={() => setActive(i)}
-                  className={`h-1.5 rounded-full transition-all duration-500 py-2 min-h-[44px] flex items-center ${
+                  className={`relative h-1.5 rounded-full transition-all duration-500 ${
                     active === i ? 'w-6 bg-white' : 'w-2 bg-white/30 hover:bg-white/50'
-                  }`}
+                  } after:content-[''] after:absolute after:-inset-y-5 after:-inset-x-2`}
                   aria-label={`Go to slide ${i + 1}`}
                 />
               ))}
