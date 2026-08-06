@@ -672,19 +672,19 @@ export default function CheckoutPage() {
               </AnimatePresence>
 
               {/* Navigation Buttons */}
-              <div className="flex items-center justify-between mt-6">
+              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 mt-6">
                 {currentStep > 1 ? (
-                  <button onClick={prevStep} className="btn-secondary text-sm">
+                  <button onClick={prevStep} className="btn-secondary w-full sm:w-auto text-sm justify-center flex items-center">
                     Back
                   </button>
                 ) : (
-                  <div />
+                  <div className="hidden sm:block" />
                 )}
                 {currentStep < 4 ? (
                   <button 
                     onClick={nextStep} 
                     disabled={currentStep === 3 && !form.paymentMethod}
-                    className={`btn-primary flex items-center gap-2 ${currentStep === 3 && !form.paymentMethod ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={`btn-primary w-full sm:w-auto justify-center flex items-center gap-2 ${currentStep === 3 && !form.paymentMethod ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <span>Continue</span>
                     <ChevronRight size={16} className="relative z-10" />
@@ -693,7 +693,7 @@ export default function CheckoutPage() {
                   <button 
                     onClick={placeOrder} 
                     disabled={!form.paymentMethod || (form.paymentMethod === 'bank_transfer' && uploadState !== 'done') || isSubmitting} 
-                    className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="btn-primary w-full sm:w-auto justify-center flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <span>{isSubmitting ? 'Processing...' : 'Place Order'}</span>
                     {isSubmitting ? <Loader2 size={16} className="relative z-10 animate-spin" /> : <Check size={16} className="relative z-10" />}

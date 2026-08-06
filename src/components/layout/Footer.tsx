@@ -55,9 +55,9 @@ export default function Footer() {
               <input
                 type="email"
                 placeholder="Your email address"
-                className="flex-1 bg-ivory/10 border border-ivory/20 rounded-l-full px-6 py-3.5 text-sm font-body text-ivory placeholder:text-ivory/40 focus:outline-none focus:border-rose-gold/50 transition-colors"
+                className="flex-1 min-w-0 bg-ivory/10 border border-ivory/20 rounded-l-full px-4 sm:px-6 py-3.5 text-sm font-body text-ivory placeholder:text-ivory/40 focus:outline-none focus:border-rose-gold/50 transition-colors"
               />
-              <button className="bg-gradient-to-r from-rose-gold to-rose-gold-light text-burgundy border border-transparent px-6 py-3.5 rounded-r-full font-ui font-semibold text-sm uppercase tracking-wider hover:opacity-90 transition-opacity whitespace-nowrap">
+              <button className="bg-gradient-to-r from-rose-gold to-rose-gold-light text-burgundy border border-transparent px-4 sm:px-6 py-3.5 rounded-r-full font-ui font-semibold text-sm uppercase tracking-wider hover:opacity-90 transition-opacity whitespace-nowrap">
                 Subscribe
               </button>
             </div>
@@ -179,12 +179,15 @@ export default function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="py-6 border-t border-ivory/10 flex flex-col sm:flex-row items-center justify-center gap-4">
+        <div className="hidden sm:flex py-6 border-t border-ivory/10 flex-col sm:flex-row items-center justify-center gap-4">
           <p className="font-body text-xs text-ivory/40 text-center">
             © {currentYear} Yara Jewelry. All rights reserved.
           </p>
         </div>
       </div>
+      
+      {/* Padding for MobileBottomNav */}
+      <div className="h-24 sm:hidden" />
 
       {/* Toast Notification */}
       <AnimatePresence>

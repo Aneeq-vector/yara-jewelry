@@ -11,6 +11,7 @@ import {
   User,
   Menu,
   X,
+  LogOut,
 } from 'lucide-react';
 import { NAV_LINKS } from '@/lib/constants';
 import { useCartStore } from '@/lib/store/cart-store';
@@ -274,16 +275,30 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
 
                 <div className="mt-10 pt-8 border-t border-nude/60">
                   {isAuthenticated && user ? (
-                    <Link
-                      href="/dashboard"
-                      onClick={() => setMobileOpen(false)}
-                      className="flex items-center gap-3 py-3 px-4 rounded-xl font-ui text-sm font-semibold text-burgundy hover:bg-champagne/50 transition-all"
-                    >
-                      <div className="shrink-0 w-7 h-7 rounded-full gradient-rose-gold flex items-center justify-center text-[11px] font-heading font-bold text-white shadow-sm">
-                        {user.name?.charAt(0)}
-                      </div>
-                      {user.name}
-                    </Link>
+                    <div className="flex items-center justify-between py-2 pl-4 pr-2 rounded-xl hover:bg-champagne/50 transition-all">
+                      <Link
+                        href="/dashboard"
+                        onClick={() => setMobileOpen(false)}
+                        className="flex items-center gap-3 font-ui text-sm font-semibold text-burgundy flex-1 py-1"
+                      >
+                        <div className="shrink-0 w-7 h-7 rounded-full gradient-rose-gold flex items-center justify-center text-[11px] font-heading font-bold text-white shadow-sm">
+                          {user.name?.charAt(0)}
+                        </div>
+                        {user.name}
+                      </Link>
+                      <button
+                        onClick={async () => {
+                          const { logoutAction } = await import('@/app/actions/auth');
+                          await logoutAction();
+                          useAuthStore.getState().logout();
+                          window.location.href = '/';
+                        }}
+                        className="p-2 text-burgundy/60 hover:text-burgundy hover:bg-burgundy/10 rounded-full transition-colors"
+                        aria-label="Logout"
+                      >
+                        <LogOut size={18} />
+                      </button>
+                    </div>
                   ) : (
                     <Link
                       href="/auth/login"
