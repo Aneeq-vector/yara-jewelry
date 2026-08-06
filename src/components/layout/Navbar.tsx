@@ -298,11 +298,11 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
                             window.location.href = '/';
                           }
                         }}
-                        className="group flex items-center gap-3 py-3 px-4 rounded-xl font-ui text-sm font-semibold text-burgundy/80 hover:text-wine hover:bg-rose-gold/10 transition-all w-full text-left"
-                        aria-label="Logout"
+                        className="group flex items-center gap-3 py-3 px-4 rounded-xl font-ui text-sm font-semibold text-red-500 hover:text-red-600 hover:bg-red-50 transition-all w-full text-left"
+                        aria-label="Sign Out"
                       >
                         <LogOut size={18} className="transition-transform duration-300 group-hover:translate-x-1.5" />
-                        Logout
+                        Sign Out
                       </button>
                     </div>
                   ) : (

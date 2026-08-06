@@ -93,9 +93,16 @@ export default function AddProductPage() {
   };
 
   const removeImage = (index: number) => {
+    URL.revokeObjectURL(imagePreviews[index]);
     setImageFiles(prev => prev.filter((_, i) => i !== index));
     setImagePreviews(prev => prev.filter((_, i) => i !== index));
   };
+
+  useEffect(() => {
+    return () => {
+      imagePreviews.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [imagePreviews]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

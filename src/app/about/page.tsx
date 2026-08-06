@@ -47,12 +47,12 @@ export default function AboutPage() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.6 }}
               >
-                <div className="relative rounded-3xl overflow-hidden aspect-[4/5]">
+                <div className="relative rounded-3xl overflow-hidden w-full pb-[125%]">
                   <Image
                     src="https://images.unsplash.com/photo-1588444837495-c6cfeb53f32d?w=600&h=750&fit=crop"
                     alt="Yara jewelry collection"
                     fill
-                    className="object-cover"
+                    className="absolute inset-0 object-cover"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-burgundy/20 to-transparent" />
                 </div>

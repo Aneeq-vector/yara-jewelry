@@ -536,12 +536,12 @@ export default function CheckoutPage() {
                         <AnimatePresence>
                           {form.paymentMethod === 'bank_transfer' && (
                             <motion.div 
-                              initial={{ height: 0, opacity: 0, marginTop: 0 }}
-                              animate={{ height: 'auto', opacity: 1, marginTop: 16 }}
-                              exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
                               className="overflow-hidden"
                             >
-                              <div className="pl-8 space-y-2">
+                              <div className="pl-8 pt-4 space-y-2">
                                 <p className="font-body text-xs text-burgundy/70 mb-2">Please transfer the total amount to the following bank account:</p>
                                 <div className="grid grid-cols-2 gap-2 font-body text-sm text-burgundy bg-white/50 p-3 rounded-xl border border-burgundy/10">
                                   <span className="text-burgundy/50">Bank Name</span>

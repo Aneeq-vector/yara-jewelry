@@ -21,17 +21,25 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    let timeout: NodeJS.Timeout;
     if (query.length > 1) {
       searchProducts(query).then(setResults);
     } else {
-      setTimeout(() => setResults([]), 0);
+      timeout = setTimeout(() => setResults([]), 0);
     }
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
   }, [query]);
 
   useEffect(() => {
+    let timeout: NodeJS.Timeout;
     if (isOpen && inputRef.current) {
-      setTimeout(() => inputRef.current?.focus(), 200);
+      timeout = setTimeout(() => inputRef.current?.focus(), 200);
     }
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
   }, [isOpen]);
 
   const handleClose = () => {

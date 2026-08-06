@@ -117,16 +117,22 @@ export default function FixedBoxViewer({ box, categories = [] }: FixedBoxViewerP
   const [added, setAdded] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>('all');
 
-  // Show "not available" if is_active is false
-  if (!box.isActive) {
-    return <NotAvailable name={box.name} />;
-  }
-
   // Unique category IDs from the fixed items
   const itemCategoryIds = useMemo(() => {
     const ids = new Set(box.fixedItems.map((p) => String(p.category)));
     return Array.from(ids);
   }, [box.fixedItems]);
+
+  // Filtered items
+  const visibleItems = useMemo(() => {
+    if (activeCategory === 'all') return box.fixedItems;
+    return box.fixedItems.filter((p) => String(p.category) === activeCategory);
+  }, [activeCategory, box.fixedItems]);
+
+  // Show "not available" if is_active is false
+  if (!box.isActive) {
+    return <NotAvailable name={box.name} />;
+  }
 
   // Category name lookup
   const catName = (id: string) => {
@@ -134,12 +140,6 @@ export default function FixedBoxViewer({ box, categories = [] }: FixedBoxViewerP
     if (found) return found.name;
     return id.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   };
-
-  // Filtered items
-  const visibleItems = useMemo(() => {
-    if (activeCategory === 'all') return box.fixedItems;
-    return box.fixedItems.filter((p) => String(p.category) === activeCategory);
-  }, [activeCategory, box.fixedItems]);
 
   const totalPrice =
     box.fixedItems.reduce((sum, p) => sum + p.price, 0) + box.boxPrice;

@@ -73,7 +73,6 @@ export default function AdminLayout({
     } catch (err) {
       console.error('Logout action failed:', err);
     }
-    document.cookie = "pb_admin_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     logout();
     router.refresh();
     router.push('/auth/login');

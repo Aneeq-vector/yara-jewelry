@@ -6,7 +6,8 @@
     "dev": "open -a Firefox http://localhost:3000 && next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "doctor": "npx react-doctor@latest"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -36,6 +37,6 @@
     "eslint": "^10.8.0",
     "eslint-config-next": "^16.3.0",
     "tailwindcss": "^4.3.3",
-    "typescript": "^7.0.2"
+    "typescript": "6.0"
   }
 }

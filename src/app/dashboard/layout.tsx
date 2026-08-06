@@ -79,9 +79,9 @@ export default function DashboardLayout({
                   <div className="shrink-0 w-14 h-14 rounded-full gradient-rose-gold flex items-center justify-center text-white font-heading text-xl font-bold">
                     {user?.name?.charAt(0)}
                   </div>
-                  <div>
-                    <h3 className="font-ui font-semibold text-burgundy">{user?.name}</h3>
-                    <p className="font-body text-xs text-burgundy/40">{user?.email}</p>
+                  <div className="min-w-0">
+                    <h3 className="font-ui font-semibold text-burgundy truncate">{user?.name}</h3>
+                    <p className="font-body text-xs text-burgundy/40 truncate">{user?.email}</p>
                   </div>
                 </div>
 
@@ -118,7 +118,6 @@ export default function DashboardLayout({
                       } catch (err) {
                         console.error('Logout action failed:', err);
                       }
-                      document.cookie = "pb_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
                       logout();
                       router.refresh();
                       router.push('/');

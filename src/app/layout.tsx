@@ -33,7 +33,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={cn("h-full antialiased", "font-sans", geist.variable)}>
-      <body className="min-h-full flex flex-col bg-ivory text-burgundy">
+      <body className="min-h-full flex flex-col bg-ivory text-burgundy overflow-x-hidden">
         {children}
       </body>
     </html>

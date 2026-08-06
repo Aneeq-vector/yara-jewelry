@@ -68,7 +68,7 @@ export default async function OrdersPage() {
                                 <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-ivory rounded-lg text-burgundy/40">
                                   <ShoppingBag size={14} />
                                 </div>
-                                <p className="font-body text-sm text-burgundy/80 font-medium truncate">
+                                <p className="font-body text-sm text-burgundy/80 font-medium truncate flex-1 min-w-0">
                                   {boxItem}
                                 </p>
                               </div>
@@ -113,14 +113,14 @@ export default async function OrdersPage() {
                   return (
                     <div key={idx} className="flex items-center gap-3 p-2 rounded-xl bg-champagne/20 overflow-hidden">
                       <ShoppingBag size={14} className="text-burgundy/30 flex-shrink-0" />
-                      <span className="font-body text-sm text-burgundy/60 truncate" title={finalItem}>{finalItem}</span>
+                      <span className="font-body text-sm text-burgundy/60 truncate flex-1 min-w-0" title={finalItem}>{finalItem}</span>
                     </div>
                   );
                 })}
                 {!(order.cartDetails?.length) && order.expand?.items?.map((item: any, idx: number) => (
-                  <div key={`fallback-${idx}`} className="flex items-center gap-3 p-2 rounded-xl bg-champagne/20">
-                    <ShoppingBag size={14} className="text-burgundy/30" />
-                    <span className="font-body text-sm text-burgundy/60 truncate">{item.name}</span>
+                  <div key={`fallback-${idx}`} className="flex items-center gap-3 p-2 rounded-xl bg-champagne/20 overflow-hidden">
+                    <ShoppingBag size={14} className="text-burgundy/30 flex-shrink-0" />
+                    <span className="font-body text-sm text-burgundy/60 truncate flex-1 min-w-0">{item.name}</span>
                   </div>
                 ))}
               </div>
