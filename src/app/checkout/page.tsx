@@ -672,14 +672,7 @@ export default function CheckoutPage() {
               </AnimatePresence>
 
               {/* Navigation Buttons */}
-              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 mt-6">
-                {currentStep > 1 ? (
-                  <button onClick={prevStep} className="btn-secondary w-full sm:w-auto text-sm justify-center flex items-center">
-                    Back
-                  </button>
-                ) : (
-                  <div className="hidden sm:block" />
-                )}
+              <div className="flex flex-col sm:flex-row-reverse items-stretch sm:items-center justify-between gap-3 sm:gap-4 mt-6">
                 {currentStep < 4 ? (
                   <button 
                     onClick={nextStep} 
@@ -698,6 +691,14 @@ export default function CheckoutPage() {
                     <span>{isSubmitting ? 'Processing...' : 'Place Order'}</span>
                     {isSubmitting ? <Loader2 size={16} className="relative z-10 animate-spin" /> : <Check size={16} className="relative z-10" />}
                   </button>
+                )}
+                
+                {currentStep > 1 ? (
+                  <button onClick={prevStep} className="btn-secondary w-full sm:w-auto text-sm justify-center flex items-center">
+                    Back
+                  </button>
+                ) : (
+                  <div className="hidden sm:block" />
                 )}
               </div>
             </div>

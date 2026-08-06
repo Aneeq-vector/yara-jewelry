@@ -275,28 +275,34 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
 
                 <div className="mt-10 pt-8 border-t border-nude/60">
                   {isAuthenticated && user ? (
-                    <div className="flex items-center justify-between py-2 pl-4 pr-2 rounded-xl hover:bg-champagne/50 transition-all">
+                    <div className="flex flex-col gap-1">
                       <Link
                         href="/dashboard"
                         onClick={() => setMobileOpen(false)}
-                        className="flex items-center gap-3 font-ui text-sm font-semibold text-burgundy flex-1 py-1"
+                        className="flex items-center gap-3 py-3 px-4 rounded-xl font-ui text-sm font-semibold text-burgundy hover:bg-champagne/50 transition-all overflow-hidden"
                       >
                         <div className="shrink-0 w-7 h-7 rounded-full gradient-rose-gold flex items-center justify-center text-[11px] font-heading font-bold text-white shadow-sm">
                           {user.name?.charAt(0)}
                         </div>
-                        {user.name}
+                        <span className="truncate">{user.name}</span>
                       </Link>
                       <button
                         onClick={async () => {
-                          const { logoutAction } = await import('@/app/actions/auth');
-                          await logoutAction();
-                          useAuthStore.getState().logout();
-                          window.location.href = '/';
+                          try {
+                            const { logoutAction } = await import('@/app/actions/auth');
+                            await logoutAction();
+                          } catch (e) {
+                            console.error('Logout failed:', e);
+                          } finally {
+                            useAuthStore.getState().logout();
+                            window.location.href = '/';
+                          }
                         }}
-                        className="p-2 text-burgundy/60 hover:text-burgundy hover:bg-burgundy/10 rounded-full transition-colors"
+                        className="flex items-center gap-3 py-3 px-4 rounded-xl font-ui text-sm font-semibold text-burgundy/80 hover:text-burgundy hover:bg-champagne/50 transition-all w-full text-left"
                         aria-label="Logout"
                       >
                         <LogOut size={18} />
+                        Logout
                       </button>
                     </div>
                   ) : (
