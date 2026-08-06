@@ -558,7 +558,7 @@ function ShopContent() {
             </AnimatePresence>
 
             {/* Products Grid */}
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               {/* Category Pills (Mobile) */}
               <div className="flex gap-2 overflow-x-auto no-scrollbar mb-6 lg:hidden pb-2 -mx-4 px-4 sm:-mx-6 sm:px-6">
                 <button
