@@ -186,8 +186,7 @@ export default function Footer() {
         </div>
       </div>
       
-      {/* Padding for MobileBottomNav */}
-      <div className="h-24 sm:hidden" />
+
 
       {/* Toast Notification */}
       <AnimatePresence>
