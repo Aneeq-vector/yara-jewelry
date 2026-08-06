@@ -310,7 +310,7 @@ function ShopContent() {
 
   return (
     <PageWrapper>
-      <div className="pt-28 pb-20">
+      <div className="pt-28 pb-32 lg:pb-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <motion.div
@@ -348,21 +348,21 @@ function ShopContent() {
               />
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 w-full sm:w-auto">
               {/* Filter Toggle (Mobile) */}
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="lg:hidden flex items-center gap-2 px-4 py-3 min-h-[44px] rounded-2xl bg-champagne/40 border border-nude/30 font-ui text-xs font-semibold uppercase tracking-wider text-burgundy/70"
+                className="lg:hidden flex-1 flex items-center justify-center gap-2 px-4 py-3 min-h-[44px] rounded-2xl bg-champagne/40 border border-nude/30 font-ui text-xs font-semibold uppercase tracking-wider text-burgundy/70"
               >
                 <SlidersHorizontal size={14} />
                 Filters
               </button>
 
               {/* Sort */}
-              <div className="relative">
+              <div className="relative flex-1 sm:flex-none">
                 <button
                   onClick={() => setIsSortOpen(!isSortOpen)}
-                  className="flex items-center justify-between gap-2 px-4 py-3 min-h-[44px] w-[170px] rounded-2xl bg-champagne/40 border border-nude/30 font-ui text-xs font-semibold text-burgundy/70 focus:outline-none cursor-pointer hover:bg-champagne/60 transition-colors"
+                  className="flex items-center justify-between gap-2 px-4 py-3 min-h-[44px] w-full sm:w-[170px] rounded-2xl bg-champagne/40 border border-nude/30 font-ui text-xs font-semibold text-burgundy/70 focus:outline-none cursor-pointer hover:bg-champagne/60 transition-colors"
                 >
                   <span className="truncate">{sortOptions.find(opt => opt.value === sortBy)?.label || 'Sort By'}</span>
                   <ChevronDown size={14} className={`text-burgundy/40 transition-transform shrink-0 ${isSortOpen ? 'rotate-180' : ''}`} />
@@ -543,7 +543,7 @@ function ShopContent() {
             {/* Products Grid */}
             <div className="flex-1">
               {/* Category Pills (Mobile) */}
-              <div className="flex gap-2 overflow-x-auto no-scrollbar mb-6 lg:hidden pb-2">
+              <div className="flex gap-2 overflow-x-auto no-scrollbar mb-6 lg:hidden pb-2 -mx-4 px-4 sm:-mx-6 sm:px-6">
                 <button
                   onClick={() => handleCategoryChange('all')}
                   className={cn(
@@ -579,7 +579,7 @@ function ShopContent() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.3 }}
-                    className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6"
+                    className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6"
                   >
                     {filteredProducts.map((product, i) => (
                       <ProductCard key={product.id} product={product} index={i} />

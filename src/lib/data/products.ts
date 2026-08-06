@@ -125,8 +125,16 @@ export async function getNewArrivals(): Promise<Product[]> {
 export async function searchProducts(query: string): Promise<Product[]> {
   try {
     const pb = createClient();
+    
+    // Split the query into words, ignoring empty spaces
+    const terms = query.trim().split(/\s+/).filter(t => t.length > 0);
+    if (terms.length === 0) return [];
+    
+    // Create a filter where each word must be present in the name
+    const filter = terms.map(term => `name ~ "${term}"`).join(' && ');
+
     const records = await pb.collection('products').getFullList({
-      filter: `name ~ "${query}"`,
+      filter,
       expand: 'category'
     });
     return records.map(mapRecordToProduct);
