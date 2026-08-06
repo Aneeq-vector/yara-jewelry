@@ -144,10 +144,10 @@ export default function ProductDetailPage() {
             <Link href="/shop" className="hover:text-burgundy transition-colors">Shop</Link>
             <ChevronRight size={12} />
             {(() => {
-              const categoryObj = categories.find(c => c.id === product.category);
+              const categoryObj = categories.find(c => c.id === product.category || c.name.toLowerCase() === product.category.toLowerCase());
               return (
-                <Link href={`/shop?category=${categoryObj?.slug || product.category}`} className="hover:text-burgundy transition-colors capitalize">
-                  {categoryObj?.name || product.category.replace('-', ' ')}
+                <Link href={`/shop?category=${categoryObj?.slug || product.category.toLowerCase()}`} className="hover:text-burgundy transition-colors capitalize">
+                  {categoryObj?.name || product.category}
                 </Link>
               );
             })()}

@@ -272,9 +272,11 @@ function ShopContent() {
     let result = [...products];
 
     if (selectedCategory !== 'all') {
-      const selectedCategoryObj = categories.find((c) => c.slug === selectedCategory);
+      const selectedCategoryObj = categories.find(
+        (c) => c.slug.toLowerCase() === selectedCategory.toLowerCase() || c.name.toLowerCase() === selectedCategory.toLowerCase()
+      );
       if (selectedCategoryObj) {
-        if (selectedCategory === 'new-arrivals') {
+        if (selectedCategory.toLowerCase() === 'new-arrivals' || selectedCategoryObj.slug === 'new-arrivals') {
           result = result.filter((p) => (p.category && p.category.toLowerCase() === selectedCategoryObj.name.toLowerCase()) || p.badge === 'new');
         } else {
           result = result.filter((p) => p.category && p.category.toLowerCase() === selectedCategoryObj.name.toLowerCase());
