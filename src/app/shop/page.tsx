@@ -177,7 +177,6 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
                 Sold Out
               </div>
             )}
-            )}
           </div>
         </div>
       </div>
