@@ -137,14 +137,25 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
         )}
 
         {(product.originalPrice || 0) > 0 && (
-          <div className="absolute top-3 right-3 z-10">
-            <span className="px-2.5 py-1 rounded-full bg-burgundy/90 text-[10px] font-ui font-bold text-ivory">
+          <div className="absolute bottom-3 left-3 z-10">
+            <span className="px-2.5 py-1 rounded-full bg-burgundy/90 text-[10px] font-ui font-bold text-ivory shadow-sm">
               -{calculateDiscount(product.price, product.originalPrice || 0)}%
             </span>
           </div>
         )}
 
-        <div className="absolute bottom-3 left-3 right-3 z-10 opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all duration-300">
+        <motion.button
+          whileTap={{ scale: 0.9 }}
+          onClick={(e) => { e.preventDefault(); toggleItem(product); }}
+          className={`absolute top-3 right-3 z-20 p-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-full backdrop-blur-md transition-colors ${
+            wishlisted ? 'bg-rose-gold text-white shadow-md' : 'bg-white/80 text-burgundy hover:bg-white shadow-sm'
+          }`}
+        >
+          <Heart size={16} fill={wishlisted ? 'currentColor' : 'none'} />
+        </motion.button>
+
+        {/* Desktop Add to Cart Hover */}
+        <div className="hidden lg:flex absolute bottom-3 left-3 right-3 z-10 opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all duration-300">
           <div className="flex items-center gap-2">
             {product.inStock ? (
               <motion.button
@@ -166,20 +177,12 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
                 Sold Out
               </div>
             )}
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              onClick={() => toggleItem(product)}
-              className={`p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl backdrop-blur-sm transition-colors ${
-                wishlisted ? 'bg-rose-gold text-white' : 'bg-ivory/80 text-burgundy hover:bg-ivory'
-              }`}
-            >
-              <Heart size={14} fill={wishlisted ? 'currentColor' : 'none'} />
-            </motion.button>
+            )}
           </div>
         </div>
       </div>
 
-      <Link href={`/shop/${product.id}`}>
+      <Link href={`/shop/${product.id}`} className="flex flex-col">
         <h3 className="font-ui font-semibold text-sm text-burgundy group-hover:text-wine transition-colors mb-1 line-clamp-1">
           {product.name}
         </h3>
@@ -189,11 +192,26 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
           ))}
           <span className="font-body text-[10px] text-burgundy/40 ml-0.5">({product.reviewCount})</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="font-ui font-bold text-sm text-burgundy">{formatPrice(product.price)}</span>
-          {(product.originalPrice || 0) > 0 && (
-            <span className="font-body text-xs text-burgundy/35 line-through">{formatPrice(product.originalPrice || 0)}</span>
-          )}
+        <div className="flex items-center justify-between mt-1">
+          <div className="flex items-center gap-2">
+            <span className="font-ui font-bold text-sm text-burgundy">{formatPrice(product.price)}</span>
+            {(product.originalPrice || 0) > 0 && (
+              <span className="font-body text-xs text-burgundy/35 line-through">{formatPrice(product.originalPrice || 0)}</span>
+            )}
+          </div>
+
+          {/* Mobile Quick Add */}
+          <button 
+            onClick={(e) => { e.preventDefault(); handleAddToCart(); }}
+            disabled={!product.inStock || isAdding}
+            className={`p-2 rounded-full min-w-[36px] min-h-[36px] flex items-center justify-center transition-colors lg:hidden ${
+              product.inStock 
+                ? 'bg-burgundy text-white shadow-sm hover:bg-wine' 
+                : 'bg-nude/50 text-burgundy/30 cursor-not-allowed'
+            }`}
+          >
+             {isAdding ? <Loader2 size={16} className="animate-spin" /> : <ShoppingBag size={16} />}
+          </button>
         </div>
       </Link>
     </motion.div>
@@ -334,7 +352,7 @@ function ShopContent() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1, type: 'spring', damping: 20 }}
-            className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 w-full"
+            className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-8 w-full"
           >
             {/* Search */}
             <div className="relative flex-1 w-full">
