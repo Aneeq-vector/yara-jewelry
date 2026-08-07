@@ -122,13 +122,13 @@ export function ProductCard({ product, index }: { product: Product; index: numbe
 
         {/* Desktop Add to Cart Hover */}
         <div className="hidden lg:flex absolute bottom-3 left-3 right-3 z-10 opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition duration-300">
-          <div className="flex items-center gap-2">
+          <div className="w-full flex items-center gap-2">
             {product.inStock ? (
               <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={handleAddToCart}
                 disabled={isAdding}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 min-h-[44px] rounded-xl bg-burgundy/90 backdrop-blur-sm text-ivory font-ui text-xs font-semibold uppercase tracking-wider hover:bg-burgundy transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                className="flex-1 w-full flex items-center justify-center gap-2 py-2.5 px-4 min-h-[44px] rounded-xl bg-burgundy/90 backdrop-blur-sm text-ivory font-ui text-xs font-semibold uppercase tracking-wider hover:bg-burgundy transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {isAdding ? (
                   <Loader2 size={14} className="animate-spin" />
@@ -138,7 +138,7 @@ export function ProductCard({ product, index }: { product: Product; index: numbe
                 {isAdding ? 'Adding...' : 'Add to Cart'}
               </motion.button>
             ) : (
-              <div className="flex-1 flex items-center justify-center gap-2 py-2.5 min-h-[44px] rounded-xl bg-nude/50 backdrop-blur-sm text-burgundy/50 font-ui text-xs font-semibold uppercase tracking-wider cursor-not-allowed">
+              <div className="flex-1 w-full flex items-center justify-center gap-2 py-2.5 px-4 min-h-[44px] rounded-xl bg-nude/50 backdrop-blur-sm text-burgundy/50 font-ui text-xs font-semibold uppercase tracking-wider cursor-not-allowed">
                 <ShoppingBag size={14} />
                 Sold Out
               </div>
@@ -158,7 +158,7 @@ export function ProductCard({ product, index }: { product: Product; index: numbe
           <span className="font-body text-[10px] text-burgundy/40 ml-0.5">({product.reviewCount})</span>
         </div>
         <div className="flex items-center justify-between mt-1">
-          <div className="flex items-center gap-2">
+          <div className="w-full flex items-center gap-2">
             <span className="font-ui font-bold text-sm text-burgundy">{formatPrice(product.price)}</span>
             {(product.originalPrice || 0) > 0 && (
               <span className="font-body text-xs text-burgundy/35 line-through">{formatPrice(product.originalPrice || 0)}</span>
