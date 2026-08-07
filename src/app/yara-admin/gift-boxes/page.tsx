@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useReducer } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import {
@@ -50,7 +50,78 @@ function buildImageUrl(collectionId: string, recordId: string, filename: string)
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
+
+interface EditorState {
+  editorCategory: string;
+  selectedItems: Set<string>;
+  productSearch: string;
+  isActive: boolean;
+  pendingImage: File | null;
+  previewUrl: string;
+  saveStatus: SaveStatus;
+}
+
+type EditorAction =
+  | { type: 'LOAD_BOX'; payload: RawBox }
+  | { type: 'SET_CATEGORY'; payload: string }
+  | { type: 'TOGGLE_ITEM'; payload: string }
+  | { type: 'SET_SEARCH'; payload: string }
+  | { type: 'TOGGLE_ACTIVE' }
+  | { type: 'SET_IMAGE'; payload: { file: File | null; previewUrl: string } }
+  | { type: 'SET_SAVE_STATUS'; payload: SaveStatus }
+  | { type: 'SAVE_SUCCESS' }
+  | { type: 'CLEAR_ITEMS' };
+
+const initialEditorState: EditorState = {
+  editorCategory: '',
+  selectedItems: new Set(),
+  productSearch: '',
+  isActive: true,
+  pendingImage: null,
+  previewUrl: '',
+  saveStatus: 'idle',
+};
+
+function editorReducer(state: EditorState, action: EditorAction): EditorState {
+  switch (action.type) {
+    case 'LOAD_BOX':
+      return {
+        ...state,
+        editorCategory: '',
+        selectedItems: new Set(action.payload.fixed_items),
+        isActive: action.payload.is_active,
+        pendingImage: null,
+        previewUrl: action.payload.images[0] || '',
+        saveStatus: 'idle',
+        productSearch: '',
+      };
+    case 'SET_CATEGORY':
+      return { ...state, editorCategory: action.payload, productSearch: '' };
+    case 'TOGGLE_ITEM': {
+      const next = new Set(state.selectedItems);
+      if (next.has(action.payload)) next.delete(action.payload);
+      else next.add(action.payload);
+      return { ...state, selectedItems: next };
+    }
+    case 'SET_SEARCH':
+      return { ...state, productSearch: action.payload };
+    case 'TOGGLE_ACTIVE':
+      return { ...state, isActive: !state.isActive };
+    case 'SET_IMAGE':
+      return { ...state, pendingImage: action.payload.file, previewUrl: action.payload.previewUrl };
+    case 'SET_SAVE_STATUS':
+      return { ...state, saveStatus: action.payload };
+    case 'SAVE_SUCCESS':
+      return { ...state, pendingImage: null, saveStatus: 'success' };
+    case 'CLEAR_ITEMS':
+      return { ...state, selectedItems: new Set() };
+    default:
+      return state;
+  }
+}
+
 export default function GiftBoxesAdminPage() {
+
   const [boxes, setBoxes] = useState<RawBox[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
@@ -58,13 +129,8 @@ export default function GiftBoxesAdminPage() {
   const [loading, setLoading] = useState(true);
 
   // Editor state
-  const [editorCategory, setEditorCategory] = useState<string>('');
-  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
-  const [productSearch, setProductSearch] = useState('');
-  const [isActive, setIsActive] = useState(true);
-  const [pendingImage, setPendingImage] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string>('');
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const [editorState, dispatch] = useReducer(editorReducer, initialEditorState);
+  const { editorCategory, selectedItems, productSearch, isActive, pendingImage, previewUrl, saveStatus } = editorState;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchData = () => {
@@ -127,13 +193,7 @@ export default function GiftBoxesAdminPage() {
   // When a box is selected, load its state into the editor
   useEffect(() => {
     if (!selectedBox) return;
-    setEditorCategory(''); // Default to showing all categories
-    setSelectedItems(new Set(selectedBox.fixed_items));
-    setIsActive(selectedBox.is_active);
-    setPendingImage(null);
-    setPreviewUrl(selectedBox.images[0] || '');
-    setSaveStatus('idle');
-    setProductSearch('');
+    dispatch({ type: 'LOAD_BOX', payload: selectedBox });
   }, [selectedBoxId]);
 
   // Products filtered by the chosen editor category + search
@@ -152,24 +212,18 @@ export default function GiftBoxesAdminPage() {
   }, [editorCategory, productSearch, allProducts]);
 
   const toggleItem = (id: string) => {
-    setSelectedItems((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    dispatch({ type: 'TOGGLE_ITEM', payload: id });
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setPendingImage(file);
-    setPreviewUrl(URL.createObjectURL(file));
+    dispatch({ type: 'SET_IMAGE', payload: { file, previewUrl: URL.createObjectURL(file) } });
   };
 
   const handleSave = async () => {
     if (!selectedBox) return;
-    setSaveStatus('saving');
+    dispatch({ type: 'SET_SAVE_STATUS', payload: 'saving' });
     try {
       const formData = new FormData();
 
@@ -195,6 +249,7 @@ export default function GiftBoxesAdminPage() {
       }
 
       const updated = res.giftBox;
+      if (!updated) throw new Error("Failed to update gift box: No data returned.");
 
       setBoxes((prev) =>
         prev.map((b) =>
@@ -213,13 +268,12 @@ export default function GiftBoxesAdminPage() {
         )
       );
 
-      setPendingImage(null);
-      setSaveStatus('success');
-      setTimeout(() => setSaveStatus('idle'), 3000);
+      dispatch({ type: 'SAVE_SUCCESS' });
+      setTimeout(() => dispatch({ type: 'SET_SAVE_STATUS', payload: 'idle' }), 3000);
     } catch (err) {
       console.error(err);
-      setSaveStatus('error');
-      setTimeout(() => setSaveStatus('idle'), 4000);
+      dispatch({ type: 'SET_SAVE_STATUS', payload: 'error' });
+      setTimeout(() => dispatch({ type: 'SET_SAVE_STATUS', payload: 'idle' }), 4000);
     }
   };
 
@@ -320,7 +374,7 @@ export default function GiftBoxesAdminPage() {
                   {selectedBox.name}
                 </h2>
                 <button
-                  onClick={() => setIsActive((v) => !v)}
+                  onClick={() => dispatch({ type: 'TOGGLE_ACTIVE' })}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl font-ui text-sm font-semibold transition-all ${
                     isActive
                       ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
@@ -387,8 +441,7 @@ export default function GiftBoxesAdminPage() {
                   <select
                     value={editorCategory}
                     onChange={(e) => {
-                      setEditorCategory(e.target.value);
-                      setProductSearch('');
+                      dispatch({ type: 'SET_CATEGORY', payload: e.target.value });
                     }}
                     className="w-full appearance-none pl-4 pr-10 py-3 rounded-xl border border-nude/60 bg-champagne/20 font-body text-sm text-burgundy focus:outline-none focus:border-burgundy/40 transition-colors"
                   >
@@ -417,7 +470,7 @@ export default function GiftBoxesAdminPage() {
                   </p>
                   {selectedItems.size > 0 && (
                     <button
-                      onClick={() => setSelectedItems(new Set())}
+                      onClick={() => dispatch({ type: 'CLEAR_ITEMS' })}
                       className="font-body text-xs text-burgundy/40 hover:text-burgundy underline"
                     >
                       Clear all
@@ -431,7 +484,7 @@ export default function GiftBoxesAdminPage() {
                   <input
                     type="text"
                     value={productSearch}
-                    onChange={(e) => setProductSearch(e.target.value)}
+                    onChange={(e) => dispatch({ type: 'SET_SEARCH', payload: e.target.value })}
                     placeholder="Search products..."
                     className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-nude/60 bg-champagne/20 font-body text-sm text-burgundy placeholder:text-burgundy/30 focus:outline-none focus:border-burgundy/30"
                   />
