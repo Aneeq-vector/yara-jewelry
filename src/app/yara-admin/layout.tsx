@@ -61,8 +61,15 @@ export default function AdminLayout({
     return null;
   }
 
+  if (pathname === '/yara-admin/login') {
+    if (isAuthenticated && user?.role === 'admin') {
+      redirect('/yara-admin');
+    }
+    return <>{children}</>;
+  }
+
   if (!isAuthenticated || user?.role !== 'admin') {
-    redirect('/auth/login');
+    if (pathname !== '/yara-admin/login') { redirect('/yara-admin/login'); }
   }
 
   const handleLogout = async () => {

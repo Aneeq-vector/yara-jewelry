@@ -21,6 +21,12 @@ export async function loginAction(formData: FormData) {
       return { error: 'cannot login kindly contact customer support' };
     }
     
+    const expectedRole = data.expectedRole || 'customer';
+    if (authData.record.role !== expectedRole) {
+      pb.authStore.clear();
+      return { error: `Access denied. Please login via the correct portal.` };
+    }
+    
     const cookieStore = await cookies();
     const authPayload = JSON.stringify({ token: pb.authStore.token, model: pb.authStore.record });
     

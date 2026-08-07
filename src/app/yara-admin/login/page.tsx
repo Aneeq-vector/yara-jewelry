@@ -2,20 +2,18 @@
 
 import { useState } from 'react';
 import { m as motion } from 'framer-motion';
-import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, Loader2, ShieldCheck } from 'lucide-react';
 import { loginAction } from '@/app/actions/auth';
-import { useAuthStore } from '@/lib/store/auth-store';
+import { useAdminAuthStore } from '@/lib/store/admin-auth-store';
 
-export default function LoginPage() {
+export default function AdminLoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [remember, setRemember] = useState(false);
   const [focused, setFocused] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,7 +24,7 @@ export default function LoginPage() {
       const formData = new FormData();
       formData.append('email', email);
       formData.append('password', password);
-      formData.append('expectedRole', 'customer');
+      formData.append('expectedRole', 'admin');
       
       const result = await loginAction(formData);
       
@@ -36,22 +34,9 @@ export default function LoginPage() {
       }
       
       // Sync client state
-      useAuthStore.setState({ user: result.user as any, isAuthenticated: true });
+      useAdminAuthStore.setState({ user: result.user as any, isAuthenticated: true });
       
-      // Sync wishlist
-      try {
-        const { syncWishlistAction } = await import('@/app/actions/wishlist');
-        const { useWishlistStore } = await import('@/lib/store/wishlist-store');
-        const localItems = useWishlistStore.getState().items.map(i => i.id);
-        const syncRes = await syncWishlistAction(localItems);
-        if (syncRes.success && syncRes.items) {
-          useWishlistStore.getState().setWishlist(syncRes.items);
-        }
-      } catch (e) {
-        console.error('Failed to sync wishlist on login', e);
-      }
-      
-      router.push('/dashboard');
+      router.push('/yara-admin');
     } finally {
       setLoading(false);
     }
@@ -71,16 +56,20 @@ export default function LoginPage() {
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           className="flex justify-center -mb-4 -mt-10 relative z-20"
         >
-          <Link href="/">
+          <div className="flex flex-col items-center">
             <Image 
               src="/images/yara-logo.png" 
               alt="Yara" 
-              width={400} 
-              height={160} 
-              className="h-28 sm:h-36 w-auto hover:scale-105 transition-transform duration-500" 
+              width={300} 
+              height={120} 
+              className="h-20 sm:h-24 w-auto hover:scale-105 transition-transform duration-500 mb-2" 
               priority
             />
-          </Link>
+            <div className="flex items-center gap-2 text-burgundy font-ui uppercase tracking-widest font-bold text-sm bg-burgundy/5 px-4 py-1.5 rounded-full border border-burgundy/10">
+              <ShieldCheck size={16} />
+              Admin Portal
+            </div>
+          </div>
         </motion.div>
 
         {/* Glass Card Form */}
@@ -88,17 +77,16 @@ export default function LoginPage() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-          className="bg-white/40 backdrop-blur-3xl rounded-[2.5rem] border border-white/50 p-8 sm:p-12 shadow-[0_8px_40px_rgb(0,0,0,0.04)]"
+          className="bg-white/40 backdrop-blur-3xl rounded-[2.5rem] border border-white/50 p-8 sm:p-12 shadow-[0_8px_40px_rgb(0,0,0,0.04)] mt-8"
         >
           <div className="text-center mb-10">
-            <h1 className="font-heading text-3xl font-bold text-burgundy mb-2">Sign In</h1>
+            <h1 className="font-heading text-3xl font-bold text-burgundy mb-2">Secure Login</h1>
             <p className="font-body text-burgundy/50">
-              Welcome back to elegance. Please enter your details.
+              Authorized personnel only.
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Floating Label Input - Email */}
             <div className="relative pt-5">
               <input 
                 type="email"
@@ -108,7 +96,7 @@ export default function LoginPage() {
                 onFocus={() => setFocused('email')}
                 onBlur={() => setFocused(null)}
                 className="peer w-full bg-transparent border-b-2 border-burgundy/10 px-0 py-2 text-burgundy font-body focus:border-burgundy focus:outline-none transition-colors placeholder-transparent"
-                placeholder="Email Address"
+                placeholder="Admin Email"
                 required
               />
               <label 
@@ -116,11 +104,10 @@ export default function LoginPage() {
                 className={`absolute left-0 font-ui transition duration-200 pointer-events-none
                   ${focused === 'email' || email ? 'top-0 text-xs text-burgundy uppercase font-bold tracking-wider' : 'top-7 text-sm text-burgundy/50'}`}
               >
-                Email Address
+                Admin Email
               </label>
             </div>
 
-            {/* Floating Label Input - Password */}
             <div className="relative pt-5">
               <input 
                 type={showPassword ? 'text' : 'password'}
@@ -150,24 +137,6 @@ export default function LoginPage() {
               </button>
             </div>
 
-            <div className="flex items-center justify-between pt-4">
-              <label className="flex items-center gap-2 cursor-pointer group">
-                <div className="relative flex items-center justify-center w-4 h-4 rounded border border-burgundy/30 group-hover:border-burgundy transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={remember}
-                    onChange={(e) => setRemember(e.target.checked)}
-                    className="absolute opacity-0 w-full h-full cursor-pointer"
-                  />
-                  {remember && <div className="w-2 h-2 rounded-sm bg-burgundy" />}
-                </div>
-                <span className="font-body text-sm text-burgundy/60 group-hover:text-burgundy transition-colors">Remember me</span>
-              </label>
-              <button type="button" className="font-ui text-xs font-bold uppercase tracking-wider text-rose-gold hover:text-wine transition-colors">
-                Forgot Password?
-              </button>
-            </div>
-
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -179,20 +148,12 @@ export default function LoginPage() {
                 <Loader2 size={16} className="animate-spin relative z-10" />
               ) : (
                 <>
-                  <span>Sign In</span>
+                  <span>Login</span>
                   <ArrowRight size={16} className="relative z-10" />
                 </>
               )}
             </motion.button>
           </form>
-
-          {/* Sign Up Link */}
-          <p className="text-center mt-10 font-body text-sm text-burgundy/50">
-            Don&apos;t have an account?{' '}
-            <Link href="/auth/signup" className="font-semibold text-burgundy hover:text-wine transition-colors border-b border-burgundy/30 pb-0.5 hover:border-wine">
-              Create Account
-            </Link>
-          </p>
         </motion.div>
       </div>
     </div>
