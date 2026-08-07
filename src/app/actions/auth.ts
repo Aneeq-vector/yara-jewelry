@@ -1,6 +1,6 @@
 'use server';
 
-import { getServerClient, getAdminPanelClient, requireAuth, getServerSession, validateSession } from '@/lib/pocketbase-server';
+import { getServerClient, getAdminPanelClient, requireAuth, getServerSession, validateSession, getAdminClient } from '@/lib/pocketbase-server';
 import { loginSchema, registerSchema } from '@/lib/schemas';
 import { cookies } from 'next/headers';
 
@@ -93,6 +93,13 @@ export async function registerAction(formData: FormData) {
 
 export async function requestPasswordResetAction(email: string) {
   try {
+    const adminPb = await getAdminClient();
+    try {
+      await adminPb.collection('users').getFirstListItem(`email="${email}"`);
+    } catch (e) {
+      return { error: 'The email is not registered. Kindly create an account.', notFound: true };
+    }
+
     const pb = await getServerClient();
     await pb.collection('users').requestPasswordReset(email);
     return { success: true };
