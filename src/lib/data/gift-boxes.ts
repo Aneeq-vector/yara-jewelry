@@ -77,7 +77,7 @@ export async function getAllGiftBoxes(): Promise<GiftBox[]> {
 }
 
 // Get by slug — returns regardless of is_active so the page can show "unavailable"
-export async function getGiftBoxBySlug(slug: string): Promise<GiftBox | undefined> {
+async function getGiftBoxBySlug(slug: string): Promise<GiftBox | undefined> {
   try {
     const pb = createClient();
     const record = await pb

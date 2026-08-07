@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 import PageWrapper from '@/components/layout/PageWrapper';
 import FixedBoxViewer from '@/components/gift-boxes/FixedBoxViewer';
 import { getGiftBoxByType } from '@/lib/data/gift-boxes';

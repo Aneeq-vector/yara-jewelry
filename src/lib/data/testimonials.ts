@@ -2,7 +2,7 @@ import { Testimonial } from '@/types';
 import { createClient, PB_URL } from '@/lib/pocketbase';
 import { RecordModel } from 'pocketbase';
 
-export const testimonials: Testimonial[] = [];
+const testimonials: Testimonial[] = [];
 
 function mapRecordToTestimonial(record: RecordModel): Testimonial {
   const imageUrl = record.image

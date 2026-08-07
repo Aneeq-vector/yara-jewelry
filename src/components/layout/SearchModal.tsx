@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m as motion, AnimatePresence } from 'framer-motion';
 import { Search, X, TrendingUp, ArrowRight } from 'lucide-react';
 import { searchProducts } from '@/lib/data/products';
 import { formatPrice } from '@/lib/utils';
@@ -80,7 +80,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
               {/* Search Input */}
               <div className="flex items-center gap-3 px-6 py-5 border-b border-nude/30">
                 <Search size={20} className="text-burgundy/50" />
-                <input
+                <input aria-label="Search for earrings, necklaces, rings..."
                   ref={inputRef}
                   type="text"
                   value={query}
@@ -88,7 +88,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
                   placeholder="Search for earrings, necklaces, rings..."
                   className="flex-1 bg-transparent text-burgundy font-body text-base placeholder:text-burgundy/35 focus:outline-none"
                 />
-                <button onClick={handleClose} className="p-2 sm:p-3 rounded-full bg-nude/30 text-burgundy hover:bg-nude/50 transition-colors">
+                <button aria-label="Action" onClick={handleClose} className="p-2 sm:p-3 rounded-full bg-nude/30 text-burgundy hover:bg-nude/50 transition-colors">
                   <X size={18} className="text-burgundy/60" />
                 </button>
               </div>

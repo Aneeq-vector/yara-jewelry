@@ -1,7 +1,9 @@
 'use client';
+const emptyArray: any[] = [];
+import { CustomBoxSidebar } from './CustomBoxSidebar';
 
 import { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m as motion, LazyMotion, domAnimation, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -28,8 +30,8 @@ interface CustomBoxBuilderProps {
 
 export default function CustomBoxBuilder({
   baseBox,
-  allProducts = [],
-  categories = [],
+  allProducts = emptyArray,
+  categories = emptyArray,
 }: CustomBoxBuilderProps) {
   const router = useRouter();
   const [selectedItems, setSelectedItems] = useState<{ product: Product; quantity: number; color?: string }[]>([]);
@@ -50,17 +52,20 @@ export default function CustomBoxBuilder({
   // Unique category IDs present in non-gift-box products
   const categoryIds = useMemo(() => {
     const ids = new Set(
-      allProducts
-        .filter((p) => p.category !== 'gift-boxes' && !String(p.category).includes('gift'))
-        .map((p) => String(p.category))
+      allProducts.reduce((acc: string[], p: any) => {
+        if (p.category !== 'gift-boxes' && !String(p.category).includes('gift')) {
+          acc.push(String(p.category));
+        }
+        return acc;
+      }, [])
     );
     return Array.from(ids);
   }, [allProducts]);
 
   const availableProducts = useMemo(() => {
-    return allProducts
-      .filter((p) => p.category !== 'gift-boxes' && !String(p.category).includes('gift'))
-      .filter((p) => activeCategory === 'all' || String(p.category) === activeCategory);
+    return allProducts.filter(
+      (p) => p.category !== 'gift-boxes' && !String(p.category).includes('gift') && (activeCategory === 'all' || String(p.category) === activeCategory)
+    );
   }, [activeCategory, allProducts]);
 
   const handleAddItem = (product: Product, color?: string) => {
@@ -123,6 +128,7 @@ export default function CustomBoxBuilder({
   };
 
   return (
+    <LazyMotion features={domAnimation}>
     <div className="pt-24 pb-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Breadcrumb */}
@@ -155,7 +161,7 @@ export default function CustomBoxBuilder({
             <div className="flex gap-2 overflow-x-auto no-scrollbar mb-8 pb-1">
               <button
                 onClick={() => setActiveCategory('all')}
-                className={`flex-shrink-0 px-4 py-2 rounded-full font-ui text-xs font-semibold uppercase tracking-wider transition-all whitespace-nowrap ${
+                className={`flex-shrink-0 px-4 py-2 rounded-full font-ui text-xs font-semibold uppercase tracking-wider transition-colors whitespace-nowrap ${
                   activeCategory === 'all'
                     ? 'bg-burgundy text-ivory'
                     : 'bg-champagne/50 text-burgundy/60 hover:bg-champagne'
@@ -168,7 +174,7 @@ export default function CustomBoxBuilder({
                 <button
                   key={id}
                   onClick={() => setActiveCategory(id)}
-                  className={`flex-shrink-0 px-4 py-2 rounded-full font-ui text-xs font-semibold uppercase tracking-wider transition-all whitespace-nowrap ${
+                  className={`flex-shrink-0 px-4 py-2 rounded-full font-ui text-xs font-semibold uppercase tracking-wider transition-colors whitespace-nowrap ${
                     activeCategory === id
                       ? 'bg-burgundy text-ivory'
                       : 'bg-champagne/50 text-burgundy/60 hover:bg-champagne'
@@ -198,13 +204,13 @@ export default function CustomBoxBuilder({
                   return (
                     <div
                       key={product.id}
-                      className="relative group bg-champagne/20 rounded-2xl p-3 border border-transparent hover:border-burgundy/20 transition-all"
+                      className="relative group bg-champagne/20 rounded-2xl p-3 border border-transparent hover:border-burgundy/20 transition-colors"
                     >
                       <div className="relative aspect-square rounded-xl overflow-hidden mb-3">
                         <Image
                           src={product.images[0]}
                           alt={product.name}
-                          fill
+                          fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                           className="object-cover transition-transform duration-500 group-hover:scale-105"
                           unoptimized
                         />
@@ -231,6 +237,7 @@ export default function CustomBoxBuilder({
                         <div className="flex items-center gap-1">
                           {selectedCount > 0 && (
                             <button
+                              aria-label="Remove item"
                               onClick={() => handleRemoveItem(product.id, activeColor)}
                               className="p-1.5 rounded-full bg-burgundy/10 text-burgundy hover:bg-burgundy hover:text-ivory transition-colors"
                             >
@@ -238,6 +245,7 @@ export default function CustomBoxBuilder({
                             </button>
                           )}
                           <button
+                            aria-label="Add item"
                             onClick={() => handleAddItem(product, activeColor)}
                             className="p-1.5 rounded-full bg-burgundy/10 text-burgundy hover:bg-burgundy hover:text-ivory transition-colors"
                           >
@@ -270,135 +278,21 @@ export default function CustomBoxBuilder({
             </AnimatePresence>
           </div>
 
-          {/* Right: Box Summary */}
-          <div className="lg:col-span-1">
-            <div className="glass-card rounded-3xl p-6 sticky top-28">
-              <h2 className="font-heading text-xl font-bold text-burgundy mb-6">Your Box</h2>
-
-              <div className="flex items-start gap-4 mb-6 pb-6 border-b border-burgundy/10">
-                <div className="relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0">
-                  <Image
-                    src={baseBox.images[0]}
-                    alt={baseBox.name}
-                    fill
-                    className="object-cover"
-                    unoptimized
-                  />
-                </div>
-                <div>
-                  <h3 className="font-ui font-semibold text-sm text-burgundy">{baseBox.name}</h3>
-                  <span className="font-body text-sm text-burgundy/60">
-                    {formatPrice(baseBox.price)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Selected Items */}
-              <div className="space-y-4 mb-6 max-h-[280px] overflow-y-auto no-scrollbar">
-                {selectedItems.length === 0 ? (
-                  <p className="font-body text-sm text-burgundy/40 text-center py-4">
-                    Your box is empty. Select items to add!
-                  </p>
-                ) : (
-                  <AnimatePresence>
-                    {selectedItems.map((item) => (
-                      <motion.div
-                        key={`${item.product.id}-${item.color || 'none'}`}
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="flex items-center justify-between gap-3"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="font-ui font-semibold text-xs text-burgundy line-clamp-1">
-                            {item.product.name}{item.color ? ` (${item.color})` : ''}
-                          </p>
-                          <p className="font-body text-xs text-burgundy/60">
-                            {formatPrice(item.product.price)}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2 bg-champagne/50 rounded-lg p-1 flex-shrink-0">
-                          <button
-                            onClick={() => handleRemoveItem(item.product.id, item.color)}
-                            className="p-1 rounded bg-ivory text-burgundy/60 hover:text-burgundy"
-                          >
-                            <Minus size={10} />
-                          </button>
-                          <span className="font-ui text-xs font-bold w-4 text-center">
-                            {item.quantity}
-                          </span>
-                          <button
-                            onClick={() => handleAddItem(item.product, item.color)}
-                            className="p-1 rounded bg-ivory text-burgundy/60 hover:text-burgundy"
-                          >
-                            <Plus size={10} />
-                          </button>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                )}
-              </div>
-
-              {/* Totals */}
-              <div className="space-y-3 pt-6 border-t border-burgundy/10 mb-6">
-                <div className="flex justify-between font-body text-sm text-burgundy/60">
-                  <span>Box & packaging</span>
-                  <span>{formatPrice(baseBox.price)}</span>
-                </div>
-                <div className="flex justify-between font-body text-sm text-burgundy/60">
-                  <span>Items ({flatBoxItems.length})</span>
-                  <span>{formatPrice(boxItemsTotal)}</span>
-                </div>
-                <div className="flex justify-between font-heading font-bold text-xl text-burgundy pt-3 border-t border-burgundy/10">
-                  <span>Total</span>
-                  <span>{formatPrice(totalBoxPrice)}</span>
-                </div>
-              </div>
-
-              {/* Add to Cart */}
-              <AnimatePresence mode="wait">
-                {added ? (
-                  <motion.div
-                    key="added"
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl bg-emerald-500 text-white font-ui font-semibold mb-3"
-                  >
-                    <Check size={16} />
-                    Added! Redirecting…
-                  </motion.div>
-                ) : (
-                  <motion.button
-                    key="add"
-                    whileTap={{ scale: 0.97 }}
-                    onClick={handleAddToCart}
-                    disabled={selectedItems.length === 0}
-                    className="btn-primary w-full flex items-center justify-center gap-2 mb-3 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <ShoppingBag size={16} />
-                    <span>Add Box to Cart</span>
-                  </motion.button>
-                )}
-              </AnimatePresence>
-
-              {/* WhatsApp */}
-              <a
-                href={`https://wa.me/${BRAND.whatsapp}?text=${buildWhatsAppMessage()}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl border border-green-500/40 bg-green-50 text-green-700 font-ui text-sm font-semibold hover:bg-green-100 transition-colors"
-              >
-                <MessageCircle size={16} />
-                Chat on WhatsApp
-              </a>
-              <p className="font-body text-[10px] text-burgundy/40 text-center mt-2">
-                Need more customization? We're here to help!
-              </p>
-            </div>
-          </div>
+          <CustomBoxSidebar
+            baseBox={baseBox}
+            selectedItems={selectedItems}
+            flatBoxItems={flatBoxItems}
+            boxItemsTotal={boxItemsTotal}
+            totalBoxPrice={totalBoxPrice}
+            added={added}
+            handleRemoveItem={handleRemoveItem}
+            handleAddItem={handleAddItem}
+            handleAddToCart={handleAddToCart}
+            buildWhatsAppMessage={buildWhatsAppMessage}
+          />
         </div>
       </div>
     </div>
+    </LazyMotion>
   );
 }

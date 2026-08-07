@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 import { User, Check } from 'lucide-react';
 import { useAuthStore } from '@/lib/store/auth-store';
 
@@ -65,16 +65,16 @@ export default function ProfilePage() {
         </div>
         <div className="space-y-4">
           <div>
-            <label className="font-ui text-xs font-semibold uppercase tracking-wider text-burgundy/50 mb-2 block">Name</label>
-            <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputClass} />
+            <label className="font-ui text-xs font-semibold uppercase tracking-wider text-burgundy/50 mb-2 block" htmlFor="name_ecbd6b">Name</label>
+            <input id="name_ecbd6b" aria-label="Action" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputClass} />
           </div>
           <div>
-            <label className="font-ui text-xs font-semibold uppercase tracking-wider text-burgundy/50 mb-2 block">Email</label>
-            <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputClass} />
+            <label className="font-ui text-xs font-semibold uppercase tracking-wider text-burgundy/50 mb-2 block" htmlFor="email_46875d">Email</label>
+            <input id="email_46875d" aria-label="Action" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputClass} />
           </div>
           <div>
-            <label className="font-ui text-xs font-semibold uppercase tracking-wider text-burgundy/50 mb-2 block">Phone</label>
-            <input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inputClass} />
+            <label className="font-ui text-xs font-semibold uppercase tracking-wider text-burgundy/50 mb-2 block" htmlFor="phone_b4bcb3">Phone</label>
+            <input id="phone_b4bcb3" aria-label="Action" type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inputClass} />
           </div>
         </div>
         <button onClick={handleSave} disabled={loading} className="btn-primary mt-6 flex items-center gap-2">

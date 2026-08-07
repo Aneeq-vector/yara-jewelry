@@ -1,6 +1,6 @@
 'use server';
 
-import { getServerClient, getAdminPanelClient } from '@/lib/pocketbase-server';
+import { getServerClient, getAdminPanelClient, requireAuth, getServerSession, validateSession } from '@/lib/pocketbase-server';
 import { loginSchema, registerSchema } from '@/lib/schemas';
 import { cookies } from 'next/headers';
 
@@ -33,7 +33,7 @@ export async function loginAction(formData: FormData) {
     });
     
     // Ensure the record is a plain object without prototype methods for Server Actions
-    const plainUser = JSON.parse(JSON.stringify(authData.record));
+    const plainUser = structuredClone(authData.record);
     
     return { success: true, user: plainUser };
   } catch (error: any) {
@@ -83,6 +83,7 @@ export async function registerAction(formData: FormData) {
 }
 
 export async function logoutAction() {
+  await getServerSession();
   const pb = await getServerClient();
   pb.authStore.clear();
   // We also explicitly remove the cookie as a fallback
@@ -91,6 +92,7 @@ export async function logoutAction() {
 }
 
 export async function adminLogoutAction() {
+  await getServerSession();
   const pb = await getAdminPanelClient();
   pb.authStore.clear();
   const cookieStore = await cookies();
@@ -98,12 +100,12 @@ export async function adminLogoutAction() {
 }
 
 export async function getUserAction() {
-  const pb = await getServerClient();
-  if (!pb.authStore.isValid || !pb.authStore.record) return null;
+  const { pb, user } = await getServerSession();
+  if (!user) return null;
 
   try {
     // Fetch fresh user record from DB to avoid stale cookie data
-    const freshRecord = await pb.collection('users').getOne(pb.authStore.record.id);
+    const freshRecord = await pb.collection('users').getOne(user.id);
     
     if (freshRecord.status === 'Inactive') {
       pb.authStore.clear();
@@ -122,7 +124,7 @@ export async function getUserAction() {
       sameSite: 'lax',
     });
     
-    return JSON.parse(JSON.stringify(freshRecord));
+    return structuredClone(freshRecord);
   } catch (err) {
     return null;
   }
@@ -130,8 +132,8 @@ export async function getUserAction() {
 
 export async function updateUserAction(id: string, updates: Record<string, any>) {
   try {
-    const pb = await getServerClient();
-    if (!pb.authStore.isValid || pb.authStore.record?.id !== id) {
+    const { pb, user } = await requireAuth();
+    if (user.id !== id) {
       return { error: 'Unauthorized' };
     }
     const record = await pb.collection('users').update(id, updates);
@@ -145,7 +147,7 @@ export async function updateUserAction(id: string, updates: Record<string, any>)
       sameSite: 'lax',
     });
     
-    const plainUser = JSON.parse(JSON.stringify(record));
+    const plainUser = structuredClone(record);
     return { success: true, user: plainUser };
   } catch (error: any) {
     return { error: error.message || 'Failed to update profile' };
@@ -153,15 +155,12 @@ export async function updateUserAction(id: string, updates: Record<string, any>)
 }
 export async function getAdminUsersAction() {
   try {
-    const pb = await getAdminPanelClient();
-    if (!pb.authStore.isValid || pb.authStore.record?.role !== 'admin') {
-      return { error: 'Unauthorized' };
-    }
+    const { pb } = await validateSession();
     const admins = await pb.collection('users').getFullList({
       filter: 'role = "admin"'
     });
     
-    return { success: true, admins: JSON.parse(JSON.stringify(admins)) };
+    return { success: true, admins: structuredClone(admins) };
   } catch (error: any) {
     return { error: error.message || 'Failed to fetch admins' };
   }

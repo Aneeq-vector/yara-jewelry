@@ -1,4 +1,5 @@
 import { DollarSign, ShoppingBag, Users, TrendingUp } from 'lucide-react';
+import Image from 'next/image';
 import { getAdminClient } from '@/lib/pocketbase-server';
 import { PB_URL } from '@/lib/pocketbase';
 
@@ -52,7 +53,7 @@ export default async function AdminDashboard() {
           <p className="text-burgundy/60 font-body text-sm mt-1">Live data from PocketBase.</p>
         </div>
         <div className="flex items-center gap-3">
-          <select className="bg-white border border-burgundy/10 text-burgundy text-sm rounded-xl px-4 py-2 font-body outline-none focus:border-burgundy/30 transition-colors cursor-pointer">
+          <select aria-label="Action" className="bg-white border border-burgundy/10 text-burgundy text-sm rounded-xl px-4 py-2 font-body outline-none focus:border-burgundy/30 transition-colors cursor-pointer">
             <option>Today</option>
             <option>Last 7 Days</option>
             <option>Last 30 Days</option>
@@ -138,7 +139,14 @@ export default async function AdminDashboard() {
                 <div key={product.id} className="flex items-center gap-4 p-3 rounded-xl hover:bg-ivory transition-colors cursor-pointer border border-transparent hover:border-burgundy/10">
                   <div className="w-12 h-12 bg-champagne rounded-lg overflow-hidden flex-shrink-0 relative">
                     {product.images && product.images[0] && (
-                      <img src={`${PB_URL}/api/files/${product.collectionId}/${product.id}/${product.images[0]}`} alt={product.name} className="w-full h-full object-cover" />
+                      <Image 
+                        src={`${PB_URL}/api/files/${product.collectionId}/${product.id}/${product.images[0]}`} 
+                        alt={product.name} 
+                        fill
+                        sizes="48px"
+                        className="object-cover"
+                        unoptimized
+                      />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">

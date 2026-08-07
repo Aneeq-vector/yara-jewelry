@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 import { User, Package, Heart, MapPin, Settings, LogOut, ChevronRight, LayoutDashboard } from 'lucide-react';
 import PageWrapper from '@/components/layout/PageWrapper';
 import { useAuthStore } from '@/lib/store/auth-store';

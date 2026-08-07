@@ -67,16 +67,16 @@ export default function AdminSettings() {
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label className="text-sm font-bold text-burgundy font-ui uppercase tracking-wider">Store Name</label>
-                      <input 
+                      <label className="text-sm font-bold text-burgundy font-ui uppercase tracking-wider" htmlFor="storename_9d0dc1">Store Name</label>
+                      <input id="storename_9d0dc1" aria-label="Action" 
                         type="text" 
                         defaultValue="Yara Jewelry"
                         className="w-full bg-ivory border border-burgundy/10 rounded-xl px-4 py-2.5 font-body text-burgundy focus:border-burgundy/30 outline-none transition-colors"
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-bold text-burgundy font-ui uppercase tracking-wider">Contact Email</label>
-                      <input 
+                      <label className="text-sm font-bold text-burgundy font-ui uppercase tracking-wider" htmlFor="contactemail_608854">Contact Email</label>
+                      <input id="contactemail_608854" aria-label="Action" 
                         type="email" 
                         defaultValue="contact@yarajewelry.com"
                         className="w-full bg-ivory border border-burgundy/10 rounded-xl px-4 py-2.5 font-body text-burgundy focus:border-burgundy/30 outline-none transition-colors"
@@ -85,8 +85,8 @@ export default function AdminSettings() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-bold text-burgundy font-ui uppercase tracking-wider">Store Description</label>
-                    <textarea 
+                    <label className="text-sm font-bold text-burgundy font-ui uppercase tracking-wider" htmlFor="storedescription_033c23">Store Description</label>
+                    <textarea id="storedescription_033c23" aria-label="Action" 
                       rows={4}
                       defaultValue="Exclusive handcrafted fine jewelry combining traditional artistry with modern elegance."
                       className="w-full bg-ivory border border-burgundy/10 rounded-xl px-4 py-3 font-body text-burgundy focus:border-burgundy/30 outline-none transition-colors resize-none"
@@ -97,8 +97,8 @@ export default function AdminSettings() {
                     <h3 className="font-bold text-burgundy font-ui mb-4">Currency & Region</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <label className="text-sm font-bold text-burgundy font-ui uppercase tracking-wider text-xs">Default Currency</label>
-                        <select className="w-full bg-ivory border border-burgundy/10 rounded-xl px-4 py-2.5 font-body text-burgundy focus:border-burgundy/30 outline-none transition-colors cursor-pointer">
+                        <label className="text-sm font-bold text-burgundy font-ui uppercase tracking-wider text-xs" htmlFor="defaultcurrency_248f74">Default Currency</label>
+                        <select id="defaultcurrency_248f74" aria-label="Action" className="w-full bg-ivory border border-burgundy/10 rounded-xl px-4 py-2.5 font-body text-burgundy focus:border-burgundy/30 outline-none transition-colors cursor-pointer">
                           <option>PKR (Rs.)</option>
                           <option>USD ($)</option>
                           <option>EUR (€)</option>
@@ -106,8 +106,8 @@ export default function AdminSettings() {
                         </select>
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-bold text-burgundy font-ui uppercase tracking-wider text-xs">Timezone</label>
-                        <select className="w-full bg-ivory border border-burgundy/10 rounded-xl px-4 py-2.5 font-body text-burgundy focus:border-burgundy/30 outline-none transition-colors cursor-pointer">
+                        <label className="text-sm font-bold text-burgundy font-ui uppercase tracking-wider text-xs" htmlFor="timezone_55d114">Timezone</label>
+                        <select id="timezone_55d114" aria-label="Action" className="w-full bg-ivory border border-burgundy/10 rounded-xl px-4 py-2.5 font-body text-burgundy focus:border-burgundy/30 outline-none transition-colors cursor-pointer">
                           <option>Asia/Karachi (GMT+5)</option>
                           <option>America/New_York (GMT-5)</option>
                           <option>Europe/London (GMT+0)</option>

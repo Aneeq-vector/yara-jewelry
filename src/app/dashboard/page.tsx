@@ -72,8 +72,8 @@ export default async function DashboardOverviewPage() {
                   </div>
                   <div>
                     <p className="font-ui font-semibold text-sm text-burgundy">{order.orderId || `#${order.id.slice(0, 8)}`}</p>
-                    <p className="font-body text-xs text-burgundy/40">
-                      {new Date(order.orderDate ? order.orderDate.replace(' ', 'T') : (order.created ? order.created.replace(' ', 'T') : Date.now())).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    <p suppressHydrationWarning className="font-body text-xs text-burgundy/40">
+                      {new Date(order.orderDate ? order.orderDate.replace(' ', 'T') : (order.created ? order.created.replace(' ', 'T') : '2024-01-01T00:00:00Z')).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </p>
                   </div>
                 </div>

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useSyncExternalStore } from 'react';
+import { m as motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Heart, ShoppingBag, X, Star } from 'lucide-react';
@@ -14,11 +14,11 @@ export default function WishlistPage() {
   const { items, removeItem } = useWishlistStore();
   const addToCart = useCartStore((s) => s.addItem);
 
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
 
   if (!mounted) {
     return null;
@@ -70,12 +70,12 @@ export default function WishlistPage() {
                 >
                   <div className="relative rounded-3xl overflow-hidden bg-champagne/30 mb-4">
                     <Link href={`/shop/${product.id}`} className="block relative aspect-square">
-                      <Image src={product.images[0]} alt={product.name} fill className="object-cover group-hover:scale-105 transition-transform duration-700" unoptimized />
+                      <Image src={product.images[0]} alt={product.name} fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover group-hover:scale-105 transition-transform duration-700" unoptimized />
                     </Link>
 
                     <button
                       onClick={() => removeItem(product.id)}
-                      className="absolute top-3 right-3 p-2 rounded-full bg-ivory/80 backdrop-blur-sm text-burgundy/60 hover:bg-ivory hover:text-burgundy transition-colors"
+                      aria-label="Interactive control" className="absolute top-3 right-3 p-2 rounded-full bg-ivory/80 backdrop-blur-sm text-burgundy/60 hover:bg-ivory hover:text-burgundy transition-colors"
                     >
                       <X size={14} />
                     </button>
@@ -84,7 +84,7 @@ export default function WishlistPage() {
                       <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => addToCart(product)}
-                        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-burgundy/90 backdrop-blur-sm text-ivory font-ui text-xs font-semibold uppercase tracking-wider opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300"
+                        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-burgundy/90 backdrop-blur-sm text-ivory font-ui text-xs font-semibold uppercase tracking-wider opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition duration-300"
                       >
                         <ShoppingBag size={14} />
                         Add to Cart

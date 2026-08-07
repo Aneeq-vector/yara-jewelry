@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useSyncExternalStore } from 'react';
+import { m as motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Heart, ShoppingBag, Eye, Star, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -14,13 +14,13 @@ import { Product } from '@/types';
 function ProductCard({ product, index, isViewAll }: { product: Product; index: number; isViewAll?: boolean }) {
   const addToCart = useCartStore((s) => s.addItem);
   const { isInWishlist, toggleItem } = useWishlistStore();
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
   const wishlisted = isInWishlist(product.id);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   const nextImage = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -55,8 +55,8 @@ function ProductCard({ product, index, isViewAll }: { product: Product; index: n
                 <Image
                   src={product.images[currentImageIndex]}
                   alt={product.name}
-                  fill
-                  className={`object-cover group-hover:scale-105 transition-all duration-700 ${
+                  fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  className={`object-cover group-hover:scale-105 transition duration-700 ${
                     !product.inStock ? 'opacity-40 grayscale-[30%]' : ''
                   }`}
                   unoptimized
@@ -70,13 +70,13 @@ function ProductCard({ product, index, isViewAll }: { product: Product; index: n
             <div className="absolute inset-0 flex items-center justify-between px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none">
               <button
                 onClick={prevImage}
-                className="pointer-events-auto p-1.5 rounded-full bg-white/80 text-burgundy hover:bg-white transition-colors shadow-sm"
+                aria-label="Interactive control" className="pointer-events-auto p-1.5 rounded-full bg-white/80 text-burgundy hover:bg-white transition-colors shadow-sm"
               >
                 <ChevronLeft size={16} />
               </button>
               <button
                 onClick={nextImage}
-                className="pointer-events-auto p-1.5 rounded-full bg-white/80 text-burgundy hover:bg-white transition-colors shadow-sm"
+                aria-label="Interactive control" className="pointer-events-auto p-1.5 rounded-full bg-white/80 text-burgundy hover:bg-white transition-colors shadow-sm"
               >
                 <ChevronRight size={16} />
               </button>
@@ -114,8 +114,8 @@ function ProductCard({ product, index, isViewAll }: { product: Product; index: n
 
         {/* View All Overlay */}
         {isViewAll && (
-          <Link href="/shop" className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-burgundy/20 group-hover:bg-burgundy/40 transition-all duration-500">
-            <div className="w-14 h-14 rounded-full bg-white/20 border border-white/40 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 group-hover:bg-white/30 transition-all duration-300">
+          <Link href="/shop" className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-burgundy/20 group-hover:bg-burgundy/40 transition duration-500">
+            <div className="w-14 h-14 rounded-full bg-white/20 border border-white/40 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 group-hover:bg-white/30 transition duration-300">
               <ArrowRight size={22} className="text-white" />
             </div>
             <div className="text-center px-4">
@@ -127,7 +127,7 @@ function ProductCard({ product, index, isViewAll }: { product: Product; index: n
 
         {/* Quick Actions */}
         {!isViewAll && (
-          <div className="absolute bottom-3 left-3 right-3 z-10 opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all duration-300">
+          <div className="absolute bottom-3 left-3 right-3 z-10 opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition duration-300">
             <div className="flex items-center gap-2">
               {product.inStock ? (
                 <motion.button

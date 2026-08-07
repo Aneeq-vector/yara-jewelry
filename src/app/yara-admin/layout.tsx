@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, redirect } from 'next/navigation';
 import { 
   LayoutDashboard, 
   ShoppingBag, 
@@ -15,7 +15,8 @@ import {
   X,
   Bell,
   Search,
-  ChevronDown
+  ChevronDown,
+  Gift
 } from 'lucide-react';
 import Image from 'next/image';
 import { useAdminAuthStore } from '@/lib/store/admin-auth-store';
@@ -26,6 +27,7 @@ const SIDEBAR_ITEMS = [
   { name: 'Products', href: '/yara-admin/products', icon: ShoppingBag },
   { name: 'Orders', href: '/yara-admin/orders', icon: ShoppingCart },
   { name: 'Customers', href: '/yara-admin/customers', icon: Users },
+  { name: 'Gift Boxes', href: '/yara-admin/gift-boxes', icon: Gift },
   { name: 'Settings', href: '/yara-admin/settings', icon: Settings },
 ];
 
@@ -54,17 +56,13 @@ export default function AdminLayout({
     };
   }, []);
 
-  useEffect(() => {
-    if (isClient && hasHydrated) {
-      if (!isAuthenticated || user?.role !== 'admin') {
-        router.push('/auth/login');
-      }
-    }
-  }, [isClient, hasHydrated, isAuthenticated, user, router]);
-
   // Prevent hydration mismatch or showing admin UI briefly before redirect
-  if (!isClient || !hasHydrated || !isAuthenticated || user?.role !== 'admin') {
+  if (!isClient || !hasHydrated) {
     return null;
+  }
+
+  if (!isAuthenticated || user?.role !== 'admin') {
+    redirect('/auth/login');
   }
 
   const handleLogout = async () => {
@@ -82,8 +80,10 @@ export default function AdminLayout({
     <div className="min-h-screen bg-ivory flex">
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/20 z-40 lg:hidden"
+        <button 
+          type="button"
+          aria-label="Close sidebar"
+          className="fixed inset-0 w-full h-full bg-black/20 z-40 lg:hidden cursor-default border-0 p-0 m-0"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
@@ -98,7 +98,7 @@ export default function AdminLayout({
           <Link href="/yara-admin" className="flex items-center gap-2">
             <span className="font-heading text-2xl font-bold text-burgundy">Yara Admin</span>
           </Link>
-          <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-burgundy/50 hover:text-burgundy">
+          <button aria-label="Action" onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-burgundy/50 hover:text-burgundy">
             <X size={20} />
           </button>
         </div>
@@ -112,7 +112,7 @@ export default function AdminLayout({
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition duration-200 ${
                   isActive 
                     ? 'bg-burgundy text-white font-medium shadow-md shadow-burgundy/20' 
                     : 'text-burgundy/70 hover:bg-rose-gold/10 hover:text-burgundy'
@@ -141,7 +141,7 @@ export default function AdminLayout({
         {/* Header */}
         <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-burgundy/10 px-4 sm:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button 
+            <button aria-label="Action" 
               onClick={() => setIsSidebarOpen(true)}
               className="lg:hidden text-burgundy p-2 rounded-lg hover:bg-rose-gold/10"
             >
@@ -150,7 +150,7 @@ export default function AdminLayout({
           </div>
 
           <div className="flex items-center gap-4 sm:gap-6">
-            <button className="relative text-burgundy/60 hover:text-burgundy transition-colors">
+            <button aria-label="Action" className="relative text-burgundy/60 hover:text-burgundy transition-colors">
               <Bell size={20} />
               <span className="absolute -top-1 -right-1 w-2 h-2 bg-rose-500 rounded-full"></span>
             </button>

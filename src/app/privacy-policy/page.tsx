@@ -1,7 +1,7 @@
 'use client';
 
 import PageWrapper from '@/components/layout/PageWrapper';
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 
 export default function PrivacyPolicyPage() {
   return (

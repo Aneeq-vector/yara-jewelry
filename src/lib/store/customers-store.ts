@@ -23,7 +23,7 @@ interface CustomersStore {
   updateCustomerStatus: (id: string, status: Customer['status']) => void;
 }
 
-export const useCustomersStore = create<CustomersStore>()(
+const useCustomersStore = create<CustomersStore>()(
   persist(
     (set) => ({
       customers: INITIAL_CUSTOMERS,

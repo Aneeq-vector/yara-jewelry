@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m as motion, AnimatePresence } from 'framer-motion';
 import { Mail, Phone, MapPin, Send, Check, MessageCircle } from 'lucide-react';
 import PageWrapper from '@/components/layout/PageWrapper';
 import { BRAND } from '@/lib/constants';
@@ -29,6 +29,12 @@ const FacebookIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
+const socialLinks = [
+  { name: 'Instagram', icon: InstagramIcon, href: BRAND.instagram, color: 'hover:text-pink-600' },
+  { name: 'Facebook', icon: FacebookIcon, href: BRAND.facebook, color: 'hover:text-blue-600' },
+  { name: 'TikTok', icon: TiktokIcon, href: BRAND.tiktok, color: 'hover:text-black' },
+];
+
 export default function ContactPage() {
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
   const [focused, setFocused] = useState<string | null>(null);
@@ -39,12 +45,6 @@ export default function ContactPage() {
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 4000);
   };
-
-  const socialLinks = [
-    { name: 'Instagram', icon: InstagramIcon, href: BRAND.instagram, color: 'hover:text-pink-600' },
-    { name: 'Facebook', icon: FacebookIcon, href: BRAND.facebook, color: 'hover:text-blue-600' },
-    { name: 'TikTok', icon: TiktokIcon, href: BRAND.tiktok, color: 'hover:text-black' },
-  ];
 
   return (
     <PageWrapper>
@@ -96,7 +96,7 @@ export default function ContactPage() {
                             transition={{ delay: 0.2 + i * 0.1 }}
                             className="flex items-start gap-5 group"
                           >
-                            <div className="w-14 h-14 rounded-2xl bg-burgundy/5 flex items-center justify-center flex-shrink-0 group-hover:bg-burgundy group-hover:scale-105 transition-all duration-300">
+                            <div className="w-14 h-14 rounded-2xl bg-burgundy/5 flex items-center justify-center flex-shrink-0 group-hover:bg-burgundy group-hover:scale-105 transition duration-300">
                               <Icon size={24} className="text-burgundy group-hover:text-ivory transition-colors duration-300" />
                             </div>
                             <div>
@@ -145,7 +145,7 @@ export default function ContactPage() {
                             initial={{ opacity: 0, scale: 0.8 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: 0.6 + index * 0.1 }}
-                            className={`w-12 h-12 rounded-full border border-burgundy/10 flex items-center justify-center text-burgundy hover:border-transparent hover:bg-white hover:shadow-lg transition-all duration-300 ${social.color}`}
+                            className={`w-12 h-12 rounded-full border border-burgundy/10 flex items-center justify-center text-burgundy hover:border-transparent hover:bg-white hover:shadow-lg transition duration-300 ${social.color}`}
                           >
                             <Icon className="w-5 h-5" />
                           </motion.a>
@@ -188,7 +188,7 @@ export default function ContactPage() {
                             />
                             <label 
                               htmlFor="name"
-                              className={`absolute left-0 font-ui transition-all duration-200 pointer-events-none
+                              className={`absolute left-0 font-ui transition duration-200 pointer-events-none
                                 ${focused === 'name' || form.name ? 'top-0 text-xs text-burgundy uppercase font-bold tracking-wider' : 'top-7 text-sm text-burgundy/50'}`}
                             >
                               Your Name
@@ -210,7 +210,7 @@ export default function ContactPage() {
                             />
                             <label 
                               htmlFor="email"
-                              className={`absolute left-0 font-ui transition-all duration-200 pointer-events-none
+                              className={`absolute left-0 font-ui transition duration-200 pointer-events-none
                                 ${focused === 'email' || form.email ? 'top-0 text-xs text-burgundy uppercase font-bold tracking-wider' : 'top-7 text-sm text-burgundy/50'}`}
                             >
                               Email Address
@@ -232,7 +232,7 @@ export default function ContactPage() {
                             />
                             <label 
                                htmlFor="subject"
-                               className={`absolute left-0 font-ui transition-all duration-200 pointer-events-none
+                               className={`absolute left-0 font-ui transition duration-200 pointer-events-none
                                  ${focused === 'subject' || form.subject ? 'top-0 text-xs text-burgundy uppercase font-bold tracking-wider' : 'top-7 text-sm text-burgundy/50'}`}
                             >
                               Subject
@@ -254,7 +254,7 @@ export default function ContactPage() {
                             />
                             <label 
                                htmlFor="message"
-                               className={`absolute left-0 font-ui transition-all duration-200 pointer-events-none
+                               className={`absolute left-0 font-ui transition duration-200 pointer-events-none
                                  ${focused === 'message' || form.message ? 'top-0 text-xs text-burgundy uppercase font-bold tracking-wider' : 'top-7 text-sm text-burgundy/50'}`}
                             >
                               Your Message

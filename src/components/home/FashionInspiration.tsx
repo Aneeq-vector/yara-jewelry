@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { m as motion, useScroll, useTransform } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRef } from 'react';
@@ -52,7 +52,7 @@ export default function FashionInspiration() {
         <div className="columns-2 md:columns-3 lg:columns-4 gap-4">
           {images.map((img, i) => (
             <motion.div
-              key={i}
+              key={img.src}
               initial={{ opacity: 0, scale: 0.95 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true, margin: '-30px' }}

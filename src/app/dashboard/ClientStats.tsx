@@ -1,17 +1,17 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 import { Package, Heart, MapPin } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useSyncExternalStore } from 'react';
 import { useWishlistStore } from '@/lib/store/wishlist-store';
 
 export default function DashboardClientStats({ orderCount, wishlistCount: serverWishlistCount, addressesCount }: { orderCount: number, wishlistCount: number, addressesCount: number }) {
   const localWishlistCount = useWishlistStore((s) => s.items.length);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
 
   const displayWishlistCount = mounted ? localWishlistCount : serverWishlistCount;
 

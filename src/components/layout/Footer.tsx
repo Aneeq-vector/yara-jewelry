@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { X } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m as motion, AnimatePresence } from 'framer-motion';
 
 const InstagramIcon = ({ size = 16 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -52,7 +52,7 @@ export default function Footer() {
               </p>
             </div>
             <div className="flex w-full max-w-md">
-              <input
+              <input aria-label="Your email address"
                 type="email"
                 placeholder="Your email address"
                 className="flex-1 min-w-0 bg-ivory/10 border border-ivory/20 rounded-l-full px-4 sm:px-6 py-3.5 text-sm font-body text-ivory placeholder:text-ivory/40 focus:outline-none focus:border-rose-gold/50 transition-colors"
@@ -83,6 +83,7 @@ export default function Footer() {
                 href={BRAND.instagram}
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="Follow us on Instagram"
                 className="w-10 h-10 rounded-full bg-ivory/10 flex items-center justify-center hover:bg-ivory/20 transition-colors"
               >
                 <InstagramIcon size={16} />
@@ -91,6 +92,7 @@ export default function Footer() {
                 href={BRAND.facebook}
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="Follow us on Facebook"
                 className="w-10 h-10 rounded-full bg-ivory/10 flex items-center justify-center hover:bg-ivory/20 transition-colors"
               >
                 <FacebookIcon size={16} />
@@ -99,6 +101,7 @@ export default function Footer() {
                 href={BRAND.pinterest}
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="Follow us on Pinterest"
                 className="w-10 h-10 rounded-full bg-ivory/10 flex items-center justify-center hover:bg-ivory/20 transition-colors"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -198,7 +201,7 @@ export default function Footer() {
             className="fixed bottom-6 left-1/2 z-50 flex items-center gap-3 px-6 py-4 rounded-2xl bg-ivory text-burgundy shadow-2xl border border-rose-gold/20"
           >
             <span className="font-body text-sm font-medium">We are currently working on this page. Check back soon!</span>
-            <button onClick={() => setShowToast(false)} className="text-burgundy/60 hover:text-burgundy transition-colors ml-2">
+            <button aria-label="Action" onClick={() => setShowToast(false)} className="text-burgundy/60 hover:text-burgundy transition-colors ml-2">
               <X size={16} />
             </button>
           </motion.div>

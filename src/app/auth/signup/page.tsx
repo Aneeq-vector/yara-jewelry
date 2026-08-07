@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -28,39 +28,42 @@ export default function SignupPage() {
     }
     setLoading(true);
     
-    const formData = new FormData();
-    formData.append('name', form.name);
-    formData.append('email', form.email);
-    formData.append('phone', form.phone);
-    formData.append('password', form.password);
-    formData.append('passwordConfirm', form.confirmPassword);
-
-    const result = await registerAction(formData);
-    
-    if (result.error) {
-      setLoading(false);
-      alert(result.error);
-      return;
-    }
-    
-    // Sync client state
-    useAuthStore.setState({ user: result.user as any, isAuthenticated: true });
-    
-    // Sync wishlist
     try {
-      const { syncWishlistAction } = await import('@/app/actions/wishlist');
-      const { useWishlistStore } = await import('@/lib/store/wishlist-store');
-      const localItems = useWishlistStore.getState().items.map(i => i.id);
-      const syncRes = await syncWishlistAction(localItems);
-      if (syncRes.success && syncRes.items) {
-        useWishlistStore.getState().setWishlist(syncRes.items);
+      const formData = new FormData();
+      formData.append('name', form.name);
+      formData.append('email', form.email);
+      formData.append('phone', form.phone);
+      formData.append('password', form.password);
+      formData.append('passwordConfirm', form.confirmPassword);
+
+      const result = await registerAction(formData);
+      
+      if (result.error) {
+        alert(result.error);
+        return;
       }
-    } catch (e) {
-      console.error('Failed to sync wishlist on signup', e);
+      
+      // Sync client state
+      useAuthStore.setState({ user: result.user as any, isAuthenticated: true });
+      
+      // Sync wishlist
+      try {
+        const { syncWishlistAction } = await import('@/app/actions/wishlist');
+        const { useWishlistStore } = await import('@/lib/store/wishlist-store');
+        const localItems = useWishlistStore.getState().items.map(i => i.id);
+        const syncRes = await syncWishlistAction(localItems);
+        if (syncRes.success && syncRes.items) {
+          useWishlistStore.getState().setWishlist(syncRes.items);
+        }
+      } catch (e) {
+        console.error('Failed to sync wishlist on signup', e);
+      }
+      
+      setSuccess(true);
+      setTimeout(() => router.push('/dashboard'), 2000);
+    } finally {
+      setLoading(false);
     }
-    
-    setSuccess(true);
-    setTimeout(() => router.push('/dashboard'), 2000);
   };
 
   return (
@@ -71,7 +74,7 @@ export default function SignupPage() {
       
       <div className="relative z-10 w-full max-w-[540px] mt-6 sm:mt-8 pb-12">
         {/* Large Logo */}
-        <motion.div 
+        <m.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
@@ -87,10 +90,10 @@ export default function SignupPage() {
               priority
             />
           </Link>
-        </motion.div>
+        </m.div>
 
         {/* Glass Card Form */}
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
@@ -98,7 +101,7 @@ export default function SignupPage() {
         >
           <AnimatePresence mode="wait">
             {!success ? (
-              <motion.div
+              <m.div
                 key="form"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -113,26 +116,26 @@ export default function SignupPage() {
                     {/* Name */}
                     <div className="relative pt-5">
                       <input type="text" id="name" value={form.name} onChange={(e) => updateForm('name', e.target.value)} onFocus={() => setFocused('name')} onBlur={() => setFocused(null)} className="peer w-full bg-transparent border-b-2 border-burgundy/10 px-0 py-2 text-burgundy font-body focus:border-burgundy focus:outline-none transition-colors placeholder-transparent" placeholder="Full Name" required />
-                      <label htmlFor="name" className={`absolute left-0 font-ui transition-all duration-200 pointer-events-none ${focused === 'name' || form.name ? 'top-0 text-xs text-burgundy uppercase font-bold tracking-wider' : 'top-7 text-sm text-burgundy/50'}`}>Full Name</label>
+                      <label htmlFor="name" className={`absolute left-0 font-ui transition duration-200 pointer-events-none ${focused === 'name' || form.name ? 'top-0 text-xs text-burgundy uppercase font-bold tracking-wider' : 'top-7 text-sm text-burgundy/50'}`}>Full Name</label>
                     </div>
 
                     {/* Phone */}
                     <div className="relative pt-5">
                       <input type="tel" id="phone" value={form.phone} onChange={(e) => updateForm('phone', e.target.value)} onFocus={() => setFocused('phone')} onBlur={() => setFocused(null)} className="peer w-full bg-transparent border-b-2 border-burgundy/10 px-0 py-2 text-burgundy font-body focus:border-burgundy focus:outline-none transition-colors placeholder-transparent" placeholder="Phone Number" required />
-                      <label htmlFor="phone" className={`absolute left-0 font-ui transition-all duration-200 pointer-events-none ${focused === 'phone' || form.phone ? 'top-0 text-xs text-burgundy uppercase font-bold tracking-wider' : 'top-7 text-sm text-burgundy/50'}`}>Phone Number</label>
+                      <label htmlFor="phone" className={`absolute left-0 font-ui transition duration-200 pointer-events-none ${focused === 'phone' || form.phone ? 'top-0 text-xs text-burgundy uppercase font-bold tracking-wider' : 'top-7 text-sm text-burgundy/50'}`}>Phone Number</label>
                     </div>
 
                   {/* Email */}
                   <div className="relative pt-5">
                     <input type="email" id="email" value={form.email} onChange={(e) => updateForm('email', e.target.value)} onFocus={() => setFocused('email')} onBlur={() => setFocused(null)} className="peer w-full bg-transparent border-b-2 border-burgundy/10 px-0 py-2 text-burgundy font-body focus:border-burgundy focus:outline-none transition-colors placeholder-transparent" placeholder="Email Address" required />
-                    <label htmlFor="email" className={`absolute left-0 font-ui transition-all duration-200 pointer-events-none ${focused === 'email' || form.email ? 'top-0 text-xs text-burgundy uppercase font-bold tracking-wider' : 'top-7 text-sm text-burgundy/50'}`}>Email Address</label>
+                    <label htmlFor="email" className={`absolute left-0 font-ui transition duration-200 pointer-events-none ${focused === 'email' || form.email ? 'top-0 text-xs text-burgundy uppercase font-bold tracking-wider' : 'top-7 text-sm text-burgundy/50'}`}>Email Address</label>
                   </div>
 
                     {/* Password */}
                     <div className="relative pt-5">
                       <input type={showPassword ? 'text' : 'password'} id="password" value={form.password} onChange={(e) => updateForm('password', e.target.value)} onFocus={() => setFocused('password')} onBlur={() => setFocused(null)} className="peer w-full bg-transparent border-b-2 border-burgundy/10 px-0 py-2 pr-10 text-burgundy font-body focus:border-burgundy focus:outline-none transition-colors placeholder-transparent" placeholder="Password" required />
-                      <label htmlFor="password" className={`absolute left-0 font-ui transition-all duration-200 pointer-events-none ${focused === 'password' || form.password ? 'top-0 text-xs text-burgundy uppercase font-bold tracking-wider' : 'top-7 text-sm text-burgundy/50'}`}>Password</label>
-                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-0 top-7 text-burgundy/30 hover:text-burgundy/60 transition-colors">
+                      <label htmlFor="password" className={`absolute left-0 font-ui transition duration-200 pointer-events-none ${focused === 'password' || form.password ? 'top-0 text-xs text-burgundy uppercase font-bold tracking-wider' : 'top-7 text-sm text-burgundy/50'}`}>Password</label>
+                      <button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword(!showPassword)} className="absolute right-0 top-7 text-burgundy/30 hover:text-burgundy/60 transition-colors">
                         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                       </button>
                     </div>
@@ -140,13 +143,13 @@ export default function SignupPage() {
                     {/* Confirm Password */}
                     <div className="relative pt-5">
                       <input type="password" id="confirmPassword" value={form.confirmPassword} onChange={(e) => updateForm('confirmPassword', e.target.value)} onFocus={() => setFocused('confirm')} onBlur={() => setFocused(null)} className="peer w-full bg-transparent border-b-2 border-burgundy/10 px-0 py-2 text-burgundy font-body focus:border-burgundy focus:outline-none transition-colors placeholder-transparent" placeholder="Confirm Password" required />
-                      <label htmlFor="confirmPassword" className={`absolute left-0 font-ui transition-all duration-200 pointer-events-none ${focused === 'confirm' || form.confirmPassword ? 'top-0 text-xs text-burgundy uppercase font-bold tracking-wider' : 'top-7 text-sm text-burgundy/50'}`}>Confirm Password</label>
+                      <label htmlFor="confirmPassword" className={`absolute left-0 font-ui transition duration-200 pointer-events-none ${focused === 'confirm' || form.confirmPassword ? 'top-0 text-xs text-burgundy uppercase font-bold tracking-wider' : 'top-7 text-sm text-burgundy/50'}`}>Confirm Password</label>
                     </div>
                   {form.password && form.confirmPassword && form.password !== form.confirmPassword && (
                     <p className="font-body text-xs text-red-500 mt-1">Passwords do not match</p>
                   )}
 
-                  <motion.button
+                  <m.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     type="submit"
@@ -161,7 +164,7 @@ export default function SignupPage() {
                         <ArrowRight size={16} className="relative z-10" />
                       </>
                     )}
-                  </motion.button>
+                  </m.button>
                 </form>
 
                 <p className="text-center mt-10 font-body text-sm text-burgundy/50">
@@ -170,28 +173,28 @@ export default function SignupPage() {
                     Sign In
                   </Link>
                 </p>
-              </motion.div>
+              </m.div>
             ) : (
-              <motion.div
+              <m.div
                 key="success"
-                initial={{ opacity: 0, scale: 0.9 }}
+                initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="text-center py-10"
               >
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
+                <m.div
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
                   transition={{ type: 'spring', damping: 12, delay: 0.2 }}
                   className="w-24 h-24 rounded-full gradient-rose-gold flex items-center justify-center mx-auto mb-6"
                 >
                   <Sparkles size={40} className="text-white" />
-                </motion.div>
+                </m.div>
                 <h2 className="font-heading text-3xl font-bold text-burgundy mb-3">Welcome to Yara! ✨</h2>
                 <p className="font-body text-burgundy/50">Your account has been created. Redirecting you to your dashboard...</p>
-              </motion.div>
+              </m.div>
             )}
           </AnimatePresence>
-        </motion.div>
+        </m.div>
       </div>
     </div>
   );

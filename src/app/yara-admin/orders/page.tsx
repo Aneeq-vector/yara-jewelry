@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { OrdersTable } from './components/OrdersTable';
+import { OrdersPagination } from './components/OrdersPagination';
+import { ViewOrderModal } from './components/ViewOrderModal';
 import { Search, Filter, Eye, Download, X, Loader2, ChevronDown, FileText, Trash2, RefreshCw } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -87,7 +90,8 @@ export default function OrdersManager() {
 
     const res = await deleteOrdersAction(selectedOrders);
     if (res?.success) {
-      setOrders(prev => prev.filter(o => !selectedOrders.includes(o.id)));
+      const selectedSet = new Set(selectedOrders);
+      setOrders(prev => prev.filter(o => !selectedSet.has(o.id)));
       setSelectedOrders([]);
     } else {
       alert("Failed to delete orders: " + (res?.error || "Unknown error"));
@@ -229,7 +233,7 @@ export default function OrdersManager() {
         <div className="p-4 border-b border-burgundy/5 flex flex-col sm:flex-row justify-between gap-4 bg-ivory/30">
           <div className="flex items-center gap-2 bg-white border border-burgundy/10 rounded-xl px-4 py-2 w-full sm:w-80 focus-within:border-burgundy/30 transition-colors">
             <Search size={16} className="text-burgundy/40" />
-            <input 
+            <input aria-label="Search by order ID or customer..." 
               type="text" 
               placeholder="Search by order ID or customer..." 
               value={searchQuery}
@@ -260,7 +264,7 @@ export default function OrdersManager() {
               </button>
             )}
             {dateFilter === 'custom' && (
-              <input 
+              <input aria-label="Action" 
                 type="date" 
                 value={customDate}
                 onChange={(e) => {
@@ -308,381 +312,14 @@ export default function OrdersManager() {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[800px]">
-            <thead>
-              <tr className="border-b border-burgundy/10 text-burgundy/60 font-body text-xs uppercase tracking-wider">
-                <th className="p-4 font-semibold w-12 align-middle">
-                  <div className="flex items-center">
-                    <Checkbox 
-                      className="rounded border-burgundy/20 text-burgundy focus:ring-burgundy" 
-                      checked={isAllSelected}
-                      onCheckedChange={handleSelectAll}
-                    />
-                  </div>
-                </th>
-                <th className="p-4 font-semibold text-left align-middle">Order ID</th>
-                <th className="p-4 font-semibold text-center align-middle">Date</th>
-                <th className="p-4 font-semibold text-center align-middle">Customer</th>
-                <th className="p-4 font-semibold text-center align-middle">Status</th>
-                <th className="p-4 font-semibold text-center align-middle">Payment</th>
-                <th className="p-4 font-semibold text-center align-middle">Receipt</th>
-                <th className="p-4 font-semibold text-right align-middle">Total</th>
-                <th className="p-4 font-semibold text-right align-middle">Action</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm font-body">
-              {paginatedOrders.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="p-8 text-center text-burgundy/50 font-body">
-                    No orders found.
-                  </td>
-                </tr>
-              ) : paginatedOrders.map((order) => {
-                const itemsCount = Array.isArray(order.cartDetails) ? order.cartDetails.length : 0;
-                const orderDate = new Date(order.orderDate || order.created).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                const total = Number(order.totalAmount || 0);
-
-                return (
-                  <tr key={order.id} className="border-b border-burgundy/5 last:border-0 hover:bg-ivory/30 transition-colors cursor-pointer">
-                    <td className="p-4 align-middle" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center">
-                        <Checkbox 
-                          className="rounded border-burgundy/20 text-burgundy focus:ring-burgundy" 
-                          checked={selectedOrders.includes(order.id)}
-                          onCheckedChange={(checked) => handleSelectOrder(order.id, checked as boolean)}
-                        />
-                      </div>
-                    </td>
-                    <td className="p-4 font-ui font-bold text-burgundy text-left align-middle">
-                      {order.orderId || order.id}
-                      <div className="text-xs text-burgundy/50 font-normal mt-0.5">{itemsCount} items</div>
-                    </td>
-                    <td className="p-4 font-ui text-burgundy/80 text-center align-middle">{orderDate}</td>
-                    <td className="p-4 text-center align-middle">
-                      <div className="font-medium text-burgundy">{order.shippingName || 'Guest'}</div>
-                      <div className="text-xs text-burgundy/50">{order.expand?.user?.email || 'N/A'}</div>
-                    </td>
-                    <td className="p-4 text-center align-middle">
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold capitalize outline-none cursor-pointer text-center ${
-                              order.status === 'pending' || order.status === 'processing' ? 'bg-amber-100 text-amber-700' :
-                              order.status === 'shipped' ? 'bg-blue-100 text-blue-700' :
-                              order.status === 'delivered' ? 'bg-emerald-100 text-emerald-700' :
-                              'bg-red-100 text-red-700'
-                            }`}>
-                              {order.status}
-                              <ChevronDown className="w-3.5 h-3.5 opacity-70" />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleStatusChange(order.id, 'pending')}>Pending</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStatusChange(order.id, 'processing')}>Processing</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStatusChange(order.id, 'shipped')}>Shipped</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStatusChange(order.id, 'delivered')}>Delivered</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStatusChange(order.id, 'cancelled')}>Cancelled</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </td>
-                    <td className="p-4 text-center align-middle">
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold capitalize outline-none cursor-pointer text-center ${
-                              order.paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-700' :
-                              order.paymentStatus === 'failed' ? 'bg-red-100 text-red-700' :
-                              'bg-amber-100 text-amber-700'
-                            }`}>
-                              {order.paymentStatus || 'pending'}
-                              <ChevronDown className="w-3.5 h-3.5 opacity-70" />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handlePaymentStatusChange(order.id, 'pending')}>Pending</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handlePaymentStatusChange(order.id, 'paid')}>Paid</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handlePaymentStatusChange(order.id, 'failed')}>Failed</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </td>
-                    <td className="p-4 text-center align-middle">
-                      {order.receipt ? (
-                        <a 
-                          href={`${PB_URL}/api/files/${order.collectionId}/${order.id}/${order.receipt}`} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-burgundy/10 rounded-lg text-burgundy hover:bg-rose-gold/10 transition-colors text-xs font-medium"
-                        >
-                          <FileText size={14} />
-                          View
-                        </a>
-                      ) : (
-                        <span className="text-xs text-burgundy/40">N/A</span>
-                      )}
-                    </td>
-                    <td className="p-4 font-ui font-bold text-burgundy text-right align-middle">
-                      Rs. {total.toLocaleString()}
-                    </td>
-                    <td className="p-4 text-right align-middle">
-                      <button 
-                        onClick={() => setSelectedOrder(order)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-burgundy/10 rounded-lg text-burgundy hover:bg-rose-gold/10 transition-colors text-xs font-medium"
-                      >
-                        <Eye size={14} />
-                        View
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <OrdersTable paginatedOrders={paginatedOrders} isAllSelected={isAllSelected} handleSelectAll={handleSelectAll} selectedOrders={selectedOrders} handleSelectOrder={handleSelectOrder} handleStatusChange={handleStatusChange} handlePaymentStatusChange={handlePaymentStatusChange} setSelectedOrder={setSelectedOrder} />
         
         {/* Pagination */}
-        <div className="p-4 border-t border-burgundy/5 bg-ivory/20 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-sm text-burgundy/60 font-body">
-            <span>Rows per page:</span>
-            <DropdownMenu>
-              <DropdownMenuTrigger className="bg-transparent border border-burgundy/10 text-burgundy text-sm rounded-md px-2 py-1 font-body outline-none focus:border-burgundy/30 transition-colors cursor-pointer flex items-center gap-2">
-                {rowsPerPage} <ChevronDown size={14} className="text-burgundy/50" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-20 bg-white border border-burgundy/10 rounded-xl shadow-lg p-1">
-                {[10, 25, 50, 100].map((num) => (
-                  <DropdownMenuItem 
-                    key={num}
-                    onClick={() => { setRowsPerPage(num); setCurrentPage(1); }}
-                    className="cursor-pointer text-sm text-burgundy focus:bg-rose-gold/10 hover:bg-rose-gold/10 rounded-md px-3 py-2 outline-none"
-                  >
-                    {num}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <span className="ml-4">
-              {filteredOrders.length === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1}-
-              {Math.min(currentPage * rowsPerPage, filteredOrders.length)} of {filteredOrders.length}
-            </span>
-          </div>
-          <Pagination className="mx-0 w-auto">
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious 
-                  href="#" 
-                  onClick={(e) => { e.preventDefault(); handlePageChange(currentPage - 1); }}
-                  className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
-                />
-              </PaginationItem>
-              
-              {Array.from({ length: totalPages }).map((_, i) => {
-                const p = i + 1;
-                // Show first, last, current, and adjacent pages
-                if (
-                  p === 1 || 
-                  p === totalPages || 
-                  (p >= currentPage - 1 && p <= currentPage + 1)
-                ) {
-                  return (
-                    <PaginationItem key={p}>
-                      <PaginationLink 
-                        href="#" 
-                        isActive={currentPage === p}
-                        onClick={(e) => { e.preventDefault(); handlePageChange(p); }}
-                      >
-                        {p}
-                      </PaginationLink>
-                    </PaginationItem>
-                  );
-                } else if (
-                  p === currentPage - 2 || 
-                  p === currentPage + 2
-                ) {
-                  return (
-                    <PaginationItem key={p}>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                  );
-                }
-                return null;
-              })}
-
-              <PaginationItem>
-                <PaginationNext 
-                  href="#" 
-                  onClick={(e) => { e.preventDefault(); handlePageChange(currentPage + 1); }}
-                  className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
+        <OrdersPagination rowsPerPage={rowsPerPage} setRowsPerPage={setRowsPerPage} setCurrentPage={setCurrentPage} currentPage={currentPage} totalPages={totalPages} handlePageChange={handlePageChange} filteredOrders={filteredOrders} />
       </div>
 
       {/* View Order Modal */}
-      {selectedOrder && (
-        <div 
-          className="fixed inset-0 bg-burgundy/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          onClick={() => setSelectedOrder(null)}
-        >
-          <div 
-            className="bg-white rounded-3xl p-6 w-full max-w-md shadow-xl border border-burgundy/10"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="font-heading font-bold text-xl text-burgundy">Order Details</h2>
-              <button onClick={() => setSelectedOrder(null)} className="text-burgundy/50 hover:text-burgundy p-2 rounded-full hover:bg-champagne/50 transition-colors">
-                <X size={20} />
-              </button>
-            </div>
-            
-            <div className="space-y-4 font-body max-h-[70vh] overflow-y-auto pr-2 no-scrollbar">
-              <div className="flex justify-between pb-3 border-b border-burgundy/10">
-                <span className="text-burgundy/60">Order ID</span>
-                <span className="font-bold text-burgundy">{selectedOrder.orderId || selectedOrder.id}</span>
-              </div>
-              <div className="flex justify-between pb-3 border-b border-burgundy/10">
-                <span className="text-burgundy/60">Customer</span>
-                <span className="text-burgundy text-right">{selectedOrder.shippingName}</span>
-              </div>
-              <div className="flex justify-between pb-3 border-b border-burgundy/10">
-                <span className="text-burgundy/60">Email</span>
-                <span className="text-burgundy">{selectedOrder.expand?.user?.email || 'N/A'}</span>
-              </div>
-              <div className="flex justify-between pb-3 border-b border-burgundy/10">
-                <span className="text-burgundy/60">Date</span>
-                <span className="text-burgundy">{new Date(selectedOrder.orderDate || selectedOrder.created).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
-              </div>
-              
-              <div className="flex justify-between pb-3 border-b border-burgundy/10">
-                <span className="text-burgundy/60">Address</span>
-                <span className="text-burgundy text-right max-w-[200px]">
-                  {[selectedOrder.shippingStreet, selectedOrder.shippingCity, selectedOrder.shippingZip, selectedOrder.shippingCountry].filter(Boolean).join(', ')}
-                </span>
-              </div>
-              
-              <div className="flex justify-between pb-3 border-b border-burgundy/10">
-                <span className="text-burgundy/60">Payment</span>
-                <span className="text-burgundy capitalize flex items-center">
-                  {selectedOrder.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Bank Transfer'}
-                  {selectedOrder.paymentMethod === 'bank_transfer' && selectedOrder.receipt && (
-                    <a 
-                      href={`${PB_URL}/api/files/${selectedOrder.collectionId}/${selectedOrder.id}/${selectedOrder.receipt}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 hover:underline border border-blue-200"
-                    >
-                      View Receipt
-                    </a>
-                  )}
-                  <span className={`ml-2 text-[10px] px-2 py-0.5 rounded-full ${selectedOrder.paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                    {selectedOrder.paymentStatus}
-                  </span>
-                </span>
-              </div>
-              
-              <div className="pb-3 border-b border-burgundy/10">
-                <span className="text-burgundy/60 block mb-2">Items</span>
-                <div className="space-y-1">
-                  {Array.isArray(selectedOrder.cartDetails) ? (
-                    selectedOrder.cartDetails.map((item: string, i: number) => {
-                      if (item.includes('Custom Box')) {
-                        const [mainPart, itemsPart] = item.split(' - Items: ');
-                        return (
-                          <div key={i} className="text-xs text-burgundy font-medium bg-ivory/50 p-3 rounded-lg border border-burgundy/10">
-                            <div className="font-bold mb-1.5">{mainPart}</div>
-                            {itemsPart && (
-                              <ul className="list-disc pl-4 space-y-1 text-[11px] opacity-80">
-                                {(itemsPart.includes(' | ') ? itemsPart.split(' | ') : itemsPart.split(', ')).map((boxItem, idx) => (
-                                  <li key={idx}>{boxItem}</li>
-                                ))}
-                              </ul>
-                            )}
-                          </div>
-                        );
-                      }
-
-                      let rawClean = item.split('[')[0].split(' - Rs.')[0].trim();
-                      let count = "";
-                      let name = rawClean;
-                      const match = rawClean.match(/^(\d+)x\s+(.*)/);
-                      if (match) {
-                        count = match[1];
-                        name = match[2];
-                      }
-                      
-                      name = name.replace(/\s*\([^)]*\)$/, '').trim();
-                      
-                      let productCode = "";
-                      if (selectedOrder.expand?.items) {
-                        const matchedProduct = selectedOrder.expand.items.find((p: any) => name.includes(p.name) || p.name.includes(name));
-                        if (matchedProduct?.productCode) {
-                          productCode = matchedProduct.productCode;
-                        }
-                      }
-                      
-                      const codeMatch = rawClean.match(/\(([^)]+)\)$/);
-                      if (!productCode && codeMatch) {
-                        productCode = codeMatch[1];
-                      }
-
-                      const extrasMatch = item.match(/\[(.*?)\]/);
-                      const extras = extrasMatch ? ` (${extrasMatch[1]})` : "";
-
-                      const codePrefix = productCode ? `${productCode} - ` : "";
-                      const countSuffix = count ? ` x ${count}` : "";
-                      const finalItem = `${codePrefix}${name}${countSuffix}${extras}`;
-                      
-                      return (
-                        <div key={i} className="text-xs text-burgundy font-medium bg-ivory/50 p-2 rounded">
-                          {finalItem}
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="text-sm text-burgundy">No items recorded</div>
-                  )}
-                </div>
-              </div>
-              
-              <div className="flex justify-between pb-3 border-b border-burgundy/10">
-                <span className="text-burgundy/60">Total Amount</span>
-                <span className="font-bold text-burgundy">Rs. {Number(selectedOrder.totalAmount || 0).toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-burgundy/60">Order Status</span>
-                <DropdownMenu>
-                  <DropdownMenuTrigger className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold capitalize outline-none cursor-pointer text-center ${
-                      selectedOrder.status === 'pending' || selectedOrder.status === 'processing' ? 'bg-amber-100 text-amber-700' :
-                      selectedOrder.status === 'shipped' ? 'bg-blue-100 text-blue-700' :
-                      selectedOrder.status === 'delivered' ? 'bg-emerald-100 text-emerald-700' :
-                      'bg-red-100 text-red-700'
-                    }`}>
-                      {selectedOrder.status}
-                      <ChevronDown className="w-3.5 h-3.5 opacity-70" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleStatusChange(selectedOrder.id, 'pending')}>Pending</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleStatusChange(selectedOrder.id, 'processing')}>Processing</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleStatusChange(selectedOrder.id, 'shipped')}>Shipped</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleStatusChange(selectedOrder.id, 'delivered')}>Delivered</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleStatusChange(selectedOrder.id, 'cancelled')}>Cancelled</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              
-              <div className="pt-4 flex justify-end gap-3 border-t border-burgundy/5 mt-6">
-                <button 
-                  onClick={() => setSelectedOrder(null)}
-                  className="px-4 py-2 font-ui font-semibold text-burgundy/70 hover:text-burgundy transition-colors rounded-xl hover:bg-burgundy/5"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {selectedOrder && <ViewOrderModal selectedOrder={selectedOrder} setSelectedOrder={setSelectedOrder} handleStatusChange={handleStatusChange} handlePaymentStatusChange={handlePaymentStatusChange} />}
     </div>
   );
 }

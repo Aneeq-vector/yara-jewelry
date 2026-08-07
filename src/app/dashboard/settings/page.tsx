@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 import { Bell } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -40,6 +40,7 @@ export default function SettingsPage() {
                 className={`w-12 h-7 rounded-full transition-colors relative ${
                   notifications[item.key] ? 'bg-rose-gold' : 'bg-nude/50'
                 }`}
+                aria-label="Toggle setting"
               >
                 <div className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${
                   notifications[item.key] ? 'left-6' : 'left-1'

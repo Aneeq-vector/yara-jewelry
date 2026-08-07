@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Gift, Sparkles, Heart, ArrowRight } from 'lucide-react';
@@ -64,7 +64,7 @@ export default function GiftBoxCard({ box, index }: GiftBoxCardProps) {
     >
       <Link href={href} className="block group h-full">
         <div
-          className={`relative rounded-3xl overflow-hidden border border-nude/40 bg-gradient-to-br ${config.gradient} shadow-xl ${config.borderGlow} hover:shadow-2xl transition-all duration-500 h-full flex flex-col`}
+          className={`relative rounded-3xl overflow-hidden border border-nude/40 bg-gradient-to-br ${config.gradient} shadow-xl ${config.borderGlow} hover:shadow-2xl transition duration-500 h-full flex flex-col`}
         >
 
 
@@ -73,7 +73,7 @@ export default function GiftBoxCard({ box, index }: GiftBoxCardProps) {
             <Image
               src={box.images[0]}
               alt={box.name}
-              fill
+              fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               className="object-cover transition-transform duration-700 group-hover:scale-105"
               unoptimized
             />
@@ -109,7 +109,7 @@ export default function GiftBoxCard({ box, index }: GiftBoxCardProps) {
               </div>
               <motion.div
                 whileHover={{ x: 4 }}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-white font-ui text-sm font-semibold shadow-lg transition-all ${config.btnClass}`}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-white font-ui text-sm font-semibold shadow-lg transition ${config.btnClass}`}
               >
                 Explore
                 <ArrowRight size={14} />
@@ -131,7 +131,7 @@ export default function GiftBoxCard({ box, index }: GiftBoxCardProps) {
                       <Image
                         src={item.images[0]}
                         alt={item.name}
-                        fill
+                        fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                         className="object-cover"
                         unoptimized
                       />

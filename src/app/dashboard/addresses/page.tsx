@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 import { MapPin, Plus, Check, Loader2 } from 'lucide-react';
 import { getAddressesAction, addAddressAction, updateAddressAction, deleteAddressAction } from '@/app/actions/addresses';
 import { Address } from '@/types';
@@ -116,15 +116,15 @@ export default function AddressesPage() {
           >
             <h3 className="font-heading text-lg font-bold text-burgundy mb-4">Add New Address</h3>
             <div className="space-y-3">
-              <input value={newForm.name} onChange={(e) => setNewForm(p => ({ ...p, name: e.target.value }))} placeholder="Name (e.g. Home)" className={inputClass} />
-              <input value={newForm.street} onChange={(e) => setNewForm(p => ({ ...p, street: e.target.value }))} placeholder="Street Address" className={inputClass} />
+              <input aria-label="Name (e.g. Home)" value={newForm.name} onChange={(e) => setNewForm(p => ({ ...p, name: e.target.value }))} placeholder="Name (e.g. Home)" className={inputClass} />
+              <input aria-label="Street Address" value={newForm.street} onChange={(e) => setNewForm(p => ({ ...p, street: e.target.value }))} placeholder="Street Address" className={inputClass} />
               <div className="grid grid-cols-2 gap-2">
-                <input value={newForm.city} onChange={(e) => setNewForm(p => ({ ...p, city: e.target.value }))} placeholder="City" className={inputClass} />
-                <input value={newForm.state} onChange={(e) => setNewForm(p => ({ ...p, state: e.target.value }))} placeholder="Province" className={inputClass} />
+                <input aria-label="City" value={newForm.city} onChange={(e) => setNewForm(p => ({ ...p, city: e.target.value }))} placeholder="City" className={inputClass} />
+                <input aria-label="Province" value={newForm.state} onChange={(e) => setNewForm(p => ({ ...p, state: e.target.value }))} placeholder="Province" className={inputClass} />
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <input value={newForm.zipCode} onChange={(e) => setNewForm(p => ({ ...p, zipCode: e.target.value }))} placeholder="ZIP Code" className={inputClass} />
-                <input value={newForm.phone} onChange={(e) => setNewForm(p => ({ ...p, phone: e.target.value }))} placeholder="Phone Number" className={inputClass} />
+                <input aria-label="ZIP Code" value={newForm.zipCode} onChange={(e) => setNewForm(p => ({ ...p, zipCode: e.target.value }))} placeholder="ZIP Code" className={inputClass} />
+                <input aria-label="Phone Number" value={newForm.phone} onChange={(e) => setNewForm(p => ({ ...p, phone: e.target.value }))} placeholder="Phone Number" className={inputClass} />
               </div>
               <div className="flex items-center gap-2 mt-2">
                 <input type="checkbox" id="new-default" checked={newForm.isDefault} onChange={(e) => setNewForm(p => ({ ...p, isDefault: e.target.checked }))} className="rounded border-burgundy/20 text-burgundy focus:ring-burgundy" />
@@ -148,15 +148,15 @@ export default function AddressesPage() {
             {editingId === addr.id ? (
               <div className="space-y-3">
                 <h3 className="font-heading text-lg font-bold text-burgundy mb-2">Edit Address</h3>
-                <input value={editForm.name} onChange={(e) => setEditForm((p: any) => ({ ...p, name: e.target.value }))} placeholder="Name (e.g. Home)" className={inputClass} />
-                <input value={editForm.street} onChange={(e) => setEditForm((p: any) => ({ ...p, street: e.target.value }))} placeholder="Street Address" className={inputClass} />
+                <input aria-label="Name (e.g. Home)" value={editForm.name} onChange={(e) => setEditForm((p: any) => ({ ...p, name: e.target.value }))} placeholder="Name (e.g. Home)" className={inputClass} />
+                <input aria-label="Street Address" value={editForm.street} onChange={(e) => setEditForm((p: any) => ({ ...p, street: e.target.value }))} placeholder="Street Address" className={inputClass} />
                 <div className="grid grid-cols-2 gap-2">
-                  <input value={editForm.city} onChange={(e) => setEditForm((p: any) => ({ ...p, city: e.target.value }))} placeholder="City" className={inputClass} />
-                  <input value={editForm.state} onChange={(e) => setEditForm((p: any) => ({ ...p, state: e.target.value }))} placeholder="Province" className={inputClass} />
+                  <input aria-label="City" value={editForm.city} onChange={(e) => setEditForm((p: any) => ({ ...p, city: e.target.value }))} placeholder="City" className={inputClass} />
+                  <input aria-label="Province" value={editForm.state} onChange={(e) => setEditForm((p: any) => ({ ...p, state: e.target.value }))} placeholder="Province" className={inputClass} />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <input value={editForm.zipCode} onChange={(e) => setEditForm((p: any) => ({ ...p, zipCode: e.target.value }))} placeholder="ZIP Code" className={inputClass} />
-                  <input value={editForm.phone} onChange={(e) => setEditForm((p: any) => ({ ...p, phone: e.target.value }))} placeholder="Phone Number" className={inputClass} />
+                  <input aria-label="ZIP Code" value={editForm.zipCode} onChange={(e) => setEditForm((p: any) => ({ ...p, zipCode: e.target.value }))} placeholder="ZIP Code" className={inputClass} />
+                  <input aria-label="Phone Number" value={editForm.phone} onChange={(e) => setEditForm((p: any) => ({ ...p, phone: e.target.value }))} placeholder="Phone Number" className={inputClass} />
                 </div>
                 <div className="flex items-center gap-2 mt-2">
                   <input type="checkbox" id={`edit-default-${addr.id}`} checked={editForm.isDefault} onChange={(e) => setEditForm((p: any) => ({ ...p, isDefault: e.target.checked }))} className="rounded border-burgundy/20 text-burgundy focus:ring-burgundy" />

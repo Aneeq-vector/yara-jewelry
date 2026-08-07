@@ -1,5 +1,7 @@
 import { NavLink } from '@/types';
 
+const SUPPORTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
 export const BRAND = {
   name: 'Yara',
   tagline: 'Crafted For Elegance',
@@ -13,7 +15,7 @@ export const BRAND = {
   pinterest: 'https://pinterest.com/yarajewelry',
 } as const;
 
-export const COLORS = {
+const COLORS = {
   burgundy: '#4B0F12',
   wine: '#5D1217',
   champagne: '#F6EBDD',

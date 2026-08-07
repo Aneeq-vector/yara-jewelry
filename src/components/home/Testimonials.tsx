@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m as motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { Star, ChevronLeft, ChevronRight, Quote } from 'lucide-react';
 import { Testimonial } from '@/types';
@@ -100,7 +100,7 @@ export default function Testimonials({ testimonials = [] }: { testimonials?: Tes
                       <Image
                         src={testimonials[current].image}
                         alt={testimonials[current].name}
-                        fill
+                        fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                         className="object-cover"
                       />
                     </div>
@@ -130,9 +130,9 @@ export default function Testimonials({ testimonials = [] }: { testimonials?: Tes
 
               {/* Dots */}
               <div className="flex items-center gap-2">
-                {testimonials.map((_, i) => (
+                {testimonials.map((testimonial, i) => (
                   <button
-                    key={i}
+                    key={testimonial.id || testimonial.name}
                     onClick={() => {
                       setCurrent(i);
                       setAutoplay(false);
@@ -140,7 +140,7 @@ export default function Testimonials({ testimonials = [] }: { testimonials?: Tes
                     className="py-2 min-h-[44px] flex items-center"
                     aria-label={`Testimonial ${i + 1}`}
                   >
-                    <div className={`h-2 rounded-full transition-all duration-300 ${
+                    <div className={`h-2 rounded-full transition duration-300 ${
                       i === current
                         ? 'w-8 gradient-rose-gold'
                         : 'w-2 bg-nude hover:bg-rose-gold-light'

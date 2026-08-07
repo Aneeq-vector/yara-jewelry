@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 import Image from 'next/image';
 const InstagramIcon = ({ size = 24 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -47,7 +47,7 @@ export default function InstagramShowcase() {
         <div className="grid grid-cols-3 md:grid-cols-6 gap-3 sm:gap-4">
           {posts.map((src, i) => (
             <motion.a
-              key={i}
+              key={src}
               href={BRAND.instagram}
               target="_blank"
               rel="noopener noreferrer"
@@ -60,7 +60,7 @@ export default function InstagramShowcase() {
               <Image
                 src={src}
                 alt={`Instagram post ${i + 1}`}
-                fill
+                fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 className="object-cover group-hover:scale-110 transition-transform duration-700"
               />
               <div className="absolute inset-0 bg-burgundy/0 group-hover:bg-burgundy/40 transition-colors duration-300 flex items-center justify-center">

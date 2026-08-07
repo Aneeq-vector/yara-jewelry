@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef, useReducer } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m as motion, LazyMotion, domAnimation, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import {
   Gift,
@@ -21,7 +21,7 @@ import {
 import { createClient, PB_URL } from '@/lib/pocketbase';
 import { getAllCategories } from '@/lib/data/categories';
 import { getAllGiftBoxes } from '@/lib/data/gift-boxes';
-import { updateGiftBoxAction } from '@/app/actions/gift-boxes';
+import { updateGiftBoxAction } from '@/app/actions/update-gift-box';
 import { Product, Category, GiftBox } from '@/types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -120,6 +120,300 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
   }
 }
 
+
+
+function GiftBoxEditor({
+  selectedBox, isActive, previewUrl, fileInputRef, handleImageChange, pendingImage,
+  editorCategory, categories, productSearch, filteredProducts, selectedItems, toggleItem,
+  saveStatus, handleSave, dispatch
+}: any) {
+  return (
+        <div className="lg:col-span-2">
+          {!selectedBox ? (
+            <div className="flex flex-col items-center justify-center h-full text-center py-20 rounded-3xl border border-dashed border-nude/60 bg-champagne/10">
+              <Gift size={40} className="text-burgundy/20 mb-3" />
+              <p className="font-body text-sm text-burgundy/40">
+                Select a gift box on the left to edit it
+              </p>
+            </div>
+          ) : (
+            <motion.div
+              key={selectedBox.id}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+              className="space-y-6"
+            >
+              {/* ─ Box name + status ─ */}
+              <div className="flex items-center justify-between">
+                <h2 className="font-heading text-xl font-bold text-burgundy">
+                  {selectedBox.name}
+                </h2>
+                <button
+                  onClick={() => dispatch({ type: 'TOGGLE_ACTIVE' })}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl font-ui text-sm font-semibold transition-all ${
+                    isActive
+                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                      : 'bg-red-50 text-red-500 border border-red-200'
+                  }`}
+                >
+                  {isActive ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+                  {isActive ? 'Active' : 'Inactive'}
+                </button>
+              </div>
+
+              {/* ─ Image upload ─ */}
+              <div className="bg-white rounded-2xl border border-nude/40 p-5">
+                <p className="font-ui font-bold text-xs uppercase tracking-wider text-burgundy/40 mb-4">
+                  Box Image
+                </p>
+                <div className="flex items-start gap-5">
+                  <div className="relative w-28 h-28 rounded-xl overflow-hidden bg-champagne/40 flex-shrink-0 border border-nude/40">
+                    {previewUrl ? (
+                      <Image src={previewUrl} alt="preview" fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" unoptimized />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <ImageIcon size={24} className="text-burgundy/20" />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-body text-sm text-burgundy/60 mb-3">
+                      Upload a photo for this gift box. It will appear on the gift boxes page and the box detail page.
+                    </p>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-champagne border border-nude/60 font-ui text-sm text-burgundy font-semibold hover:bg-champagne/80 transition-colors"
+                    >
+                      <Upload size={14} />
+                      {pendingImage ? 'Change Image' : 'Upload Image'}
+                    </button>
+                    {pendingImage && (
+                      <p className="font-body text-xs text-burgundy/50 mt-2 flex items-center gap-1">
+                        <Check size={12} className="text-emerald-500" />
+                        {pendingImage.name}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* ─ Category picker ─ */}
+              <div className="bg-white rounded-2xl border border-nude/40 p-5">
+                <p className="font-ui font-bold text-xs uppercase tracking-wider text-burgundy/40 mb-4">
+                  Filter Products by Category
+                </p>
+                <p className="font-body text-xs text-burgundy/50 mb-3">
+                  Select a category to narrow down the product list below. The products you tick will be included in this gift box.
+                </p>
+                <div className="relative">
+                  <select
+                    aria-label="Category Filter"
+                    value={editorCategory}
+                    onChange={(e) => {
+                      dispatch({ type: 'SET_CATEGORY', payload: e.target.value });
+                    }}
+                    className="w-full appearance-none pl-4 pr-10 py-3 rounded-xl border border-nude/60 bg-champagne/20 font-body text-sm text-burgundy focus:outline-none focus:border-burgundy/40 transition-colors"
+                  >
+                    <option value="">— Show all categories —</option>
+                    {categories.map((cat: any) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    size={16}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-burgundy/40 pointer-events-none"
+                  />
+                </div>
+              </div>
+
+              {/* ─ Product picker ─ */}
+              <div className="bg-white rounded-2xl border border-nude/40 p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="font-ui font-bold text-xs uppercase tracking-wider text-burgundy/40">
+                    Fixed Items
+                    <span className="ml-2 px-2 py-0.5 rounded-full bg-burgundy text-ivory text-[10px]">
+                      {selectedItems.size} selected
+                    </span>
+                  </p>
+                  {selectedItems.size > 0 && (
+                    <button
+                      onClick={() => dispatch({ type: 'CLEAR_ITEMS' })}
+                      className="font-body text-xs text-burgundy/40 hover:text-burgundy underline"
+                    >
+                      Clear all
+                    </button>
+                  )}
+                </div>
+
+                {/* Search */}
+                <div className="relative mb-4">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-burgundy/30" />
+                  <input
+                    aria-label="Search Products"
+                    type="text"
+                    value={productSearch}
+                    onChange={(e) => dispatch({ type: 'SET_SEARCH', payload: e.target.value })}
+                    placeholder="Search products..."
+                    className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-nude/60 bg-champagne/20 font-body text-sm text-burgundy placeholder:text-burgundy/30 focus:outline-none focus:border-burgundy/30"
+                  />
+                </div>
+
+                {/* Product grid */}
+                {filteredProducts.length === 0 ? (
+                  <div className="text-center py-10 text-burgundy/30 font-body text-sm">
+                    {editorCategory
+                      ? 'No products in this category'
+                      : 'Select a category or search above'}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[420px] overflow-y-auto pr-1 no-scrollbar">
+                    {filteredProducts.map((p: any) => {
+                      const checked = selectedItems.has(p.id);
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={() => toggleItem(p.id)}
+                          className={`relative text-left rounded-xl overflow-hidden border-2 transition-all ${
+                            checked
+                              ? 'border-burgundy shadow-md shadow-burgundy/10'
+                              : 'border-transparent hover:border-nude/60'
+                          }`}
+                        >
+                          <div className="relative aspect-square bg-champagne/30">
+                            <Image
+                              src={p.images[0]}
+                              alt={p.name}
+                              fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                              className="object-cover"
+                              unoptimized
+                            />
+                            {checked && (
+                              <div className="absolute inset-0 bg-burgundy/20 flex items-center justify-center">
+                                <div className="w-7 h-7 rounded-full bg-burgundy flex items-center justify-center shadow-lg">
+                                  <Check size={14} className="text-white" />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          <div className="p-2">
+                            <p className="font-ui text-[11px] font-semibold text-burgundy line-clamp-1">
+                              {p.name}
+                            </p>
+                            <p className="font-body text-[10px] text-burgundy/50">
+                              Rs. {p.price.toLocaleString()}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* ─ Save button ─ */}
+              <div className="flex items-center gap-4">
+                <div>
+                  {saveStatus === 'success' ? (
+                    <motion.div
+                      key="success"
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-500 text-white font-ui font-semibold"
+                    >
+                      <CheckCircle2 size={16} />
+                      Saved successfully!
+                    </motion.div>
+                  ) : saveStatus === 'error' ? (
+                    <motion.div
+                      key="error"
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="flex items-center gap-2 px-6 py-3 rounded-xl bg-red-500 text-white font-ui font-semibold"
+                    >
+                      <AlertCircle size={16} />
+                      Error saving. Try again.
+                    </motion.div>
+                  ) : (
+                    <motion.button
+                      key="save"
+                      whileTap={{ scale: 0.97 }}
+                      onClick={handleSave}
+                      disabled={saveStatus === 'saving'}
+                      className="flex items-center gap-2 px-6 py-3 rounded-xl bg-burgundy text-white font-ui font-semibold hover:bg-wine transition-colors shadow-md shadow-burgundy/20 disabled:opacity-60"
+                    >
+                      {saveStatus === 'saving' ? (
+                        <Loader size={16} className="animate-spin" />
+                      ) : (
+                        <Save size={16} />
+                      )}
+                      {saveStatus === 'saving' ? 'Saving…' : 'Save Changes'}
+                    </motion.button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </div>
+
+  );
+}
+function GiftBoxSelector({ boxes, selectedBoxId, setSelectedBoxId }: any) {
+  return (
+        <div className="space-y-3">
+          <p className="font-ui font-bold text-xs uppercase tracking-wider text-burgundy/40">
+            Select Box to Edit
+          </p>
+          {boxes.map((box: any) => (
+            <button
+              key={box.id}
+              onClick={() => setSelectedBoxId(box.id)}
+              className={`w-full flex items-center gap-4 p-4 rounded-2xl border text-left transition-all ${
+                selectedBoxId === box.id
+                  ? 'border-burgundy bg-burgundy/5 shadow-md'
+                  : 'border-nude/40 bg-white hover:border-burgundy/30'
+              }`}
+            >
+              <div className="relative w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 bg-champagne/50">
+                <Image
+                  src={box.images[0] || '/placeholder.png'}
+                  alt={box.name}
+                  fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  className="object-cover"
+                  unoptimized
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-ui font-semibold text-sm text-burgundy truncate">{box.name}</p>
+                <p className="font-body text-xs text-burgundy/50 capitalize">{box.type}</p>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <div
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      box.is_active ? 'bg-emerald-500' : 'bg-red-400'
+                    }`}
+                  />
+                  <span className="font-body text-[10px] text-burgundy/40">
+                    {box.is_active ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+
+  );
+}
 export default function GiftBoxesAdminPage() {
 
   const [boxes, setBoxes] = useState<RawBox[]>([]);
@@ -194,7 +488,7 @@ export default function GiftBoxesAdminPage() {
   useEffect(() => {
     if (!selectedBox) return;
     dispatch({ type: 'LOAD_BOX', payload: selectedBox });
-  }, [selectedBoxId]);
+  }, [selectedBox]);
 
   // Products filtered by the chosen editor category + search
   const filteredProducts = useMemo(() => {
@@ -286,6 +580,7 @@ export default function GiftBoxesAdminPage() {
   }
 
   return (
+    <LazyMotion features={domAnimation}>
     <div className="space-y-6 max-w-7xl">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
@@ -310,285 +605,18 @@ export default function GiftBoxesAdminPage() {
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* ── Left: Box selector ─────────────────────────────────────── */}
-        <div className="space-y-3">
-          <p className="font-ui font-bold text-xs uppercase tracking-wider text-burgundy/40">
-            Select Box to Edit
-          </p>
-          {boxes.map((box) => (
-            <button
-              key={box.id}
-              onClick={() => setSelectedBoxId(box.id)}
-              className={`w-full flex items-center gap-4 p-4 rounded-2xl border text-left transition-all ${
-                selectedBoxId === box.id
-                  ? 'border-burgundy bg-burgundy/5 shadow-md'
-                  : 'border-nude/40 bg-white hover:border-burgundy/30'
-              }`}
-            >
-              <div className="relative w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 bg-champagne/50">
-                <Image
-                  src={box.images[0] || '/placeholder.png'}
-                  alt={box.name}
-                  fill
-                  className="object-cover"
-                  unoptimized
-                />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="font-ui font-semibold text-sm text-burgundy truncate">{box.name}</p>
-                <p className="font-body text-xs text-burgundy/50 capitalize">{box.type}</p>
-                <div className="flex items-center gap-1.5 mt-1">
-                  <div
-                    className={`w-1.5 h-1.5 rounded-full ${
-                      box.is_active ? 'bg-emerald-500' : 'bg-red-400'
-                    }`}
-                  />
-                  <span className="font-body text-[10px] text-burgundy/40">
-                    {box.is_active ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
+        <GiftBoxSelector boxes={boxes} selectedBoxId={selectedBoxId} setSelectedBoxId={setSelectedBoxId} />
 
         {/* ── Right: Editor ──────────────────────────────────────────── */}
-        <div className="lg:col-span-2">
-          {!selectedBox ? (
-            <div className="flex flex-col items-center justify-center h-full text-center py-20 rounded-3xl border border-dashed border-nude/60 bg-champagne/10">
-              <Gift size={40} className="text-burgundy/20 mb-3" />
-              <p className="font-body text-sm text-burgundy/40">
-                Select a gift box on the left to edit it
-              </p>
-            </div>
-          ) : (
-            <motion.div
-              key={selectedBox.id}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25 }}
-              className="space-y-6"
-            >
-              {/* ─ Box name + status ─ */}
-              <div className="flex items-center justify-between">
-                <h2 className="font-heading text-xl font-bold text-burgundy">
-                  {selectedBox.name}
-                </h2>
-                <button
-                  onClick={() => dispatch({ type: 'TOGGLE_ACTIVE' })}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl font-ui text-sm font-semibold transition-all ${
-                    isActive
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                      : 'bg-red-50 text-red-500 border border-red-200'
-                  }`}
-                >
-                  {isActive ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
-                  {isActive ? 'Active' : 'Inactive'}
-                </button>
-              </div>
-
-              {/* ─ Image upload ─ */}
-              <div className="bg-white rounded-2xl border border-nude/40 p-5">
-                <p className="font-ui font-bold text-xs uppercase tracking-wider text-burgundy/40 mb-4">
-                  Box Image
-                </p>
-                <div className="flex items-start gap-5">
-                  <div className="relative w-28 h-28 rounded-xl overflow-hidden bg-champagne/40 flex-shrink-0 border border-nude/40">
-                    {previewUrl ? (
-                      <Image src={previewUrl} alt="preview" fill className="object-cover" unoptimized />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <ImageIcon size={24} className="text-burgundy/20" />
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <p className="font-body text-sm text-burgundy/60 mb-3">
-                      Upload a photo for this gift box. It will appear on the gift boxes page and the box detail page.
-                    </p>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="hidden"
-                    />
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-champagne border border-nude/60 font-ui text-sm text-burgundy font-semibold hover:bg-champagne/80 transition-colors"
-                    >
-                      <Upload size={14} />
-                      {pendingImage ? 'Change Image' : 'Upload Image'}
-                    </button>
-                    {pendingImage && (
-                      <p className="font-body text-xs text-burgundy/50 mt-2 flex items-center gap-1">
-                        <Check size={12} className="text-emerald-500" />
-                        {pendingImage.name}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* ─ Category picker ─ */}
-              <div className="bg-white rounded-2xl border border-nude/40 p-5">
-                <p className="font-ui font-bold text-xs uppercase tracking-wider text-burgundy/40 mb-4">
-                  Filter Products by Category
-                </p>
-                <p className="font-body text-xs text-burgundy/50 mb-3">
-                  Select a category to narrow down the product list below. The products you tick will be included in this gift box.
-                </p>
-                <div className="relative">
-                  <select
-                    value={editorCategory}
-                    onChange={(e) => {
-                      dispatch({ type: 'SET_CATEGORY', payload: e.target.value });
-                    }}
-                    className="w-full appearance-none pl-4 pr-10 py-3 rounded-xl border border-nude/60 bg-champagne/20 font-body text-sm text-burgundy focus:outline-none focus:border-burgundy/40 transition-colors"
-                  >
-                    <option value="">— Show all categories —</option>
-                    {categories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown
-                    size={16}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-burgundy/40 pointer-events-none"
-                  />
-                </div>
-              </div>
-
-              {/* ─ Product picker ─ */}
-              <div className="bg-white rounded-2xl border border-nude/40 p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <p className="font-ui font-bold text-xs uppercase tracking-wider text-burgundy/40">
-                    Fixed Items
-                    <span className="ml-2 px-2 py-0.5 rounded-full bg-burgundy text-ivory text-[10px]">
-                      {selectedItems.size} selected
-                    </span>
-                  </p>
-                  {selectedItems.size > 0 && (
-                    <button
-                      onClick={() => dispatch({ type: 'CLEAR_ITEMS' })}
-                      className="font-body text-xs text-burgundy/40 hover:text-burgundy underline"
-                    >
-                      Clear all
-                    </button>
-                  )}
-                </div>
-
-                {/* Search */}
-                <div className="relative mb-4">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-burgundy/30" />
-                  <input
-                    type="text"
-                    value={productSearch}
-                    onChange={(e) => dispatch({ type: 'SET_SEARCH', payload: e.target.value })}
-                    placeholder="Search products..."
-                    className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-nude/60 bg-champagne/20 font-body text-sm text-burgundy placeholder:text-burgundy/30 focus:outline-none focus:border-burgundy/30"
-                  />
-                </div>
-
-                {/* Product grid */}
-                {filteredProducts.length === 0 ? (
-                  <div className="text-center py-10 text-burgundy/30 font-body text-sm">
-                    {editorCategory
-                      ? 'No products in this category'
-                      : 'Select a category or search above'}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[420px] overflow-y-auto pr-1 no-scrollbar">
-                    {filteredProducts.map((p) => {
-                      const checked = selectedItems.has(p.id);
-                      return (
-                        <button
-                          key={p.id}
-                          onClick={() => toggleItem(p.id)}
-                          className={`relative text-left rounded-xl overflow-hidden border-2 transition-all ${
-                            checked
-                              ? 'border-burgundy shadow-md shadow-burgundy/10'
-                              : 'border-transparent hover:border-nude/60'
-                          }`}
-                        >
-                          <div className="relative aspect-square bg-champagne/30">
-                            <Image
-                              src={p.images[0]}
-                              alt={p.name}
-                              fill
-                              className="object-cover"
-                              unoptimized
-                            />
-                            {checked && (
-                              <div className="absolute inset-0 bg-burgundy/20 flex items-center justify-center">
-                                <div className="w-7 h-7 rounded-full bg-burgundy flex items-center justify-center shadow-lg">
-                                  <Check size={14} className="text-white" />
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                          <div className="p-2">
-                            <p className="font-ui text-[11px] font-semibold text-burgundy line-clamp-1">
-                              {p.name}
-                            </p>
-                            <p className="font-body text-[10px] text-burgundy/50">
-                              Rs. {p.price.toLocaleString()}
-                            </p>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* ─ Save button ─ */}
-              <div className="flex items-center gap-4">
-                <AnimatePresence mode="wait">
-                  {saveStatus === 'success' ? (
-                    <motion.div
-                      key="success"
-                      initial={{ scale: 0.9, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-500 text-white font-ui font-semibold"
-                    >
-                      <CheckCircle2 size={16} />
-                      Saved successfully!
-                    </motion.div>
-                  ) : saveStatus === 'error' ? (
-                    <motion.div
-                      key="error"
-                      initial={{ scale: 0.9, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="flex items-center gap-2 px-6 py-3 rounded-xl bg-red-500 text-white font-ui font-semibold"
-                    >
-                      <AlertCircle size={16} />
-                      Error saving. Try again.
-                    </motion.div>
-                  ) : (
-                    <motion.button
-                      key="save"
-                      whileTap={{ scale: 0.97 }}
-                      onClick={handleSave}
-                      disabled={saveStatus === 'saving'}
-                      className="flex items-center gap-2 px-6 py-3 rounded-xl bg-burgundy text-white font-ui font-semibold hover:bg-wine transition-colors shadow-md shadow-burgundy/20 disabled:opacity-60"
-                    >
-                      {saveStatus === 'saving' ? (
-                        <Loader size={16} className="animate-spin" />
-                      ) : (
-                        <Save size={16} />
-                      )}
-                      {saveStatus === 'saving' ? 'Saving…' : 'Save Changes'}
-                    </motion.button>
-                  )}
-                </AnimatePresence>
-              </div>
-            </motion.div>
-          )}
-        </div>
+        <GiftBoxEditor 
+          selectedBox={selectedBox} isActive={isActive} previewUrl={previewUrl}
+          fileInputRef={fileInputRef} handleImageChange={handleImageChange} pendingImage={pendingImage}
+          editorCategory={editorCategory} categories={categories} productSearch={productSearch}
+          filteredProducts={filteredProducts} selectedItems={selectedItems} toggleItem={toggleItem}
+          saveStatus={saveStatus} handleSave={handleSave} dispatch={dispatch}
+        />
       </div>
     </div>
+    </LazyMotion>
   );
 }

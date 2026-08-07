@@ -1,17 +1,14 @@
 'use server';
 
-import { getServerClient } from '@/lib/pocketbase-server';
+import { requireAuth } from '@/lib/pocketbase-server';
 import { Product } from '@/types';
 import { mapRecordToProduct } from '@/lib/data/products';
 
 export async function getUserWishlistAction(): Promise<{ success: boolean; items?: Product[]; error?: string }> {
   try {
-    const pb = await getServerClient();
-    if (!pb.authStore.isValid || !pb.authStore.record) {
-      return { success: false, error: 'Unauthorized' };
-    }
+    const { pb, user } = await requireAuth();
 
-    const userId = pb.authStore.record.id;
+    const userId = user.id;
     const res = await pb.collection('wishlist').getFullList({
       filter: `user="${userId}"`,
       expand: 'product'
@@ -32,11 +29,8 @@ export async function getUserWishlistAction(): Promise<{ success: boolean; items
 
 export async function addToWishlistAction(productId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const pb = await getServerClient();
-    if (!pb.authStore.isValid || !pb.authStore.record) {
-      return { success: false, error: 'Unauthorized' };
-    }
-    const userId = pb.authStore.record.id;
+    const { pb, user } = await requireAuth();
+    const userId = user.id;
 
     // Check if already exists
     const exists = await pb.collection('wishlist').getList(1, 1, {
@@ -58,11 +52,8 @@ export async function addToWishlistAction(productId: string): Promise<{ success:
 
 export async function removeFromWishlistAction(productId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const pb = await getServerClient();
-    if (!pb.authStore.isValid || !pb.authStore.record) {
-      return { success: false, error: 'Unauthorized' };
-    }
-    const userId = pb.authStore.record.id;
+    const { pb, user } = await requireAuth();
+    const userId = user.id;
 
     // Find the record
     const records = await pb.collection('wishlist').getList(1, 1, {
@@ -81,11 +72,8 @@ export async function removeFromWishlistAction(productId: string): Promise<{ suc
 
 export async function syncWishlistAction(localProductIds: string[]): Promise<{ success: boolean; items?: Product[]; error?: string }> {
   try {
-    const pb = await getServerClient();
-    if (!pb.authStore.isValid || !pb.authStore.record) {
-      return { success: false, error: 'Unauthorized' };
-    }
-    const userId = pb.authStore.record.id;
+    const { pb, user } = await requireAuth();
+    const userId = user.id;
 
     // Get current remote wishlist
     const remoteRecords = await pb.collection('wishlist').getFullList({
@@ -93,17 +81,17 @@ export async function syncWishlistAction(localProductIds: string[]): Promise<{ s
       expand: 'product'
     });
 
-    const remoteProductIds = remoteRecords.map(r => r.product);
+    const remoteProductIds = new Set(remoteRecords.map(r => r.product));
     
     // Add missing local products to remote
-    for (const pid of localProductIds) {
-      if (!remoteProductIds.includes(pid)) {
+    await Promise.all(localProductIds.map(async (pid) => {
+      if (!remoteProductIds.has(pid)) {
         await pb.collection('wishlist').create({
           user: userId,
           product: pid
         });
       }
-    }
+    }));
 
     // Refetch the complete list
     const finalRecords = await pb.collection('wishlist').getFullList({

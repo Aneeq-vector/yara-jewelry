@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -23,42 +23,45 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     
-    const formData = new FormData();
-    formData.append('email', email);
-    formData.append('password', password);
-    
-    const result = await loginAction(formData);
-    
-    if (result.error) {
-      setLoading(false);
-      alert(result.error);
-      return;
-    }
-    
-    // Sync client state depending on role
-    if (result.user?.role === 'admin') {
-      useAdminAuthStore.setState({ user: result.user as any, isAuthenticated: true });
-    } else {
-      useAuthStore.setState({ user: result.user as any, isAuthenticated: true });
-    }
-    
-    // Sync wishlist
     try {
-      const { syncWishlistAction } = await import('@/app/actions/wishlist');
-      const { useWishlistStore } = await import('@/lib/store/wishlist-store');
-      const localItems = useWishlistStore.getState().items.map(i => i.id);
-      const syncRes = await syncWishlistAction(localItems);
-      if (syncRes.success && syncRes.items) {
-        useWishlistStore.getState().setWishlist(syncRes.items);
+      const formData = new FormData();
+      formData.append('email', email);
+      formData.append('password', password);
+      
+      const result = await loginAction(formData);
+      
+      if (result.error) {
+        alert(result.error);
+        return;
       }
-    } catch (e) {
-      console.error('Failed to sync wishlist on login', e);
-    }
-    
-    if (result.user?.role === 'admin') {
-      router.push('/yara-admin');
-    } else {
-      router.push('/dashboard');
+      
+      // Sync client state depending on role
+      if (result.user?.role === 'admin') {
+        useAdminAuthStore.setState({ user: result.user as any, isAuthenticated: true });
+      } else {
+        useAuthStore.setState({ user: result.user as any, isAuthenticated: true });
+      }
+      
+      // Sync wishlist
+      try {
+        const { syncWishlistAction } = await import('@/app/actions/wishlist');
+        const { useWishlistStore } = await import('@/lib/store/wishlist-store');
+        const localItems = useWishlistStore.getState().items.map(i => i.id);
+        const syncRes = await syncWishlistAction(localItems);
+        if (syncRes.success && syncRes.items) {
+          useWishlistStore.getState().setWishlist(syncRes.items);
+        }
+      } catch (e) {
+        console.error('Failed to sync wishlist on login', e);
+      }
+      
+      if (result.user?.role === 'admin') {
+        router.push('/yara-admin');
+      } else {
+        router.push('/dashboard');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -118,7 +121,7 @@ export default function LoginPage() {
               />
               <label 
                 htmlFor="email"
-                className={`absolute left-0 font-ui transition-all duration-200 pointer-events-none
+                className={`absolute left-0 font-ui transition duration-200 pointer-events-none
                   ${focused === 'email' || email ? 'top-0 text-xs text-burgundy uppercase font-bold tracking-wider' : 'top-7 text-sm text-burgundy/50'}`}
               >
                 Email Address
@@ -140,7 +143,7 @@ export default function LoginPage() {
               />
               <label 
                 htmlFor="password"
-                className={`absolute left-0 font-ui transition-all duration-200 pointer-events-none
+                className={`absolute left-0 font-ui transition duration-200 pointer-events-none
                   ${focused === 'password' || password ? 'top-0 text-xs text-burgundy uppercase font-bold tracking-wider' : 'top-7 text-sm text-burgundy/50'}`}
               >
                 Password
@@ -149,6 +152,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-0 top-7 text-burgundy/30 hover:text-burgundy/60 transition-colors"
+                aria-label="Toggle password visibility"
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>

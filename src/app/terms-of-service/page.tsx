@@ -1,7 +1,7 @@
 'use client';
 
 import PageWrapper from '@/components/layout/PageWrapper';
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 import Link from 'next/link';
 
 export default function TermsOfServicePage() {
@@ -22,7 +22,7 @@ export default function TermsOfServicePage() {
             <p className="font-body text-[#c9856a] tracking-wide uppercase text-sm font-semibold">
               Yara Jewelry
             </p>
-            <p className="font-body text-[#4a1c27]/50 text-sm mt-4">
+            <p suppressHydrationWarning className="font-body text-[#4a1c27]/50 text-sm mt-4">
               Last updated: {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
             </p>
           </motion.div>

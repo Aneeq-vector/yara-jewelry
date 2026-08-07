@@ -1,17 +1,14 @@
 'use server';
 
-import { getServerClient } from '@/lib/pocketbase-server';
+import { requireAuth } from '@/lib/pocketbase-server';
 import { Address } from '@/types';
 
 export async function getAddressesAction(): Promise<{ success: boolean; addresses?: Address[]; error?: string }> {
   try {
-    const pb = await getServerClient();
-    if (!pb.authStore.isValid || !pb.authStore.record) {
-      return { success: false, error: 'Unauthorized' };
-    }
+    const { pb, user } = await requireAuth();
 
     const records = await pb.collection('addresses').getFullList({
-      filter: `user="${pb.authStore.record.id}"`
+      filter: `user="${user.id}"`
     });
 
     const addresses = records.map(record => ({
@@ -34,21 +31,16 @@ export async function getAddressesAction(): Promise<{ success: boolean; addresse
 
 export async function addAddressAction(data: Partial<Address>): Promise<{ success: boolean; error?: string }> {
   try {
-    const pb = await getServerClient();
-    if (!pb.authStore.isValid || !pb.authStore.record) {
-      return { success: false, error: 'Unauthorized' };
-    }
+    const { pb, user } = await requireAuth();
 
     if (data.isDefault) {
       // Unset previous defaults
-      const existing = await pb.collection('addresses').getFullList({ filter: `user="${pb.authStore.record.id}" && isDefault=true` });
-      for (const addr of existing) {
-        await pb.collection('addresses').update(addr.id, { isDefault: false });
-      }
+      const existing = await pb.collection('addresses').getFullList({ filter: `user="${user.id}" && isDefault=true` });
+      await Promise.all(existing.map(addr => pb.collection('addresses').update(addr.id, { isDefault: false })));
     }
 
     await pb.collection('addresses').create({
-      user: pb.authStore.record.id,
+      user: user.id,
       name: data.name,
       street: data.street,
       city: data.city,
@@ -67,17 +59,12 @@ export async function addAddressAction(data: Partial<Address>): Promise<{ succes
 
 export async function updateAddressAction(id: string, data: Partial<Address>): Promise<{ success: boolean; error?: string }> {
   try {
-    const pb = await getServerClient();
-    if (!pb.authStore.isValid || !pb.authStore.record) {
-      return { success: false, error: 'Unauthorized' };
-    }
+    const { pb, user } = await requireAuth();
 
     if (data.isDefault) {
       // Unset previous defaults
-      const existing = await pb.collection('addresses').getFullList({ filter: `user="${pb.authStore.record.id}" && isDefault=true && id!="${id}"` });
-      for (const addr of existing) {
-        await pb.collection('addresses').update(addr.id, { isDefault: false });
-      }
+      const existing = await pb.collection('addresses').getFullList({ filter: `user="${user.id}" && isDefault=true && id!="${id}"` });
+      await Promise.all(existing.map(addr => pb.collection('addresses').update(addr.id, { isDefault: false })));
     }
 
     await pb.collection('addresses').update(id, {
@@ -99,10 +86,7 @@ export async function updateAddressAction(id: string, data: Partial<Address>): P
 
 export async function deleteAddressAction(id: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const pb = await getServerClient();
-    if (!pb.authStore.isValid || !pb.authStore.record) {
-      return { success: false, error: 'Unauthorized' };
-    }
+    const { pb, user } = await requireAuth();
 
     await pb.collection('addresses').delete(id);
     return { success: true };

@@ -61,6 +61,28 @@ export async function getAdminPanelClient() {
   return pb;
 }
 
+export async function requireAuth() {
+  const pb = await getServerClient();
+  if (!pb.authStore.isValid || !pb.authStore.record) {
+    throw new Error('Unauthorized');
+  }
+  return { pb, user: pb.authStore.record };
+}
+
+export async function getServerSession() {
+  const pb = await getServerClient();
+  return { pb, user: pb.authStore.isValid ? pb.authStore.record : null };
+}
+
+export async function validateSession() {
+  const pb = await getAdminPanelClient();
+  if (!pb.authStore.isValid || !pb.authStore.record || pb.authStore.record.role !== 'admin') {
+    throw new Error('Unauthorized Admin');
+  }
+  return { pb, user: pb.authStore.record };
+}
+
+
 // Client for Admin-only operations using env credentials
 export async function getAdminClient() {
   const pb = new PocketBase(PB_URL);

@@ -1,10 +1,11 @@
 'use server';
 
-import { getAdminClient } from '@/lib/pocketbase-server';
+import { validateSession, getAdminClient } from '@/lib/pocketbase-server';
 import { revalidatePath } from 'next/cache';
 
 export async function getCustomersAction() {
   try {
+    await validateSession();
     const pb = await getAdminClient();
     
     // Fetch all users with role 'customer'
@@ -43,20 +44,25 @@ export async function getCustomersAction() {
         spent: `Rs. ${spentAmount.toLocaleString()}`,
         joined: joinedDate,
         status: record.status || 'Active', // Default to Active if not set
-        addresses: addresses.filter((a: any) => a.user === record.id).map((a: any) => ({
-          id: a.id,
-          name: a.name,
-          street: a.street,
-          city: a.city,
-          state: a.state,
-          zipCode: a.zip,
-          phone: a.phone,
-          isDefault: a.isDefault
-        }))
+        addresses: addresses.reduce((acc: any[], a: any) => {
+          if (a.user === record.id) {
+            acc.push({
+              id: a.id,
+              name: a.name,
+              street: a.street,
+              city: a.city,
+              state: a.state,
+              zipCode: a.zip,
+              phone: a.phone,
+              isDefault: a.isDefault
+            });
+          }
+          return acc;
+        }, [])
       };
     });
     
-    return { success: true, customers: JSON.parse(JSON.stringify(customers)) };
+    return { success: true, customers: structuredClone(customers) };
   } catch (error: any) {
     console.error('Failed to fetch customers:', error);
     return { success: false, error: error.message || 'Failed to fetch customers' };
@@ -65,6 +71,7 @@ export async function getCustomersAction() {
 
 export async function deleteCustomerAction(id: string) {
   try {
+    await validateSession();
     const pb = await getAdminClient();
     await pb.collection('users').delete(id);
     
@@ -78,6 +85,7 @@ export async function deleteCustomerAction(id: string) {
 
 export async function deleteCustomersAction(ids: string[]) {
   try {
+    await validateSession();
     const pb = await getAdminClient();
     
     // Delete all selected customers concurrently
@@ -95,6 +103,7 @@ export async function deleteCustomersAction(ids: string[]) {
 
 export async function updateCustomerStatusAction(id: string, status: string) {
   try {
+    await validateSession();
     const pb = await getAdminClient();
     // Update the customer record with the new status
     // Note: This requires a 'status' field to exist in the 'users' collection in PocketBase.

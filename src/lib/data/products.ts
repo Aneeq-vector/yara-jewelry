@@ -2,7 +2,7 @@ import { Product } from '@/types';
 import { createClient, PB_URL } from '@/lib/pocketbase';
 import { RecordModel } from 'pocketbase';
 
-export const products: Product[] = [];
+const products: Product[] = [];
 
 // Helper to map PocketBase record to Product type
 export function mapRecordToProduct(record: RecordModel): Product {
@@ -60,7 +60,7 @@ export async function getProductById(id: string): Promise<Product | undefined> {
   }
 }
 
-export async function getProductsByCategory(category: string): Promise<Product[]> {
+async function getProductsByCategory(category: string): Promise<Product[]> {
   try {
     const pb = createClient();
     const records = await pb.collection('products').getFullList({
@@ -108,7 +108,7 @@ export async function getTrendingProducts(): Promise<Product[]> {
   }
 }
 
-export async function getNewArrivals(): Promise<Product[]> {
+async function getNewArrivals(): Promise<Product[]> {
   try {
     const pb = createClient();
     const records = await pb.collection('products').getList(1, 8, {

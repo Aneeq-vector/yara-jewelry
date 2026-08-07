@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m as motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
@@ -132,12 +132,12 @@ export default function Hero() {
                     BANNERS[active].align === 'right' ? 'justify-end' : 'justify-start'
                   }`}
                 >
-                  <Link href="/shop" className="group relative isolate flex items-center gap-3 px-8 py-4 rounded-full bg-white/95 text-burgundy shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105 overflow-hidden">
+                  <Link href="/shop" className="group relative isolate flex items-center gap-3 px-8 py-4 rounded-full bg-white/95 text-burgundy shadow-xl hover:shadow-2xl transition duration-500 hover:scale-105 overflow-hidden">
                     {/* Animated gradient background on hover */}
                     <div className="absolute inset-0 bg-gradient-to-r from-[#F6EBDD] via-[#E8C4B0] to-[#F6EBDD] bg-[length:200%_auto] opacity-0 group-hover:opacity-100 group-hover:animate-shimmer transition-opacity duration-500 -z-10" />
                     
                     <span className="font-ui font-bold text-sm tracking-[0.1em] uppercase relative z-10">Shop Collection</span>
-                    <div className="w-7 h-7 rounded-full bg-burgundy/10 flex items-center justify-center group-hover:bg-burgundy group-hover:text-white transition-all duration-300 relative z-10">
+                    <div className="w-7 h-7 rounded-full bg-burgundy/10 flex items-center justify-center group-hover:bg-burgundy group-hover:text-white transition duration-300 relative z-10">
                       <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
                     </div>
                   </Link>
@@ -154,11 +154,11 @@ export default function Hero() {
           <div className="flex items-center gap-3">
             <span className="font-heading text-white font-medium text-sm w-4">0{active + 1}</span>
             <div className="flex items-center gap-1.5">
-              {BANNERS.map((_, i) => (
+              {BANNERS.map((banner, i) => (
                 <button
-                  key={i}
+                  key={banner.id}
                   onClick={() => setActive(i)}
-                  className={`relative h-1.5 rounded-full transition-all duration-500 ${
+                  className={`relative h-1.5 rounded-full transition duration-500 ${
                     active === i ? 'w-6 bg-white' : 'w-2 bg-white/30 hover:bg-white/50'
                   } after:content-[''] after:absolute after:-inset-y-5 after:-inset-x-2`}
                   aria-label={`Go to slide ${i + 1}`}
@@ -170,13 +170,13 @@ export default function Hero() {
 
           {/* Arrows */}
           <div className="flex items-center gap-2">
-            <button 
+            <button aria-label="Action" 
               onClick={prev}
               className="w-11 h-11 rounded-full border border-white/30 text-white flex items-center justify-center backdrop-blur-md hover:bg-white hover:text-burgundy transition-colors"
             >
               <ChevronLeft size={16} />
             </button>
-            <button 
+            <button aria-label="Action" 
               onClick={next}
               className="w-11 h-11 rounded-full border border-white/30 text-white flex items-center justify-center backdrop-blur-md hover:bg-white hover:text-burgundy transition-colors"
             >

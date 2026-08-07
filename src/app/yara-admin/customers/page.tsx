@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { CustomersPagination } from './components/CustomersPagination';
+import { AddressModal } from './components/AddressModal';
+import { CustomersTable } from './components/CustomersTable';
 import { Search, Download, MoreVertical, Mail, Trash2, RefreshCw, ChevronDown } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { getCustomersAction, deleteCustomerAction, updateCustomerStatusAction, deleteCustomersAction } from '@/app/actions/customers';
@@ -104,7 +107,7 @@ export default function CustomersManager() {
     const idsToDelete = Array.from(selectedCustomerIds);
     
     // Optimistic update
-    setCustomers(customers.filter(c => !idsToDelete.includes(c.id)));
+    setCustomers(customers.filter(c => !selectedCustomerIds.has(c.id)));
     setSelectedCustomerIds(new Set());
 
     // Server update
@@ -157,7 +160,7 @@ export default function CustomersManager() {
         <div className="p-4 border-b border-burgundy/5 flex flex-col sm:flex-row justify-between gap-4 bg-ivory/30">
           <div className="flex items-center gap-2 bg-white border border-burgundy/10 rounded-xl px-4 py-2 w-full sm:w-80 focus-within:border-burgundy/30 transition-colors">
             <Search size={16} className="text-burgundy/40" />
-            <input 
+            <input aria-label="Search customers..." 
               type="text" 
               placeholder="Search customers..." 
               value={searchQuery}
@@ -215,284 +218,14 @@ export default function CustomersManager() {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto relative min-h-[300px]">
-          {loading ? (
-            <div className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-sm z-10">
-              <div className="w-8 h-8 border-4 border-burgundy/20 border-t-burgundy rounded-full animate-spin"></div>
-            </div>
-          ) : null}
-          <table className="w-full text-center border-collapse min-w-[800px]">
-            <thead>
-              <tr className="border-b border-burgundy/10 text-burgundy/60 font-body text-xs uppercase tracking-wider">
-                <th className="p-4 font-semibold w-12 text-center">
-                  <Checkbox 
-                    className="rounded border-burgundy/20 text-burgundy focus:ring-burgundy mx-auto block" 
-                    checked={paginatedCustomers.length > 0 && selectedCustomerIds.size === paginatedCustomers.length}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setSelectedCustomerIds(new Set(paginatedCustomers.map(c => c.id)));
-                      } else {
-                        setSelectedCustomerIds(new Set());
-                      }
-                    }}
-                  />
-                </th>
-                <th className="p-4 font-semibold text-center pr-24">Customer</th>
-                <th className="p-4 font-semibold text-center">Status</th>
-                <th className="p-4 font-semibold text-center">Orders</th>
-                <th className="p-4 font-semibold text-center">Total Spent</th>
-                <th className="p-4 font-semibold text-center">Joined</th>
-                <th className="p-4 font-semibold text-center">Address</th>
-                <th className="p-4 font-semibold text-center pl-16">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm font-body">
-              {paginatedCustomers.map((customer) => (
-                <tr key={customer.id} className="border-b border-burgundy/5 last:border-0 hover:bg-ivory/30 transition-colors">
-                  <td className="p-4 text-center">
-                    <Checkbox 
-                      className="rounded border-burgundy/20 text-burgundy focus:ring-burgundy mx-auto block"
-                      checked={selectedCustomerIds.has(customer.id)}
-                      onCheckedChange={(checked) => handleSelectOne(customer.id, checked as boolean)}
-                    />
-                  </td>
-                  <td className="p-4 text-left">
-                    <div className="flex items-center justify-start gap-3">
-                      <div className="w-10 h-10 rounded-full bg-champagne flex items-center justify-center text-burgundy font-bold text-sm uppercase shrink-0">
-                        {customer.name.charAt(0)}
-                      </div>
-                      <div className="text-left">
-                        <div className="font-bold text-burgundy">{customer.name}</div>
-                        <div className="text-xs text-burgundy/50">{customer.email}</div>
-                        {customer.phone && <div className="text-xs text-burgundy/40">{customer.phone}</div>}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-4 text-center">
-                    <span className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-semibold ${
-                      customer.status === 'VIP' ? 'bg-purple-100 text-purple-700' :
-                      customer.status === 'Active' ? 'bg-emerald-100 text-emerald-700' :
-                      'bg-gray-100 text-gray-600'
-                    }`}>
-                      {customer.status}
-                    </span>
-                  </td>
-                  <td className="p-4 font-ui text-burgundy/80 text-center">{customer.orders}</td>
-                  <td className="p-4 font-ui font-bold text-burgundy text-center">
-                    {customer.spent}
-                  </td>
-                  <td className="p-4 font-ui text-burgundy/80 text-center">
-                    {customer.joined}
-                  </td>
-                  <td className="p-4 text-center">
-                    {customer.addresses && customer.addresses.length > 0 ? (
-                      <button
-                        onClick={() => setSelectedCustomerForAddress(customer)}
-                        className="text-burgundy/70 hover:text-burgundy bg-burgundy/5 hover:bg-burgundy/10 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors"
-                      >
-                        View ({customer.addresses.length})
-                      </button>
-                    ) : (
-                      <span className="text-burgundy/40 text-xs italic">N/A</span>
-                    )}
-                  </td>
-                  <td className="p-4 text-right">
-                    <div className="flex items-center justify-end gap-2 relative">
-                      <button 
-                        onClick={() => {
-                          if (customer.phone) {
-                            let cleanPhone = customer.phone.replace(/[^0-9]/g, '');
-                            // If it starts with 0 (local format), replace with country code 94
-                            if (cleanPhone.startsWith('0')) {
-                              cleanPhone = '94' + cleanPhone.substring(1);
-                            } else if (cleanPhone.length === 9) {
-                              // If it's 9 digits (missing 0 and 94), prepend 94
-                              cleanPhone = '94' + cleanPhone;
-                            }
-                            window.open(`https://wa.me/${cleanPhone}`, '_blank');
-                          } else {
-                            alert('No phone number provided for this customer.');
-                          }
-                        }}
-                        className={`p-2 rounded-lg transition-colors ${customer.phone ? 'text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50' : 'text-emerald-500/30 cursor-not-allowed'}`}
-                        title="Open WhatsApp"
-                      >
-                        <WhatsappIcon size={16} />
-                      </button>
-                      <button 
-                        onClick={() => window.location.href = `mailto:${customer.email}`}
-                        className="p-2 text-burgundy/50 hover:text-burgundy hover:bg-rose-gold/10 rounded-lg transition-colors" 
-                        title="Send Email"
-                      >
-                        <Mail size={16} />
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(customer.id)}
-                        className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" 
-                        title="Delete User"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger className="p-2 text-burgundy/50 hover:text-burgundy hover:bg-rose-gold/10 rounded-lg transition-colors outline-none cursor-pointer">
-                          <MoreVertical size={16} />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-32 bg-white border border-burgundy/10 shadow-lg rounded-xl p-1">
-                          <DropdownMenuItem 
-                            onClick={() => handleStatusChange(customer.id, 'Active')}
-                            className="cursor-pointer text-sm text-burgundy hover:bg-rose-gold/10 focus:bg-rose-gold/10 rounded-md px-3 py-2 outline-none"
-                          >
-                            Set Active
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => handleStatusChange(customer.id, 'Inactive')}
-                            className="cursor-pointer text-sm text-burgundy hover:bg-rose-gold/10 focus:bg-rose-gold/10 rounded-md px-3 py-2 outline-none"
-                          >
-                            Set Inactive
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {!loading && filteredCustomers.length === 0 && (
-            <div className="p-8 text-center text-burgundy/50 font-body">
-              No customers found matching your criteria.
-            </div>
-          )}
-        </div>
+        <CustomersTable loading={loading} paginatedCustomers={paginatedCustomers} selectedCustomerIds={selectedCustomerIds} setSelectedCustomerIds={setSelectedCustomerIds} handleSelectOne={handleSelectOne} setSelectedCustomerForAddress={setSelectedCustomerForAddress} handleDelete={handleDelete} handleStatusChange={handleStatusChange} filteredCustomers={filteredCustomers} />
         
         {/* Pagination */}
-        <div className="p-4 border-t border-burgundy/5 bg-ivory/20 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-sm text-burgundy/60 font-body">
-            <span>Rows per page:</span>
-            <select 
-              value={rowsPerPage}
-              onChange={(e) => {
-                setRowsPerPage(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-              className="bg-transparent border border-burgundy/10 rounded-md px-2 py-1 outline-none focus:border-burgundy/30 cursor-pointer text-burgundy"
-            >
-              <option value="10">10</option>
-              <option value="25">25</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-            </select>
-            <span className="ml-4">
-              {filteredCustomers.length === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1}-
-              {Math.min(currentPage * rowsPerPage, filteredCustomers.length)} of {filteredCustomers.length}
-            </span>
-          </div>
-          <Pagination className="mx-0 w-auto">
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious 
-                  href="#" 
-                  onClick={(e) => { e.preventDefault(); handlePageChange(currentPage - 1); }}
-                  className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
-                />
-              </PaginationItem>
-              
-              {Array.from({ length: totalPages }).map((_, i) => {
-                const p = i + 1;
-                if (
-                  p === 1 || 
-                  p === totalPages || 
-                  (p >= currentPage - 1 && p <= currentPage + 1)
-                ) {
-                  return (
-                    <PaginationItem key={p}>
-                      <PaginationLink 
-                        href="#" 
-                        isActive={currentPage === p}
-                        onClick={(e) => { e.preventDefault(); handlePageChange(p); }}
-                      >
-                        {p}
-                      </PaginationLink>
-                    </PaginationItem>
-                  );
-                } else if (
-                  p === currentPage - 2 || 
-                  p === currentPage + 2
-                ) {
-                  return (
-                    <PaginationItem key={p}>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                  );
-                }
-                return null;
-              })}
-
-              <PaginationItem>
-                <PaginationNext 
-                  href="#" 
-                  onClick={(e) => { e.preventDefault(); handlePageChange(currentPage + 1); }}
-                  className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
+        <CustomersPagination rowsPerPage={rowsPerPage} setRowsPerPage={setRowsPerPage} setCurrentPage={setCurrentPage} currentPage={currentPage} totalPages={totalPages} handlePageChange={handlePageChange} filteredCustomers={filteredCustomers} />
       </div>
 
       {/* Address Modal */}
-      {selectedCustomerForAddress && (
-        <div 
-          className="fixed inset-0 bg-burgundy/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          onClick={() => setSelectedCustomerForAddress(null)}
-        >
-          <div 
-            className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-xl border border-burgundy/10 max-h-[80vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-heading font-bold text-burgundy">
-                Addresses for {selectedCustomerForAddress.name}
-              </h2>
-              <button 
-                onClick={() => setSelectedCustomerForAddress(null)}
-                className="text-burgundy/50 hover:text-burgundy p-2 rounded-full hover:bg-burgundy/5 transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-            
-            {selectedCustomerForAddress.addresses && selectedCustomerForAddress.addresses.length > 0 ? (
-              <div className="space-y-4">
-                {selectedCustomerForAddress.addresses.map((address: any) => (
-                  <div key={address.id} className="border border-burgundy/10 rounded-2xl p-4 bg-ivory/20 relative">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-bold text-burgundy">{address.name}</span>
-                      {address.isDefault && (
-                        <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                          Default
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-sm text-burgundy/70 space-y-1">
-                      <p>{address.street}</p>
-                      <p>{address.city}, {address.state} {address.zipCode}</p>
-                      {address.phone && (
-                        <p className="pt-1 flex items-center gap-2">
-                          <span className="text-burgundy/40 text-xs">📞</span> {address.phone}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-burgundy/50 text-center py-8 font-body">No addresses found for this customer.</p>
-            )}
-          </div>
-        </div>
-      )}
+      {selectedCustomerForAddress && <AddressModal selectedCustomerForAddress={selectedCustomerForAddress} setSelectedCustomerForAddress={setSelectedCustomerForAddress} />}
     </div>
   );
 }

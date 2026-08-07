@@ -2,7 +2,7 @@
 
 import PageWrapper from '@/components/layout/PageWrapper';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 import { Droplet, Sun, Wind, Sparkles } from 'lucide-react';
 
 export default function CareInstructionsPage() {

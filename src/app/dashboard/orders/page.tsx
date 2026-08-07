@@ -46,8 +46,8 @@ export default async function OrdersPage() {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <p className="font-ui font-bold text-sm text-burgundy">{order.orderId || `#${order.id.slice(0, 8)}`}</p>
-                  <p className="font-body text-xs text-burgundy/40">
-                    {new Date(order.orderDate ? order.orderDate.replace(' ', 'T') : (order.created ? order.created.replace(' ', 'T') : Date.now())).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}
+                  <p suppressHydrationWarning className="font-body text-xs text-burgundy/40">
+                    {new Date(order.orderDate ? order.orderDate.replace(' ', 'T') : (order.created ? order.created.replace(' ', 'T') : '2024-01-01T00:00:00Z')).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}
                   </p>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-[10px] font-ui font-bold uppercase tracking-wider ${statusColors[order.status] || 'bg-gray-100 text-gray-700'}`}>
@@ -59,12 +59,12 @@ export default async function OrdersPage() {
                   if (detail.includes('Custom Box')) {
                     const [mainPart, itemsPart] = detail.split(' - Items: ');
                     return (
-                      <div key={idx} className="flex flex-col gap-2 p-3 rounded-xl bg-champagne/20 overflow-hidden text-sm text-burgundy">
+                      <div key={detail} className="flex flex-col gap-2 p-3 rounded-xl bg-champagne/20 overflow-hidden text-sm text-burgundy">
                         <div className="font-bold px-1">{mainPart}</div>
                         {itemsPart && (
                           <div className="flex flex-col gap-2">
                             {(itemsPart.includes(' | ') ? itemsPart.split(' | ') : itemsPart.split(', ')).map((boxItem, itemIdx) => (
-                              <div key={itemIdx} className="flex items-center gap-3 p-2 rounded-xl bg-champagne/40 overflow-hidden">
+                              <div key={boxItem} className="flex items-center gap-3 p-2 rounded-xl bg-champagne/40 overflow-hidden">
                                 <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-ivory rounded-lg text-burgundy/40">
                                   <ShoppingBag size={14} />
                                 </div>
@@ -111,14 +111,14 @@ export default async function OrdersPage() {
                   const finalItem = `${codePrefix}${name}${countSuffix}${extras}`;
                   
                   return (
-                    <div key={idx} className="flex items-center gap-3 p-2 rounded-xl bg-champagne/20 overflow-hidden">
+                    <div key={detail} className="flex items-center gap-3 p-2 rounded-xl bg-champagne/20 overflow-hidden">
                       <ShoppingBag size={14} className="text-burgundy/30 flex-shrink-0" />
                       <span className="font-body text-sm text-burgundy/60 truncate flex-1 min-w-0" title={finalItem}>{finalItem}</span>
                     </div>
                   );
                 })}
                 {!(order.cartDetails?.length) && order.expand?.items?.map((item: any, idx: number) => (
-                  <div key={`fallback-${idx}`} className="flex items-center gap-3 p-2 rounded-xl bg-champagne/20 overflow-hidden">
+                  <div key={item.id} className="flex items-center gap-3 p-2 rounded-xl bg-champagne/20 overflow-hidden">
                     <ShoppingBag size={14} className="text-burgundy/30 flex-shrink-0" />
                     <span className="font-body text-sm text-burgundy/60 truncate flex-1 min-w-0">{item.name}</span>
                   </div>

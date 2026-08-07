@@ -1,14 +1,14 @@
 'use server';
 
-import { getServerClient, getAdminClient } from '@/lib/pocketbase-server';
+import { getServerSession, validateSession, getAdminClient } from '@/lib/pocketbase-server';
 import { revalidatePath } from 'next/cache';
 
 export async function createOrderAction(formData: FormData) {
   try {
-    const pb = await getServerClient();
+    const { pb, user } = await getServerSession();
     // Set the user to the currently authenticated user if available
-    if (pb.authStore.isValid && pb.authStore.record) {
-      formData.set('user', pb.authStore.record.id);
+    if (user) {
+      formData.set('user', user.id);
     }
 
     // Initial status
@@ -66,12 +66,13 @@ export async function createOrderAction(formData: FormData) {
 
 export async function getAllOrdersAction() {
   try {
+    await validateSession();
     const pb = await getAdminClient();
     const records = await pb.collection('orders').getFullList({
       sort: '-orderDate',
       expand: 'user,items'
     });
-    return { success: true, orders: JSON.parse(JSON.stringify(records)) };
+    return { success: true, orders: structuredClone(records) };
   } catch (error: any) {
     console.error('Failed to fetch orders:', error);
     return { success: false, error: error.message || 'Failed to fetch orders' };
@@ -80,6 +81,7 @@ export async function getAllOrdersAction() {
 
 export async function updateOrderStatusAction(orderId: string, status: string) {
   try {
+    await validateSession();
     const pb = await getAdminClient();
     
     // Use pb.send to bypass any SDK update() specific issues while keeping SDK auth
@@ -98,6 +100,7 @@ export async function updateOrderStatusAction(orderId: string, status: string) {
 
 export async function updateOrderPaymentStatusAction(orderId: string, paymentStatus: string) {
   try {
+    await validateSession();
     const pb = await getAdminClient();
     
     // Use pb.send to bypass any SDK update() specific issues while keeping SDK auth
@@ -116,6 +119,7 @@ export async function updateOrderPaymentStatusAction(orderId: string, paymentSta
 
 export async function deleteOrdersAction(orderIds: string[]) {
   try {
+    await validateSession();
     const pb = await getAdminClient();
     
     // Delete all selected orders

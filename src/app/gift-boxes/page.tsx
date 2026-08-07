@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 import Link from 'next/link';
 import { Gift, Sparkles, ChevronRight } from 'lucide-react';
 import PageWrapper from '@/components/layout/PageWrapper';
@@ -122,7 +122,7 @@ export default function GiftBoxesPage() {
               { step: '03', title: 'Gift with Love', desc: 'We package everything beautifully. You just need to hand it over!' },
             ].map((item, i) => (
               <div
-                key={i}
+                key={item.step}
                 className="text-center p-6 rounded-3xl bg-champagne/30 border border-nude/40"
               >
                 <div className="font-heading text-4xl font-bold text-burgundy/10 mb-2">{item.step}</div>

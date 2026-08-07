@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m as motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Minus, Plus, X, ShoppingBag, ArrowRight, Tag } from 'lucide-react';
@@ -118,8 +118,8 @@ export default function CartPage() {
                             </Link>
                             {item.isCustomBox ? (
                               <div className="mt-1 space-y-1">
-                                {item.boxItems?.slice(0, 3).map((boxItem, idx) => (
-                                  <p key={idx} className="font-body text-xs text-burgundy/60">
+                                {item.boxItems?.slice(0, 3).map((boxItem) => (
+                                  <p key={boxItem.id || boxItem.name} className="font-body text-xs text-burgundy/60">
                                     • {boxItem.name}{boxItem.selectedColor ? ` (${boxItem.selectedColor})` : ''}
                                   </p>
                                 ))}
@@ -138,7 +138,7 @@ export default function CartPage() {
                           </div>
                           <button
                             onClick={() => removeItem(item.cartItemId)}
-                            className="p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-champagne/60 text-burgundy/40 hover:text-burgundy transition-colors"
+                            aria-label="Interactive control" className="p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-champagne/60 text-burgundy/40 hover:text-burgundy transition-colors"
                           >
                             <X size={16} />
                           </button>
@@ -149,7 +149,7 @@ export default function CartPage() {
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => updateQuantity(item.cartItemId, item.quantity - 1)}
-                              className="w-11 h-11 sm:w-8 sm:h-8 min-w-[44px] sm:min-w-0 min-h-[44px] sm:min-h-0 rounded-lg border border-nude/50 flex items-center justify-center text-burgundy/50 hover:border-burgundy/30 transition-colors"
+                              aria-label="Interactive control" className="w-11 h-11 sm:w-8 sm:h-8 min-w-[44px] sm:min-w-0 min-h-[44px] sm:min-h-0 rounded-lg border border-nude/50 flex items-center justify-center text-burgundy/50 hover:border-burgundy/30 transition-colors"
                             >
                               <Minus size={12} />
                             </button>
@@ -158,7 +158,7 @@ export default function CartPage() {
                             </span>
                             <button
                               onClick={() => updateQuantity(item.cartItemId, item.quantity + 1)}
-                              className="w-11 h-11 sm:w-8 sm:h-8 min-w-[44px] sm:min-w-0 min-h-[44px] sm:min-h-0 rounded-lg border border-nude/50 flex items-center justify-center text-burgundy/50 hover:border-burgundy/30 transition-colors"
+                              aria-label="Interactive control" className="w-11 h-11 sm:w-8 sm:h-8 min-w-[44px] sm:min-w-0 min-h-[44px] sm:min-h-0 rounded-lg border border-nude/50 flex items-center justify-center text-burgundy/50 hover:border-burgundy/30 transition-colors"
                             >
                               <Plus size={12} />
                             </button>
@@ -196,7 +196,9 @@ export default function CartPage() {
                 <div className="flex gap-2 mb-6">
                   <div className="relative flex-1">
                     <Tag size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-burgundy/30" />
+                    <label htmlFor="couponCode" className="sr-only">Coupon code</label>
                     <input
+                      id="couponCode"
                       type="text"
                       value={coupon}
                       onChange={(e) => setCoupon(e.target.value)}

@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 import Image from 'next/image';
 import { Heart, Gem, Sparkles, Target } from 'lucide-react';
 import PageWrapper from '@/components/layout/PageWrapper';
@@ -51,7 +51,7 @@ export default function AboutPage() {
                   <Image
                     src="https://images.unsplash.com/photo-1588444837495-c6cfeb53f32d?w=600&h=750&fit=crop"
                     alt="Yara jewelry collection"
-                    fill
+                    fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     className="absolute inset-0 object-cover"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-burgundy/20 to-transparent" />
