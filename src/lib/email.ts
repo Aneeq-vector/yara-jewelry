@@ -230,3 +230,94 @@ export async function sendInvoiceEmail(details: InvoiceDetails) {
     return { success: false, error };
   }
 }
+
+export async function sendWelcomeEmail(customerEmail: string, customerName: string) {
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.warn('Email skipped: SMTP credentials not configured.');
+    return { success: false, error: 'SMTP not configured' };
+  }
+
+  const htmlTemplate = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Welcome to Yara</title>
+      <style>
+        @media only screen and (max-width: 600px) {
+          .main-container { width: 100% !important; border-radius: 0 !important; }
+          .header-cell { padding: 30px 20px 25px 20px !important; }
+          .content-cell { padding: 30px 20px !important; }
+          .footer-cell { padding: 30px 20px !important; }
+        }
+      </style>
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #f8f5f3; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-text-size-adjust: 100%;">
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8f5f3; padding: 20px 0;">
+        <tr>
+          <td align="center" style="padding: 0 10px;">
+            <table class="main-container" width="600" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 10px 30px rgba(74, 28, 39, 0.05); overflow: hidden; width: 100%; max-width: 600px; margin: 0 auto;">
+              <!-- Header -->
+              <tr>
+                <td class="header-cell" style="background-color: #fdf9f6; padding: 30px 40px 25px 40px; text-align: center; border-bottom: 1px solid #eee;">
+                  <img src="https://www.yarasl.shop/images/yara-logo.png" alt="Yara" width="140" style="display: block; margin: 0 auto; max-width: 100%;" />
+                  <p style="color: #c9856a; margin: 5px 0 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 2px;">Welcome to the Family</p>
+                </td>
+              </tr>
+              
+              <!-- Content -->
+              <tr>
+                <td class="content-cell" style="padding: 40px; color: #4a1c27;">
+                  <h1 style="margin: 0 0 20px 0; font-size: 24px; font-weight: 400; font-family: 'Georgia', serif;">Hello ${customerName},</h1>
+                  <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6; color: #555555;">
+                    Thank you for creating an account with Yara. We are thrilled to welcome you to our exclusive community of jewelry lovers!
+                  </p>
+                  <p style="margin: 0 0 30px 0; font-size: 15px; line-height: 1.6; color: #555555;">
+                    Your account unlocks a seamless shopping experience, allowing you to easily track your orders, save your favorite pieces to your wishlist, and check out faster.
+                  </p>
+                  
+                  <div style="text-align: center; margin-bottom: 30px;">
+                    <a href="https://www.yarasl.shop/shop" style="background-color: #4a1c27; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 30px; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; display: inline-block;">Explore Our Collection</a>
+                  </div>
+                  
+                  <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #555555;">
+                    If you have any questions, our support team is always here to help. Just reply directly to this email.
+                  </p>
+                  <p style="margin: 20px 0 0 0; font-size: 15px; color: #4a1c27; font-weight: bold;">
+                    Warmly,<br>The Yara Team
+                  </p>
+                </td>
+              </tr>
+              
+              <!-- Footer -->
+              <tr>
+                <td class="footer-cell" style="background-color: #4a1c27; padding: 40px; text-align: center;">
+                  <p style="color: #e8d9d0; font-size: 13px; margin: 0; letter-spacing: 0.5px;">YARA</p>
+                  <p style="color: #e8d9d0; font-size: 12px; margin: 10px 0 0 0; opacity: 0.7;">Sri Lanka</p>
+                  <p style="color: #e8d9d0; font-size: 12px; margin: 10px 0 0 0; opacity: 0.7;">support@yarasl.shop</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+
+  try {
+    const info = await transporter.sendMail({
+      from: '"Yara Support" <support@yarasl.shop>',
+      to: customerEmail,
+      subject: 'Welcome to Yara Jewelry',
+      html: htmlTemplate,
+    });
+    
+    console.log('Welcome email sent successfully:', info.messageId);
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending welcome email:', error);
+    return { success: false, error };
+  }
+}

@@ -3,6 +3,7 @@
 import { getServerClient, getAdminPanelClient, requireAuth, getServerSession, validateSession, getAdminClient } from '@/lib/pocketbase-server';
 import { loginSchema, registerSchema } from '@/lib/schemas';
 import { cookies } from 'next/headers';
+import { sendWelcomeEmail } from '@/lib/email';
 
 export async function loginAction(formData: FormData) {
   const data = Object.fromEntries(formData.entries());
@@ -84,6 +85,9 @@ export async function registerAction(formData: FormData) {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
     });
+    
+    // Send welcome email asynchronously without awaiting to not block the UI response
+    sendWelcomeEmail(parsed.data.email, parsed.data.name).catch(console.error);
     
     return { success: true, user: record };
   } catch (error: any) {
