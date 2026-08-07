@@ -14,10 +14,12 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [focused, setFocused] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     setLoading(true);
     
     try {
@@ -29,7 +31,7 @@ export default function AdminLoginPage() {
       const result = await loginAction(formData);
       
       if (result.error) {
-        alert(result.error);
+        setError(result.error.includes('Failed to authenticate') ? 'Invalid email or password.' : result.error);
         return;
       }
       
@@ -87,6 +89,16 @@ export default function AdminLoginPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {error && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                className="bg-red-50 text-red-600 text-sm font-body px-4 py-3 rounded-xl border border-red-100 flex items-center gap-2"
+              >
+                <div className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" />
+                {error}
+              </motion.div>
+            )}
             <div className="relative pt-5">
               <input 
                 type="email"
