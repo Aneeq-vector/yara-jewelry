@@ -69,8 +69,8 @@ export async function getAllOrdersAction() {
     await validateSession();
     const pb = await getAdminClient();
     const records = await pb.collection('orders').getFullList({
-      sort: '-orderDate',
-      expand: 'user,items'
+      sort: '-created',
+      expand: 'user'
     });
     return { success: true, orders: structuredClone(records) };
   } catch (error: any) {
