@@ -5,8 +5,8 @@ import { m as motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
-import { loginAction } from '@/app/actions/auth';
+import { Eye, EyeOff, ArrowRight, Loader2, Check } from 'lucide-react';
+import { loginAction, requestPasswordResetAction } from '@/app/actions/auth';
 import { useAuthStore } from '@/lib/store/auth-store';
 
 export default function LoginPage() {
@@ -18,6 +18,25 @@ export default function LoginPage() {
   const [remember, setRemember] = useState(false);
   const [focused, setFocused] = useState<string | null>(null);
 
+  const handleForgotPassword = async () => {
+    if (!email) {
+      alert("Please enter your email address first.");
+      return;
+    }
+    const confirm = window.confirm(`Send password reset email to ${email}?`);
+    if (!confirm) return;
+    
+    setLoading(true);
+    const result = await requestPasswordResetAction(email);
+    setLoading(false);
+    
+    if (result.success) {
+      alert("Password reset email sent! Check your inbox.");
+    } else {
+      alert(result.error);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -27,6 +46,7 @@ export default function LoginPage() {
       formData.append('email', email);
       formData.append('password', password);
       formData.append('expectedRole', 'customer');
+      formData.append('remember', remember ? 'true' : 'false');
       
       const result = await loginAction(formData);
       
@@ -152,18 +172,18 @@ export default function LoginPage() {
 
             <div className="flex items-center justify-between pt-4">
               <label className="flex items-center gap-2 cursor-pointer group">
-                <div className="relative flex items-center justify-center w-4 h-4 rounded border border-burgundy/30 group-hover:border-burgundy transition-colors">
+                <div className={`relative flex items-center justify-center w-5 h-5 rounded shrink-0 border transition-all duration-200 ${remember ? 'bg-burgundy border-burgundy text-white' : 'border-burgundy/30 bg-transparent group-hover:border-burgundy'}`}>
                   <input
                     type="checkbox"
                     checked={remember}
                     onChange={(e) => setRemember(e.target.checked)}
-                    className="absolute opacity-0 w-full h-full cursor-pointer"
+                    className="absolute inset-0 opacity-0 cursor-pointer z-10"
                   />
-                  {remember && <div className="w-2 h-2 rounded-sm bg-burgundy" />}
+                  {remember && <Check size={14} strokeWidth={3} className="animate-in zoom-in duration-200" />}
                 </div>
                 <span className="font-body text-sm text-burgundy/60 group-hover:text-burgundy transition-colors">Remember me</span>
               </label>
-              <button type="button" className="font-ui text-xs font-bold uppercase tracking-wider text-rose-gold hover:text-wine transition-colors">
+              <button type="button" onClick={handleForgotPassword} className="font-ui text-xs font-bold uppercase tracking-wider text-rose-gold hover:text-wine transition-colors">
                 Forgot Password?
               </button>
             </div>

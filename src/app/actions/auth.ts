@@ -31,11 +31,14 @@ export async function loginAction(formData: FormData) {
     const authPayload = JSON.stringify({ token: pb.authStore.token, model: pb.authStore.record });
     
     const cookieName = authData.record.role === 'admin' ? 'pb_admin_auth' : 'pb_auth';
+    const remember = data.remember === 'true';
+    
     cookieStore.set(cookieName, authPayload, {
       path: '/',
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
+      ...(remember && { maxAge: 60 * 60 * 24 * 14 }), // 14 days if remember is true
     });
     
     // Ensure the record is a plain object without prototype methods for Server Actions
@@ -85,6 +88,16 @@ export async function registerAction(formData: FormData) {
     return { success: true, user: record };
   } catch (error: any) {
     return { error: error.message || 'Failed to register' };
+  }
+}
+
+export async function requestPasswordResetAction(email: string) {
+  try {
+    const pb = await getServerClient();
+    await pb.collection('users').requestPasswordReset(email);
+    return { success: true };
+  } catch (error: any) {
+    return { error: error.message || 'Failed to request password reset' };
   }
 }
 
