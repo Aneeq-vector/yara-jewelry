@@ -67,6 +67,7 @@ function ShopContent() {
       params.set('category', slug);
     }
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const [sortBy, setSortBy] = useState('featured');

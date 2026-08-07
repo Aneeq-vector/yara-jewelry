@@ -103,7 +103,7 @@ export function ProductCard({ product, index }: { product: Product; index: numbe
         )}
 
         {(product.originalPrice || 0) > 0 && (
-          <div className="absolute bottom-3 left-3 z-10">
+          <div className="absolute bottom-3 left-3 z-10 transition-opacity duration-300 lg:group-hover:opacity-0">
             <span className="px-2.5 py-1 rounded-full bg-burgundy/90 text-[10px] font-ui font-bold text-ivory shadow-sm">
               -{calculateDiscount(product.price, product.originalPrice || 0)}%
             </span>

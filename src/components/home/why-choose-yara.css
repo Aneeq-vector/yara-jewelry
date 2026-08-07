@@ -235,8 +235,7 @@
 .wy-card {
   position: relative;
   overflow: hidden;
-  background: #ffffff;
-  border-radius: 20px;
+  background: transparent;
   padding: 2rem;
   height: 100%;
 }
