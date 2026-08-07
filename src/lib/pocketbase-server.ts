@@ -41,7 +41,7 @@ export async function getAdminPanelClient() {
   
   const pbAuthCookie = cookieStore.get('pb_admin_auth');
   if (pbAuthCookie && pbAuthCookie.value) {
-    pb.authStore.loadFromCookie(`pb_admin_auth=${pbAuthCookie.value}`);
+    pb.authStore.loadFromCookie(`pb_admin_auth=${pbAuthCookie.value}`, 'pb_admin_auth');
   }
 
   pb.authStore.onChange(() => {

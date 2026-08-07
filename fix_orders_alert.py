@@ -4,13 +4,6 @@ with open('src/app/yara-admin/orders/page.tsx', 'r') as f:
 target = """    getAllOrdersAction().then(res => {
       if (res.success && res.orders) {
         setOrders(res.orders);
-      }
-      setLoading(false);
-    });"""
-
-replacement = """    getAllOrdersAction().then(res => {
-      if (res.success && res.orders) {
-        setOrders(res.orders);
       } else if (res.error) {
         console.error("Orders fetch error:", res.error);
         alert("Error fetching orders: " + res.error);
@@ -18,6 +11,13 @@ replacement = """    getAllOrdersAction().then(res => {
       setLoading(false);
     }).catch(err => {
       alert("Network error: " + err);
+      setLoading(false);
+    });"""
+
+replacement = """    getAllOrdersAction().then(res => {
+      if (res.success && res.orders) {
+        setOrders(res.orders);
+      }
       setLoading(false);
     });"""
 

@@ -45,13 +45,7 @@ export default function OrdersManager() {
     getAllOrdersAction().then(res => {
       if (res.success && res.orders) {
         setOrders(res.orders);
-      } else if (res.error) {
-        console.error("Orders fetch error:", res.error);
-        alert("Error fetching orders: " + res.error);
       }
-      setLoading(false);
-    }).catch(err => {
-      alert("Network error: " + err);
       setLoading(false);
     });
   };
