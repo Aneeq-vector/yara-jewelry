@@ -229,7 +229,7 @@ export default function LoginPage() {
             <p className="font-body text-burgundy/60 text-sm">
               Don't have an account?{' '}
               <Link href="/auth/register" className="font-ui font-bold text-burgundy hover:text-wine uppercase tracking-wider transition-colors">
-                Create One
+                Create Account
               </Link>
             </p>
           </div>
