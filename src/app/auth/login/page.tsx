@@ -228,7 +228,7 @@ export default function LoginPage() {
           <div className="mt-8 text-center relative z-10">
             <p className="font-body text-burgundy/60 text-sm">
               Don't have an account?{' '}
-              <Link href="/auth/register" className="font-ui font-bold text-burgundy hover:text-wine tracking-wider transition-colors">
+              <Link href="/auth/signup" className="font-ui font-bold text-burgundy hover:text-wine tracking-wider transition-colors">
                 Create Account
               </Link>
             </p>
@@ -298,7 +298,7 @@ export default function LoginPage() {
                               <span>{forgotError.message}</span>
                             </div>
                             {forgotError.notFound && (
-                              <Link href="/auth/register" className="bg-red-100 hover:bg-red-200 text-red-700 py-2 px-4 rounded-lg font-ui text-xs font-bold uppercase tracking-wider text-center transition-colors">
+                              <Link href="/auth/signup" className="bg-red-100 hover:bg-red-200 text-red-700 py-2 px-4 rounded-lg font-ui text-xs font-bold uppercase tracking-wider text-center transition-colors">
                                 Create an Account
                               </Link>
                             )}
