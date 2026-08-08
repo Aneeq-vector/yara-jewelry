@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Search, Filter, Plus, MoreVertical, Edit2, Trash2, X, Save, ChevronDown, RefreshCw } from 'lucide-react';
+import { Search, Filter, Plus, MoreVertical, Edit2, Trash2, X, Save, ChevronDown, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { m, AnimatePresence } from 'framer-motion';
 import { Checkbox } from '@/components/ui/checkbox';
 import { getAllProducts } from '@/lib/data/products';
 import { Product, Category } from '@/types';
@@ -41,6 +42,12 @@ export default function ProductsManager() {
   const imagesToDelete = useRef<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [notification, setNotification] = useState<string | null>(null);
+
+  const showNotification = (msg: string) => {
+    setNotification(msg);
+    setTimeout(() => setNotification(null), 3000);
+  };
 
   // Filtering state
   const [searchQuery, setSearchQuery] = useState('');
@@ -83,6 +90,7 @@ export default function ProductsManager() {
       }
       setProductList(prev => prev.filter(p => p.id !== id));
       setSelectedIds(prev => prev.filter(selectedId => selectedId !== id));
+      showNotification('Product deleted successfully');
     }
   };
 
@@ -94,8 +102,10 @@ export default function ProductsManager() {
         alert(res.error);
         return;
       }
+      const count = selectedIds.length;
       setProductList(prev => prev.filter(p => !selectedIds.includes(p.id)));
       setSelectedIds([]);
+      showNotification(`Successfully deleted ${count} products`);
     }
   };
 
@@ -324,6 +334,21 @@ export default function ProductsManager() {
           removeExistingImage={removeExistingImage}
         />
       )}
+
+      {/* Notification Toast */}
+      <AnimatePresence>
+        {notification && (
+          <m.div 
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+            className="fixed bottom-6 right-6 bg-emerald-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 z-50 font-body font-medium"
+          >
+            <CheckCircle2 size={20} className="text-emerald-100" />
+            {notification}
+          </m.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
