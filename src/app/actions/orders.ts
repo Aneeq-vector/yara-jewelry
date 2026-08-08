@@ -70,7 +70,8 @@ export async function getAllOrdersAction() {
     const pb = await getAdminClient();
     const records = await pb.collection('orders').getFullList({
       sort: '-orderDate',
-      expand: 'user,items'
+      fields: 'id,orderId,orderDate,status,paymentStatus,totalAmount,shippingName,shippingEmail,shippingPhone,shippingCity,paymentMethod,cartDetails,user,expand',
+      expand: 'user'
     });
     return { success: true, orders: structuredClone(records) };
   } catch (error: any) {

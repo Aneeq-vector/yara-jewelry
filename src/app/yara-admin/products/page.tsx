@@ -11,6 +11,7 @@ import { EditProductModal } from './components/EditProductModal';
 import { ProductsTable } from './components/ProductsTable';
 import { ProductsToolbar } from './components/ProductsToolbar';
 import { ProductsPagination } from './components/ProductsPagination';
+import { TableSkeleton } from '@/components/admin/TableSkeleton';
 import { formatPrice } from '@/lib/utils';
 import { createClient } from '@/lib/pocketbase';
 import { updateProductDetailsAction, updateProductWithFilesAction, deleteProductAction, duplicateProductAction, deleteProductsAction } from '@/app/actions/products';
@@ -296,16 +297,20 @@ export default function ProductsManager() {
         />
 
         {/* Table */}
-        <ProductsTable 
-          paginatedProducts={paginatedProducts}
-          handleEdit={handleEdit}
-          handleDuplicate={handleDuplicate}
-          toggleProductStatus={handleToggleVisibility}
-          handleDelete={handleDelete}
-          selectedIds={selectedIds}
-          onSelectAll={handleSelectAll}
-          onSelectOne={handleSelectOne}
-        />
+        {isLoading ? (
+          <TableSkeleton columns={7} rows={8} />
+        ) : (
+          <ProductsTable 
+            paginatedProducts={paginatedProducts}
+            handleEdit={handleEdit}
+            handleDuplicate={handleDuplicate}
+            toggleProductStatus={handleToggleVisibility}
+            handleDelete={handleDelete}
+            selectedIds={selectedIds}
+            onSelectAll={handleSelectAll}
+            onSelectOne={handleSelectOne}
+          />
+        )}
         
         {/* Pagination */}
         <ProductsPagination 

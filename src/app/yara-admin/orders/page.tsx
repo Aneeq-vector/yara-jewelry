@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { OrdersTable } from './components/OrdersTable';
 import { OrdersPagination } from './components/OrdersPagination';
 import { ViewOrderModal } from './components/ViewOrderModal';
+import { TableSkeleton } from '@/components/admin/TableSkeleton';
 import { Search, Filter, Eye, Download, X, Loader2, ChevronDown, FileText, Trash2, RefreshCw } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -211,11 +212,7 @@ export default function OrdersManager() {
   const isAllSelected = paginatedOrders.length > 0 && selectedOrders.length === paginatedOrders.length;
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-burgundy" />
-      </div>
-    );
+    return <TableSkeleton columns={7} rows={8} />;
   }
 
   return (

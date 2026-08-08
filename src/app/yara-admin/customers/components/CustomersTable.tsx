@@ -2,6 +2,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { MoreVertical, Mail, Trash2 } from 'lucide-react';
 import { Customer } from '@/lib/store/customers-store';
+import { TableSkeleton } from '@/components/admin/TableSkeleton';
 
 const WhatsappIcon = ({ size = 16, className = "" }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -14,15 +15,14 @@ export function CustomersTable({
   handleSelectOne, setSelectedCustomerForAddress, handleDelete, handleStatusChange,
   filteredCustomers
 }: any) {
+  if (loading) {
+    return <TableSkeleton columns={7} rows={8} />;
+  }
+
   return (
     <>
         {/* Table */}
         <div className="overflow-x-auto relative min-h-[300px]">
-          {loading ? (
-            <div className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-sm z-10">
-              <div className="w-8 h-8 border-4 border-burgundy/20 border-t-burgundy rounded-full animate-spin"></div>
-            </div>
-          ) : null}
           <table className="w-full text-center border-collapse min-w-[800px]">
             <thead>
               <tr className="border-b border-burgundy/10 text-burgundy/60 font-body text-xs uppercase tracking-wider">
