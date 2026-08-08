@@ -14,24 +14,19 @@ export default async function AdminDashboard() {
 
   try {
     const pb = await getAdminClient();
-    const ordersRes = await pb.collection('orders').getList(1, 5, {
-      expand: 'user',
-      sort: '-orderDate'
-    }).catch(() => ({ items: [], totalItems: 0 }));
     
+    const [ordersRes, productsRes, usersRes, allOrders] = await Promise.all([
+      pb.collection('orders').getList(1, 5, { expand: 'user', sort: '-orderDate' }).catch(() => ({ items: [], totalItems: 0 })),
+      pb.collection('products').getList(1, 4, { sort: '-reviewCount' }).catch(() => ({ items: [] })),
+      pb.collection('users').getList(1, 1).catch(() => ({ totalItems: 0 })),
+      pb.collection('orders').getFullList({ fields: 'totalAmount' }).catch(() => [])
+    ]);
+
     recentOrders = ordersRes.items;
     totalOrdersCount = ordersRes.totalItems;
-
-    const productsRes = await pb.collection('products').getList(1, 4, { sort: '-reviewCount' }).catch(() => ({ items: [] }));
     topProducts = productsRes.items;
-
-    const usersRes = await pb.collection('users').getList(1, 1).catch(() => ({ totalItems: 0 }));
     activeCustomersCount = usersRes.totalItems;
-
-    // Aggregate total revenue from all orders
-    const allOrders = await pb.collection('orders').getFullList({ fields: 'totalAmount' }).catch(() => []);
     totalRevenue = allOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
-
   } catch (err) {
     console.error('Failed to load dashboard data', err);
   }
