@@ -60,6 +60,14 @@ export async function registerAction(formData: FormData) {
   }
 
   try {
+    const adminPb = await getAdminClient();
+    try {
+      await adminPb.collection('users').getFirstListItem(`email="${parsed.data.email}"`);
+      return { error: 'This email already has an account. Kindly login.' };
+    } catch (e) {
+      // Not found, safe to proceed
+    }
+
     const pb = await getServerClient();
     // Default role is customer
     const record = await pb.collection('users').create({
@@ -91,6 +99,10 @@ export async function registerAction(formData: FormData) {
     
     return { success: true, user: record };
   } catch (error: any) {
+    const errorData = error.data?.data || error.response?.data;
+    if (errorData?.email) {
+      return { error: 'This email already has an account. Kindly login.' };
+    }
     return { error: error.message || 'Failed to register' };
   }
 }

@@ -16,14 +16,17 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const [focused, setFocused] = useState<string | null>(null);
 
   const updateForm = (field: string, value: string) => setForm((prev) => ({ ...prev, [field]: value }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg('');
+    
     if (form.password !== form.confirmPassword) {
-      alert("Passwords do not match");
+      setErrorMsg("Passwords do not match");
       return;
     }
     setLoading(true);
@@ -39,7 +42,7 @@ export default function SignupPage() {
       const result = await registerAction(formData);
       
       if (result.error) {
-        alert(result.error);
+        setErrorMsg(result.error);
         return;
       }
       
@@ -145,8 +148,10 @@ export default function SignupPage() {
                       <input type="password" id="confirmPassword" value={form.confirmPassword} onChange={(e) => updateForm('confirmPassword', e.target.value)} onFocus={() => setFocused('confirm')} onBlur={() => setFocused(null)} className="peer w-full bg-transparent border-b-2 border-burgundy/10 px-0 py-2 text-burgundy font-body focus:border-burgundy focus:outline-none transition-colors placeholder-transparent" placeholder="Confirm Password" required />
                       <label htmlFor="confirmPassword" className={`absolute left-0 font-ui transition duration-200 pointer-events-none ${focused === 'confirm' || form.confirmPassword ? 'top-0 text-xs text-burgundy uppercase font-bold tracking-wider' : 'top-7 text-sm text-burgundy/50'}`}>Confirm Password</label>
                     </div>
-                  {form.password && form.confirmPassword && form.password !== form.confirmPassword && (
-                    <p className="font-body text-xs text-red-500 mt-1">Passwords do not match</p>
+                  {errorMsg && (
+                    <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl text-sm font-body mt-4 border border-red-100">
+                      {errorMsg}
+                    </div>
                   )}
 
                   <m.button
