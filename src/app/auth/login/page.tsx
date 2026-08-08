@@ -97,7 +97,7 @@ export default function LoginPage() {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-          className="flex justify-center -mb-4 -mt-10 relative z-20"
+          className="flex justify-center -mb-4 -mt-10 relative z-20 overflow-hidden w-full px-4"
         >
           <Link href="/">
             <Image 
@@ -105,7 +105,7 @@ export default function LoginPage() {
               alt="Yara" 
               width={400} 
               height={160} 
-              className="h-28 sm:h-36 w-auto hover:scale-105 transition-transform duration-500" 
+              className="h-28 sm:h-36 w-auto max-w-[280px] sm:max-w-[340px] hover:scale-105 transition-transform duration-500" 
               priority
             />
           </Link>
