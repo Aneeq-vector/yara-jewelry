@@ -12,6 +12,9 @@ interface ProductsTableProps {
   handleDuplicate: (id: string) => void;
   toggleProductStatus: (product: Product, currentStatus: boolean) => void;
   handleDelete: (id: string) => void;
+  selectedIds: string[];
+  onSelectAll: (checked: boolean) => void;
+  onSelectOne: (id: string, checked: boolean) => void;
 }
 
 export function ProductsTable({
@@ -20,14 +23,23 @@ export function ProductsTable({
   handleDuplicate,
   toggleProductStatus,
   handleDelete,
+  selectedIds,
+  onSelectAll,
+  onSelectOne,
 }: ProductsTableProps) {
+  const isAllSelected = paginatedProducts.length > 0 && selectedIds.length === paginatedProducts.length;
+  const isSomeSelected = selectedIds.length > 0 && selectedIds.length < paginatedProducts.length;
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left border-collapse">
         <thead>
           <tr className="border-b border-burgundy/10 text-burgundy/60 font-body text-xs uppercase tracking-wider">
             <th className="p-4 font-semibold w-12">
-              <Checkbox className="rounded border-burgundy/20 text-burgundy focus:ring-burgundy" />
+              <Checkbox 
+                checked={isAllSelected}
+                onCheckedChange={(checked) => onSelectAll(!!checked)}
+                className={`rounded border-burgundy/20 text-burgundy focus:ring-burgundy ${!isAllSelected && isSomeSelected ? 'bg-burgundy/20' : ''}`} 
+              />
             </th>
             <th className="p-4 font-semibold">Product</th>
             <th className="p-4 font-semibold">Category</th>
@@ -41,7 +53,11 @@ export function ProductsTable({
           {paginatedProducts.map((product) => (
             <tr key={product.id} className="border-b border-burgundy/5 last:border-0 hover:bg-ivory/30 transition-colors">
               <td className="p-4">
-                <Checkbox className="rounded border-burgundy/20 text-burgundy focus:ring-burgundy" />
+                <Checkbox 
+                  checked={selectedIds.includes(product.id)}
+                  onCheckedChange={(checked) => onSelectOne(product.id, !!checked)}
+                  className="rounded border-burgundy/20 text-burgundy focus:ring-burgundy" 
+                />
               </td>
               <td className="p-4">
                 <div className="flex items-center gap-4">

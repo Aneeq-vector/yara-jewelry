@@ -40,6 +40,7 @@ export default function ProductsManager() {
   const [newImagePreviews, setNewImagePreviews] = useState<string[]>([]);
   const imagesToDelete = useRef<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Filtering state
   const [searchQuery, setSearchQuery] = useState('');
@@ -222,6 +223,22 @@ export default function ProductsManager() {
   const endIndex = Math.min(startIndex + rowsPerPage, totalItems);
   const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
 
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(paginatedProducts.map(p => p.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id: string, checked: boolean) => {
+    if (checked) {
+      setSelectedIds(prev => [...prev, id]);
+    } else {
+      setSelectedIds(prev => prev.filter(selectedId => selectedId !== id));
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-7xl">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -259,6 +276,9 @@ export default function ProductsManager() {
           handleDuplicate={handleDuplicate}
           toggleProductStatus={handleToggleVisibility}
           handleDelete={handleDelete}
+          selectedIds={selectedIds}
+          onSelectAll={handleSelectAll}
+          onSelectOne={handleSelectOne}
         />
         
         {/* Pagination */}
