@@ -308,7 +308,7 @@ export async function sendWelcomeEmail(customerEmail: string, customerName: stri
 
   try {
     const info = await transporter.sendMail({
-      from: '"Yara Support" <support@yarasl.shop>',
+      from: '"Yara" <support@yarasl.shop>',
       to: customerEmail,
       subject: 'Welcome to Yara Jewelry',
       html: htmlTemplate,
