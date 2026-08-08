@@ -201,7 +201,7 @@ export default function LoginPage() {
                 </div>
                 <span className="font-body text-sm text-burgundy/60 group-hover:text-burgundy transition-colors">Remember me</span>
               </label>
-              <button type="button" onClick={() => setIsForgotModalOpen(true)} className="font-ui text-xs font-bold uppercase tracking-wider text-rose-gold hover:text-wine transition-colors">
+              <button type="button" onClick={() => setIsForgotModalOpen(true)} className="font-ui text-xs font-bold tracking-wider text-rose-gold hover:text-wine transition-colors">
                 Forgot Password?
               </button>
             </div>
