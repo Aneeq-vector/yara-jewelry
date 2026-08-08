@@ -63,7 +63,7 @@ export async function registerAction(formData: FormData) {
     const adminPb = await getAdminClient();
     try {
       await adminPb.collection('users').getFirstListItem(`email="${parsed.data.email}"`);
-      return { error: 'This email already has an account. Kindly login.' };
+      return { error: 'An account with this email address already exists. Please sign in to continue.' };
     } catch (e) {
       // Not found, safe to proceed
     }
@@ -101,7 +101,7 @@ export async function registerAction(formData: FormData) {
   } catch (error: any) {
     const errorData = error.data?.data || error.response?.data;
     if (errorData?.email) {
-      return { error: 'This email already has an account. Kindly login.' };
+      return { error: 'An account with this email address already exists. Please sign in to continue.' };
     }
     return { error: error.message || 'Failed to register' };
   }
