@@ -321,3 +321,38 @@ export async function sendWelcomeEmail(customerEmail: string, customerName: stri
     return { success: false, error };
   }
 }
+
+export async function sendContactEmail(name: string, email: string, subject: string, message: string) {
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.warn('Email skipped: SMTP credentials not configured.');
+    return { success: false, error: 'SMTP not configured' };
+  }
+
+  const htmlTemplate = `
+    <div style="font-family: Arial, sans-serif; padding: 20px; color: #4B0F12;">
+      <h2>New Contact Form Submission</h2>
+      <p><strong>Name:</strong> ${name}</p>
+      <p><strong>Email:</strong> ${email}</p>
+      <p><strong>Subject:</strong> ${subject}</p>
+      <div style="margin-top: 20px; padding: 15px; background-color: #f9f9f9; border-left: 4px solid #4B0F12;">
+        <p style="white-space: pre-wrap; margin: 0;">${message}</p>
+      </div>
+    </div>
+  `;
+
+  try {
+    const info = await transporter.sendMail({
+      from: '"Yara Contact Form" <support@yarasl.shop>',
+      to: 'contactyarasl@gmail.com',
+      replyTo: email,
+      subject: `[Contact Form] ${subject}`,
+      html: htmlTemplate,
+    });
+    
+    console.log('Contact email sent successfully:', info.messageId);
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending contact email:', error);
+    return { success: false, error };
+  }
+}

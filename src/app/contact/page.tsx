@@ -5,6 +5,7 @@ import { m as motion, AnimatePresence } from 'framer-motion';
 import { Mail, Phone, MapPin, Send, Check, MessageCircle } from 'lucide-react';
 import PageWrapper from '@/components/layout/PageWrapper';
 import { BRAND } from '@/lib/constants';
+import { submitContactFormAction } from '@/app/actions/contact';
 
 // SVG for Tiktok
 const TiktokIcon = ({ className }: { className?: string }) => (
@@ -39,11 +40,30 @@ export default function ContactPage() {
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
   const [focused, setFocused] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 4000);
+    setIsSubmitting(true);
+    setError('');
+    
+    const formData = new FormData();
+    formData.append('name', form.name);
+    formData.append('email', form.email);
+    formData.append('subject', form.subject);
+    formData.append('message', form.message);
+    
+    const res = await submitContactFormAction(formData);
+    setIsSubmitting(false);
+    
+    if (res.success) {
+      setSubmitted(true);
+      setForm({ name: '', email: '', subject: '', message: '' });
+      setTimeout(() => setSubmitted(false), 4000);
+    } else {
+      setError(res.error || 'Something went wrong. Please try again.');
+    }
   };
 
   return (
@@ -261,14 +281,19 @@ export default function ContactPage() {
                             </label>
                           </div>
 
+                          {error && (
+                            <p className="text-red-500 text-sm font-body text-center">{error}</p>
+                          )}
+
                           <motion.button 
-                            whileHover={{ scale: 1.02 }} 
-                            whileTap={{ scale: 0.98 }} 
+                            whileHover={isSubmitting ? {} : { scale: 1.02 }} 
+                            whileTap={isSubmitting ? {} : { scale: 0.98 }} 
                             type="submit" 
-                            className="w-full mt-8 bg-burgundy text-ivory py-4 rounded-xl font-ui font-bold uppercase tracking-wider text-sm flex items-center justify-center gap-2 hover:bg-wine transition-colors shadow-lg shadow-burgundy/20"
+                            disabled={isSubmitting}
+                            className="w-full mt-8 bg-burgundy text-ivory py-4 rounded-xl font-ui font-bold uppercase tracking-wider text-sm flex items-center justify-center gap-2 hover:bg-wine transition-colors shadow-lg shadow-burgundy/20 disabled:opacity-70 disabled:cursor-not-allowed"
                           >
-                            <span>Send Message</span>
-                            <Send size={16} />
+                            <span>{isSubmitting ? 'Sending...' : 'Send Message'}</span>
+                            {!isSubmitting && <Send size={16} />}
                           </motion.button>
                         </motion.form>
                       ) : (
