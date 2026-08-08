@@ -70,11 +70,11 @@ export default function ProfilePage() {
           </div>
           <div>
             <label className="font-ui text-xs font-semibold uppercase tracking-wider text-burgundy/50 mb-2 block" htmlFor="email_46875d">Email</label>
-            <input id="email_46875d" aria-label="Action" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputClass} />
+            <input id="email_46875d" aria-label="Action" type="email" readOnly value={form.email} className={`${inputClass} opacity-70 cursor-not-allowed bg-black/5`} />
           </div>
           <div>
             <label className="font-ui text-xs font-semibold uppercase tracking-wider text-burgundy/50 mb-2 block" htmlFor="phone_b4bcb3">Phone</label>
-            <input id="phone_b4bcb3" aria-label="Action" type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inputClass} />
+            <input id="phone_b4bcb3" aria-label="Action" type="tel" readOnly value={form.phone} className={`${inputClass} opacity-70 cursor-not-allowed bg-black/5`} />
           </div>
         </div>
         <button onClick={handleSave} disabled={loading} className="btn-primary mt-6 flex items-center gap-2">
