@@ -8,19 +8,19 @@ export async function getCustomersAction() {
     await validateSession();
     const pb = await getAdminClient();
     
-    // Fetch all users with role 'customer'
-    const records = await pb.collection('users').getFullList({
-      filter: 'role = "customer"',
-      sort: '-created'
-    });
-    
-    // Fetch all orders to aggregate spent and orders count
-    const orders = await pb.collection('orders').getFullList({
-      expand: 'user'
-    });
-    
-    // Fetch all addresses
-    const addresses = await pb.collection('addresses').getFullList();
+    // Fetch users, orders, and addresses concurrently to drastically reduce load time
+    const [records, orders, addresses] = await Promise.all([
+      pb.collection('users').getFullList({
+        filter: 'role = "customer"',
+        sort: '-created'
+      }),
+      pb.collection('orders').getFullList({
+        fields: 'user,totalAmount'
+      }),
+      pb.collection('addresses').getFullList({
+        fields: 'id,user,name,street,city,state,zip,phone,isDefault'
+      })
+    ]);
     
     const customers = records.map((record) => {
       // Find orders for this customer
