@@ -3,7 +3,8 @@
 import { getServerClient, getAdminPanelClient, requireAuth, getServerSession, validateSession, getAdminClient } from '@/lib/pocketbase-server';
 import { loginSchema, registerSchema } from '@/lib/schemas';
 import { cookies } from 'next/headers';
-import { sendWelcomeEmail } from '@/lib/email';
+import { sendWelcomeEmail, sendOtpEmail } from '@/lib/email';
+import { generateOtp, storeOtp, verifyOtp } from '@/lib/otp-store';
 
 export async function loginAction(formData: FormData) {
   const data = Object.fromEntries(formData.entries());
@@ -51,12 +52,15 @@ export async function loginAction(formData: FormData) {
   }
 }
 
-export async function registerAction(formData: FormData) {
+/**
+ * Step 1: Validate the form and send an OTP — does NOT create the account yet.
+ */
+export async function sendOtpAction(formData: FormData) {
   const data = Object.fromEntries(formData.entries());
-  
+
   const parsed = registerSchema.safeParse(data);
   if (!parsed.success) {
-    return { error: parsed.error.issues[0].message, details: parsed.error.flatten().fieldErrors };
+    return { error: parsed.error.issues[0].message };
   }
 
   try {
@@ -65,45 +69,75 @@ export async function registerAction(formData: FormData) {
       await adminPb.collection('users').getFirstListItem(`email="${parsed.data.email}"`);
       return { error: 'An account with this email address already exists. Please sign in to continue.' };
     } catch (e) {
-      // Not found, safe to proceed
+      // Not found — safe to proceed
     }
 
-    const pb = await getServerClient();
-    // Default role is customer
-    const record = await pb.collection('users').create({
+    const otp = generateOtp();
+    storeOtp(parsed.data.email, otp, {
+      name: parsed.data.name,
       email: parsed.data.email,
+      phone: parsed.data.phone,
       password: parsed.data.password,
       passwordConfirm: parsed.data.passwordConfirm,
-      name: parsed.data.name,
-      phone: parsed.data.phone,
-      role: 'customer',
-      status: 'Active'
     });
-    
+
+    const emailRes = await sendOtpEmail(parsed.data.email, parsed.data.name, otp);
+    if (!emailRes.success) {
+      return { error: 'Failed to send verification email. Please try again.' };
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    return { error: error.message || 'Something went wrong. Please try again.' };
+  }
+}
+
+/**
+ * Step 2: Verify the OTP and create the account.
+ */
+export async function verifyOtpAndRegisterAction(email: string, otp: string) {
+  const result = verifyOtp(email, otp);
+
+  if (!result.valid || !result.formData) {
+    return { error: result.error || 'Invalid verification code.' };
+  }
+
+  const { formData } = result;
+
+  try {
+    const pb = await getServerClient();
+    const record = await pb.collection('users').create({
+      email: formData.email,
+      password: formData.password,
+      passwordConfirm: formData.passwordConfirm,
+      name: formData.name,
+      phone: formData.phone,
+      role: 'customer',
+      status: 'Active',
+    });
+
     // Auto-login after registration
-    await pb.collection('users').authWithPassword(parsed.data.email, parsed.data.password);
-    
-    // Explicitly set the cookie here to guarantee it gets saved
+    await pb.collection('users').authWithPassword(formData.email, formData.password);
+
     const cookieStore = await cookies();
     const authPayload = JSON.stringify({ token: pb.authStore.token, model: pb.authStore.record });
-    
     cookieStore.set('pb_auth', authPayload, {
       path: '/',
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
     });
-    
-    // Send welcome email asynchronously without awaiting to not block the UI response
-    sendWelcomeEmail(parsed.data.email, parsed.data.name).catch(console.error);
-    
+
+    // Send welcome email asynchronously
+    sendWelcomeEmail(formData.email, formData.name).catch(console.error);
+
     return { success: true, user: record };
   } catch (error: any) {
     const errorData = error.data?.data || error.response?.data;
     if (errorData?.email) {
       return { error: 'An account with this email address already exists. Please sign in to continue.' };
     }
-    return { error: error.message || 'Failed to register' };
+    return { error: error.message || 'Failed to create account.' };
   }
 }
 

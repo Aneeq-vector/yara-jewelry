@@ -356,3 +356,81 @@ export async function sendContactEmail(name: string, email: string, subject: str
     return { success: false, error };
   }
 }
+
+export async function sendOtpEmail(toEmail: string, name: string, otp: string) {
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.warn('Email skipped: SMTP credentials not configured.');
+    return { success: false, error: 'SMTP not configured' };
+  }
+
+  const htmlTemplate = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
+    <body style="margin:0;padding:0;background-color:#FAF7F4;font-family:'Georgia',serif;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#FAF7F4;padding:40px 20px;">
+        <tr>
+          <td align="center">
+            <table width="520" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:24px;overflow:hidden;box-shadow:0 4px 40px rgba(0,0,0,0.06);">
+              
+              <!-- Header -->
+              <tr>
+                <td style="background:linear-gradient(135deg,#4B0F12 0%,#7B1F23 100%);padding:40px 48px;text-align:center;">
+                  <p style="margin:0;font-size:28px;font-weight:bold;color:#fff;letter-spacing:4px;font-family:Georgia,serif;">YARA</p>
+                  <p style="margin:8px 0 0;font-size:11px;color:rgba(255,255,255,0.65);letter-spacing:3px;text-transform:uppercase;">Luxury Jewelry</p>
+                </td>
+              </tr>
+
+              <!-- Body -->
+              <tr>
+                <td style="padding:48px 48px 36px;">
+                  <p style="margin:0 0 8px;font-size:22px;font-weight:bold;color:#4B0F12;">Hello, ${name} 👋</p>
+                  <p style="margin:0 0 32px;font-size:15px;color:#888;line-height:1.6;">
+                    Thank you for joining Yara. Please use the verification code below to confirm your email address and complete your registration.
+                  </p>
+
+                  <!-- OTP Box -->
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td align="center" style="padding:32px 0;background:#FAF7F4;border-radius:16px;">
+                        <p style="margin:0 0 8px;font-size:11px;color:#999;text-transform:uppercase;letter-spacing:2px;">Your Verification Code</p>
+                        <p style="margin:0;font-size:48px;font-weight:bold;color:#4B0F12;letter-spacing:12px;font-family:'Courier New',monospace;">${otp}</p>
+                        <p style="margin:12px 0 0;font-size:12px;color:#bbb;">This code expires in <strong>10 minutes</strong></p>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <p style="margin:32px 0 0;font-size:13px;color:#bbb;line-height:1.6;">
+                    If you did not attempt to create a Yara account, please ignore this email. No account will be created without verification.
+                  </p>
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td style="padding:24px 48px;border-top:1px solid #f0ebe6;text-align:center;">
+                  <p style="margin:0;font-size:12px;color:#ccc;">© 2025 Yara Jewelry · support@yarasl.shop</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+
+  try {
+    const info = await transporter.sendMail({
+      from: '"Yara" <support@yarasl.shop>',
+      to: toEmail,
+      subject: `${otp} is your Yara verification code`,
+      html: htmlTemplate,
+    });
+    console.log('OTP email sent:', info.messageId);
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending OTP email:', error);
+    return { success: false, error };
+  }
+}
