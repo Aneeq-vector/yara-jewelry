@@ -10,7 +10,7 @@ export async function loginAction(formData: FormData) {
   
   const parsed = loginSchema.safeParse(data);
   if (!parsed.success) {
-    return { error: 'Invalid data', details: parsed.error.flatten().fieldErrors };
+    return { error: parsed.error.issues[0].message, details: parsed.error.flatten().fieldErrors };
   }
 
   try {
@@ -56,7 +56,7 @@ export async function registerAction(formData: FormData) {
   
   const parsed = registerSchema.safeParse(data);
   if (!parsed.success) {
-    return { error: 'Invalid data', details: parsed.error.flatten().fieldErrors };
+    return { error: parsed.error.issues[0].message, details: parsed.error.flatten().fieldErrors };
   }
 
   try {
