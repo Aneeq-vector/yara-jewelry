@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, RefreshCw, ChevronDown } from 'lucide-react';
+import { Search, RefreshCw, ChevronDown, Trash2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 
 interface ProductsToolbarProps {
@@ -12,6 +12,8 @@ interface ProductsToolbarProps {
   setCurrentPage: (page: number) => void;
   isLoading: boolean;
   fetchProducts: () => void;
+  selectedIds: string[];
+  handleBulkDelete: () => void;
 }
 
 export function ProductsToolbar({
@@ -24,6 +26,8 @@ export function ProductsToolbar({
   setCurrentPage,
   isLoading,
   fetchProducts,
+  selectedIds,
+  handleBulkDelete,
 }: ProductsToolbarProps) {
   return (
     <div className="p-4 border-b border-burgundy/5 flex flex-col sm:flex-row justify-between gap-4 bg-ivory/30">
@@ -39,6 +43,15 @@ export function ProductsToolbar({
         />
       </div>
       <div className="flex items-center gap-3">
+        {selectedIds.length > 0 && (
+          <button 
+            onClick={handleBulkDelete}
+            className="px-3 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl transition-colors flex items-center gap-2 text-sm font-medium font-ui"
+          >
+            <Trash2 size={16} />
+            Delete ({selectedIds.length})
+          </button>
+        )}
         <button 
           onClick={fetchProducts}
           className="px-3 py-2 text-burgundy/60 hover:text-burgundy hover:bg-burgundy/5 rounded-full transition-colors flex items-center gap-2 text-sm font-medium disabled:opacity-50"

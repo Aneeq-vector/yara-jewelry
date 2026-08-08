@@ -12,7 +12,7 @@ import { ProductsToolbar } from './components/ProductsToolbar';
 import { ProductsPagination } from './components/ProductsPagination';
 import { formatPrice } from '@/lib/utils';
 import { createClient } from '@/lib/pocketbase';
-import { updateProductDetailsAction, updateProductWithFilesAction, deleteProductAction, duplicateProductAction } from '@/app/actions/products';
+import { updateProductDetailsAction, updateProductWithFilesAction, deleteProductAction, duplicateProductAction, deleteProductsAction } from '@/app/actions/products';
 import { Upload } from 'lucide-react';
 import {
   Pagination,
@@ -82,6 +82,20 @@ export default function ProductsManager() {
         return;
       }
       setProductList(prev => prev.filter(p => p.id !== id));
+      setSelectedIds(prev => prev.filter(selectedId => selectedId !== id));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (window.confirm(`Are you sure you want to delete ${selectedIds.length} products?`)) {
+      const res = await deleteProductsAction(selectedIds);
+      if (res.error) {
+        alert(res.error);
+        return;
+      }
+      setProductList(prev => prev.filter(p => !selectedIds.includes(p.id)));
+      setSelectedIds([]);
     }
   };
 
@@ -267,6 +281,8 @@ export default function ProductsManager() {
           setCurrentPage={setCurrentPage}
           isLoading={isLoading}
           fetchProducts={fetchProducts}
+          selectedIds={selectedIds}
+          handleBulkDelete={handleBulkDelete}
         />
 
         {/* Table */}

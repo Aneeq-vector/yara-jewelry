@@ -15,6 +15,17 @@ export async function deleteProductAction(id: string) {
   }
 }
 
+export async function deleteProductsAction(ids: string[]) {
+  try {
+    await validateSession();
+    const pb = await getAdminClient();
+    await Promise.all(ids.map(id => pb.collection('products').delete(id).catch(e => console.error(`Failed to delete ${id}`, e))));
+    return { success: true };
+  } catch (error: any) {
+    return { error: error.message || 'Failed to delete products' };
+  }
+}
+
 export async function updateProductDetailsAction(id: string, payload: any) {
   try {
     await validateSession();
