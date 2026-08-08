@@ -56,6 +56,9 @@ export default function CheckoutPage() {
     nextStep, prevStep, placeOrder, getInputClass
   } = useCheckoutLogic();
 
+  if (orderPlaced && orderId) {
+    return <CheckoutSuccess orderId={orderId} />;
+  }
 
   return (
     <PageWrapper>
