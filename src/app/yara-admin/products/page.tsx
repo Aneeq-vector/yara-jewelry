@@ -260,17 +260,17 @@ export default function ProductsManager() {
       
       const payload: any = {
         name: editingProduct.name,
-        price: editingProduct.price,
-        originalPrice: editingProduct.originalPrice,
-        category: categoryId,
+        price: (editingProduct.price as any) === '' ? null : Number(editingProduct.price),
+        originalPrice: (editingProduct.originalPrice as any) === '' ? null : Number(editingProduct.originalPrice),
+        category: categoryId || '',
         inStock: editingProduct.inStock,
         badge: editingProduct.badge || '',
         shortDescription: editingProduct.shortDescription || '',
         description: desc,
         material: editingProduct.material || '',
         weight: editingProduct.weight || '',
-        rating: editingProduct.rating || 0,
-        reviewCount: editingProduct.reviewCount || 0,
+        rating: (editingProduct.rating as any) === '' ? 0 : Number(editingProduct.rating),
+        reviewCount: (editingProduct.reviewCount as any) === '' ? 0 : Number(editingProduct.reviewCount),
         colors: editingProduct.colors || [],
         tags: editingProduct.tags || [],
       };
@@ -299,14 +299,14 @@ export default function ProductsManager() {
           if (newImageFiles.current && newImageFiles.current.length > 0) {
             const tokenResult = await getAdminTokenAction();
             if (tokenResult.token) {
-              const PB_BASE = '/pb';
+              const PB_BASE = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pb.yarasl.shop';
               for (let i = 0; i < newImageFiles.current.length; i++) {
                 const file = newImageFiles.current[i];
                 const fileName = (file as File).name || `image-new-${i}.jpg`;
                 const mimeType = file.type || 'image/jpeg';
                 
                 const imageFormData = new FormData();
-                imageFormData.append('images+', new File([file], fileName, { type: mimeType }));
+                imageFormData.append('images', new File([file], fileName, { type: mimeType }));
                 
                 try {
                   await fetch(`${PB_BASE}/api/collections/products/records/${editingProduct.id}`, {
