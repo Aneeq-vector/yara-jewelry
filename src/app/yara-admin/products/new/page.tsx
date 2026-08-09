@@ -102,8 +102,8 @@ export default function AddProductPage() {
       imageFiles.current.push(...filesArray);
       
       const options = {
-        maxSizeMB: 0.8,
-        maxWidthOrHeight: 1920,
+        maxSizeMB: 0.5, // Strict 500KB limit to avoid Nginx 1MB 413 error
+        maxWidthOrHeight: 1600,
         useWebWorker: true,
         fileType: 'image/jpeg' as string, // Force JPEG to bypass strict MIME checking
       };
@@ -189,32 +189,51 @@ export default function AddProductPage() {
       if (formData.tags && formData.tags.length > 0) {
         formData.tags.forEach(t => submitData.append('tags', t));
       }
-      
+
       submitData.append('rating', formData.rating.toString());
       submitData.append('reviewCount', formData.reviewCount.toString());
-
-      // Images — append with proper filename
-      imageFiles.current.forEach((file: File | Blob, index: number) => {
-        const fileName = (file as File).name || `image-${index}.jpg`;
-        const mimeType = file.type || 'image/jpeg';
-        submitData.append('images', new File([file], fileName, { type: mimeType }));
-      });
-
-      // Upload DIRECTLY from browser to PocketBase (bypasses Vercel's body size limit)
-      // Get admin token via a lightweight server action (no files = tiny payload)
+      
+      // 1. Get admin token via a lightweight server action
       const { getAdminTokenAction } = await import('@/app/actions/products');
       const tokenResult = await getAdminTokenAction();
       if (!tokenResult.token) throw new Error(tokenResult.error || 'Admin auth failed');
 
-      const PB_BASE = '/pb'; // Uses the proxy rewrite in next.config.ts — avoids CORS
-      const response = await fetch(`${PB_BASE}/api/collections/products/records`, {
+      const PB_BASE = '/pb'; // Proxy avoids CORS
+
+      // 2. Create the product FIRST without any images (tiny JSON-like payload)
+      const createRes = await fetch(`${PB_BASE}/api/collections/products/records`, {
         method: 'POST',
         headers: { Authorization: tokenResult.token },
-        body: submitData,
+        body: submitData, // Currently has everything EXCEPT images
       });
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errData.message || 'Upload failed'}`);
+      
+      if (!createRes.ok) {
+        const errData = await createRes.json().catch(() => ({}));
+        throw new Error(`[${createRes.status}] Create failed: ${errData.message || ''}`);
+      }
+      
+      const newProduct = await createRes.json();
+
+      // 3. Upload images SEQUENTIALLY (one by one)
+      // This completely bypasses both Nginx's 1MB limit and Vercel's 4.5MB limit!
+      for (let i = 0; i < imageFiles.current.length; i++) {
+        const file = imageFiles.current[i];
+        const fileName = (file as File).name || `image-${i}.jpg`;
+        const mimeType = file.type || 'image/jpeg';
+        
+        const imageFormData = new FormData();
+        imageFormData.append('images', new File([file], fileName, { type: mimeType }));
+        
+        const uploadRes = await fetch(`${PB_BASE}/api/collections/products/records/${newProduct.id}`, {
+          method: 'PATCH',
+          headers: { Authorization: tokenResult.token },
+          body: imageFormData,
+        });
+        
+        if (!uploadRes.ok) {
+          console.error(`Failed to upload image ${i+1}`);
+          // We don't throw here to ensure the product at least stays created with partial images
+        }
       }
       
       setShowSuccess(true);
