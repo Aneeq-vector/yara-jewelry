@@ -85,7 +85,7 @@ export default function DashboardLayout({
                   </div>
                 </div>
 
-                <nav className="flex overflow-x-auto lg:flex-col gap-2 lg:gap-1 pb-4 lg:pb-0 -mx-6 px-6 lg:mx-0 lg:px-0 no-scrollbar snap-x snap-mandatory">
+                <nav className="flex overflow-x-auto lg:flex-col gap-2 lg:gap-1 pb-4 lg:pb-0 -mx-6 px-6 lg:mx-0 lg:px-0 no-scrollbar">
                   {menuItems.map((item) => {
                     const Icon = item.icon;
                     // For the Overview/Home page, we highlight if pathname is exactly /dashboard
@@ -95,7 +95,7 @@ export default function DashboardLayout({
                       <Link
                         key={item.href}
                         href={item.href}
-                        className={`flex-shrink-0 flex items-center justify-between p-3 rounded-xl transition-colors group snap-center ${
+                        className={`flex-shrink-0 flex items-center justify-between p-3 rounded-xl transition-colors group ${
                           isActive ? 'bg-champagne/80 shadow-sm' : 'bg-champagne/30 lg:bg-transparent hover:bg-champagne/40'
                         }`}
                       >
@@ -122,7 +122,7 @@ export default function DashboardLayout({
                       router.refresh();
                       router.push('/');
                     }}
-                    className="flex-shrink-0 flex items-center gap-3 p-3 rounded-xl hover:bg-red-50 transition-colors lg:w-full text-left group lg:mt-2 snap-center bg-red-50/50 lg:bg-transparent"
+                    className="flex-shrink-0 flex items-center gap-3 p-3 rounded-xl hover:bg-red-50 transition-colors lg:w-full text-left group lg:mt-2 bg-red-50/50 lg:bg-transparent"
                   >
                     <LogOut size={16} className="text-red-400" />
                     <span className="font-ui text-sm font-medium text-red-400 group-hover:text-red-500 whitespace-nowrap">Sign Out</span>
