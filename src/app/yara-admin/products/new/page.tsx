@@ -9,7 +9,6 @@ import { createClient } from '@/lib/pocketbase';
 import { createProductWithFilesAction } from '@/app/actions/products';
 import { getAllProducts } from '@/lib/data/products';
 import { ProductFormUI, FormDataState } from './components/ProductFormUI';
-import imageCompression from 'browser-image-compression';
 
 interface Category {
   id: string;
@@ -57,21 +56,17 @@ export default function AddProductPage() {
         const categoryRecords = await pb.collection('categories').getFullList({ sort: 'name' });
         setCategories(categoryRecords.map(r => ({ id: r.id, name: r.name })));
 
-        // Load highest product code using data helper which handles cache busting
-        const allProducts = await getAllProducts();
-        
+        // Load highest product code efficiently by just getting the most recent YARA product
         let nextCodeNum = 1001; // fallback
-        const yaraCodes = allProducts.reduce((acc: string[], r) => {
-          if (r.productCode && r.productCode.startsWith('YARA-')) {
-            acc.push(r.productCode);
-          }
-          return acc;
-        }, []);
+        const latestProducts = await pb.collection('products').getList(1, 1, {
+          sort: '-created',
+          filter: 'productCode ~ "YARA-"',
+          fields: 'productCode',
+        });
 
-        
-        if (yaraCodes.length > 0) {
-          // Find max number
-          const maxNum = Math.max(...yaraCodes.map(c => parseInt(c.replace('YARA-', ''), 10) || 0));
+        if (latestProducts.items.length > 0) {
+          const latestCode = latestProducts.items[0].productCode;
+          const maxNum = parseInt(latestCode.replace('YARA-', ''), 10) || 0;
           if (maxNum >= 1000) {
             nextCodeNum = maxNum + 1;
           }
@@ -111,6 +106,7 @@ export default function AddProductPage() {
       // 3. Compress in the background without blocking the UI
       const compressionPromises = filesArray.map(async (originalFile) => {
         try {
+          const imageCompression = (await import('browser-image-compression')).default;
           const compressedFile = await imageCompression(originalFile, options);
           // Find by exact reference in case user reordered or deleted images while compressing
           const index = imageFiles.current.findIndex(f => f === originalFile);
