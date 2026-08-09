@@ -9,6 +9,7 @@ import { createClient } from '@/lib/pocketbase';
 import { createProductWithFilesAction } from '@/app/actions/products';
 import { getAllProducts } from '@/lib/data/products';
 import { ProductFormUI } from './components/ProductFormUI';
+import imageCompression from 'browser-image-compression';
 
 interface Category {
   id: string;
@@ -87,18 +88,38 @@ export default function AddProductPage() {
     setFormData(prev => ({ ...prev, name }));
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const filesArray = Array.from(e.target.files);
-      imageFiles.current.push(...filesArray);
       
-      filesArray.forEach(file => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setImagePreviews(prev => [...prev, reader.result as string]);
-        };
-        reader.readAsDataURL(file);
-      });
+      const options = {
+        maxSizeMB: 0.8,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+      };
+
+      for (const file of filesArray) {
+        try {
+          // Compress the image before storing it for upload
+          const compressedFile = await imageCompression(file, options);
+          imageFiles.current.push(compressedFile);
+          
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setImagePreviews(prev => [...prev, reader.result as string]);
+          };
+          reader.readAsDataURL(compressedFile);
+        } catch (error) {
+          console.error("Error compressing image:", error);
+          // Fallback to original file if compression fails
+          imageFiles.current.push(file);
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setImagePreviews(prev => [...prev, reader.result as string]);
+          };
+          reader.readAsDataURL(file);
+        }
+      }
     }
   };
 

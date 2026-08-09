@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { getAllProducts } from '@/lib/data/products';
 import { Product, Category } from '@/types';
 import { EditProductModal } from './components/EditProductModal';
+import imageCompression from 'browser-image-compression';
 import { ProductsTable } from './components/ProductsTable';
 import { ProductsToolbar } from './components/ProductsToolbar';
 import { ProductsPagination } from './components/ProductsPagination';
@@ -139,17 +140,37 @@ export default function ProductsManager() {
     imagesToDelete.current = [];
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const filesArray = Array.from(e.target.files);
-      newImageFiles.current = [...newImageFiles.current, ...filesArray];
-      filesArray.forEach(file => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setNewImagePreviews(prev => [...prev, reader.result as string]);
-        };
-        reader.readAsDataURL(file);
-      });
+      
+      const options = {
+        maxSizeMB: 0.8,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+      };
+
+      for (const file of filesArray) {
+        try {
+          const compressedFile = await imageCompression(file, options);
+          newImageFiles.current.push(compressedFile);
+          
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setNewImagePreviews(prev => [...prev, reader.result as string]);
+          };
+          reader.readAsDataURL(compressedFile);
+        } catch (error) {
+          console.error("Error compressing image:", error);
+          newImageFiles.current.push(file);
+          
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setNewImagePreviews(prev => [...prev, reader.result as string]);
+          };
+          reader.readAsDataURL(file);
+        }
+      }
     }
   };
 
