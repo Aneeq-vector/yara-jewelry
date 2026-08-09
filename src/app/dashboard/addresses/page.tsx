@@ -8,6 +8,7 @@ import { Address } from '@/types';
 import { COUNTRIES } from '@/lib/countries';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export default function AddressesPage() {
   const [addresses, setAddresses] = useState<Address[]>([]);
@@ -147,9 +148,9 @@ export default function AddressesPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-center gap-2 mt-2">
-                <input type="checkbox" id="new-default" checked={newForm.isDefault} onChange={(e) => setNewForm(p => ({ ...p, isDefault: e.target.checked }))} className="rounded border-burgundy/20 text-burgundy focus:ring-burgundy" />
-                <label htmlFor="new-default" className="font-body text-xs text-burgundy cursor-pointer">Set as default</label>
+              <div className="flex items-center gap-3 mt-3">
+                <Checkbox id="new-default" checked={newForm.isDefault} onCheckedChange={(checked) => setNewForm(p => ({ ...p, isDefault: !!checked }))} className="border-burgundy/30 data-[state=checked]:bg-burgundy data-[state=checked]:border-burgundy h-5 w-5 rounded-md" />
+                <label htmlFor="new-default" className="font-body text-sm font-medium text-burgundy cursor-pointer">Set as default address</label>
               </div>
               <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-nude/30">
                 <button onClick={() => setIsAdding(false)} className="px-4 py-2 rounded-xl font-ui text-xs font-semibold text-burgundy/60 hover:bg-champagne/40 transition-colors">Cancel</button>
@@ -197,9 +198,9 @@ export default function AddressesPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex items-center gap-2 mt-2">
-                  <input type="checkbox" id={`edit-default-${addr.id}`} checked={editForm.isDefault} onChange={(e) => setEditForm((p: any) => ({ ...p, isDefault: e.target.checked }))} className="rounded border-burgundy/20 text-burgundy focus:ring-burgundy" />
-                  <label htmlFor={`edit-default-${addr.id}`} className="font-body text-xs text-burgundy cursor-pointer">Set as default</label>
+                <div className="flex items-center gap-3 mt-3">
+                  <Checkbox id={`edit-default-${addr.id}`} checked={editForm.isDefault} onCheckedChange={(checked) => setEditForm((p: any) => ({ ...p, isDefault: !!checked }))} className="border-burgundy/30 data-[state=checked]:bg-burgundy data-[state=checked]:border-burgundy h-5 w-5 rounded-md" />
+                  <label htmlFor={`edit-default-${addr.id}`} className="font-body text-sm font-medium text-burgundy cursor-pointer">Set as default address</label>
                 </div>
                 <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-nude/30">
                   <button onClick={() => setEditingId(null)} className="px-4 py-2 rounded-xl font-ui text-xs font-semibold text-burgundy/60 hover:bg-champagne/40 transition-colors">Cancel</button>
