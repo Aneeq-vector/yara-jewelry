@@ -216,27 +216,31 @@ export default function AddProductPage() {
       
       const newProduct = await createRes.json();
 
-      // 3. Upload images IN PARALLEL (concurrently) but as separate requests
-      // This bypasses Nginx's 1MB limit while being extremely fast
-      const uploadPromises = imageFiles.current.map((file: File | Blob, i: number) => {
-        const fileName = (file as File).name || `image-${i}.jpg`;
-        const mimeType = file.type || 'image/jpeg';
-        
-        const imageFormData = new FormData();
-        imageFormData.append('images', new File([file], fileName, { type: mimeType }));
-        
-        return fetch(`${PB_BASE}/api/collections/products/records/${newProduct.id}`, {
-          method: 'PATCH',
-          headers: { Authorization: tokenResult.token as string },
-          body: imageFormData,
-        }).then(res => {
-          if (!res.ok) console.error(`Failed to upload image ${i+1}`);
-        });
-      });
-
-      // Fire and forget! Let images upload in the background silently
-      // This makes the "Create Product" button feel absolutely instant
-      Promise.all(uploadPromises).catch(console.error);
+      // 3. Upload images SEQUENTIALLY in the background
+      // We run this as a fire-and-forget async function so it doesn't block the UI redirect.
+      // We MUST do it sequentially to prevent a race condition in PocketBase where parallel
+      // PATCH requests overwrite each other's appended images.
+      (async () => {
+        for (let i = 0; i < imageFiles.current.length; i++) {
+          const file = imageFiles.current[i];
+          const fileName = (file as File).name || `image-${i}.jpg`;
+          const mimeType = file.type || 'image/jpeg';
+          
+          const imageFormData = new FormData();
+          imageFormData.append('images', new File([file], fileName, { type: mimeType }));
+          
+          try {
+            const res = await fetch(`${PB_BASE}/api/collections/products/records/${newProduct.id}`, {
+              method: 'PATCH',
+              headers: { Authorization: tokenResult.token as string },
+              body: imageFormData,
+            });
+            if (!res.ok) console.error(`Failed to upload image ${i+1}`);
+          } catch (err) {
+            console.error(`Network error uploading image ${i+1}:`, err);
+          }
+        }
+      })();
       
       // Redirect instantly!
       router.push('/yara-admin/products');
