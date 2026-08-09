@@ -86,13 +86,19 @@ export default function ProductsManager() {
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
-      const res = await deleteProductAction(id);
-      if (res.error) {
-        alert(res.error);
-        return;
-      }
+      // Optimistic UI update: instantly remove from screen
+      const previousList = [...productList];
       setProductList(prev => prev.filter(p => p.id !== id));
       setSelectedIds(prev => prev.filter(selectedId => selectedId !== id));
+      
+      const res = await deleteProductAction(id);
+      
+      if (res?.error) {
+        // Rollback on failure
+        setProductList(previousList);
+        alert(`Failed to delete: ${res.error}`);
+        return;
+      }
       showNotification('Product deleted successfully');
     }
   };
@@ -100,14 +106,24 @@ export default function ProductsManager() {
   const handleBulkDelete = async () => {
     if (selectedIds.length === 0) return;
     if (window.confirm(`Are you sure you want to delete ${selectedIds.length} products?`)) {
-      const res = await deleteProductsAction(selectedIds);
-      if (res.error) {
-        alert(res.error);
+      const count = selectedIds.length;
+      const idsToDelete = [...selectedIds];
+      
+      // Optimistic UI update
+      const previousList = [...productList];
+      setProductList(prev => prev.filter(p => !idsToDelete.includes(p.id)));
+      setSelectedIds([]);
+      
+      const res = await deleteProductsAction(idsToDelete);
+      
+      if (res?.error) {
+        // Rollback
+        setProductList(previousList);
+        setSelectedIds(idsToDelete);
+        alert(`Failed to delete products: ${res.error}`);
         return;
       }
-      const count = selectedIds.length;
-      setProductList(prev => prev.filter(p => !selectedIds.includes(p.id)));
-      setSelectedIds([]);
+      
       showNotification(`Successfully deleted ${count} products`);
     }
   };
