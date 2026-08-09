@@ -213,7 +213,8 @@ export default function ProductsManager() {
   };
 
   const handleEdit = (product: Product) => {
-    const cleanDescription = product.description.replace(/^<p>/, '').replace(/<\/p>$/, '');
+    const desc = product.description || '';
+    const cleanDescription = desc.replace(/^<p>/, '').replace(/<\/p>$/, '');
     setEditingProduct({ ...product, description: cleanDescription, colors: product.colors || [], tags: product.tags || [] });
     newImageFiles.current = [];
     setNewImagePreviews([]);
