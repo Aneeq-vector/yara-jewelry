@@ -1,6 +1,8 @@
 import React from 'react';
 import Image from 'next/image';
 import { Upload, X, Loader2, Save } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export interface Category {
   id: string;
@@ -78,16 +80,22 @@ export function ProductFormUI({
 
           <div className="space-y-2">
             <label className="text-sm font-semibold text-burgundy" htmlFor="category_7810b2">Category</label>
-            <select id="category_7810b2" aria-label="Action" 
-              value={formData.category}
-              onChange={(e) => setFormData(prev => ({...prev, category: e.target.value}))}
-              className="w-full bg-white border border-burgundy/20 rounded-xl px-4 py-2 font-body text-sm text-burgundy outline-none focus:border-burgundy/50 transition-colors cursor-pointer"
-            >
-              <option value="">Select Category</option>
-              {categories.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
+            <Select value={formData.category} onValueChange={(val) => setFormData(prev => ({...prev, category: val || ''}))}>
+              <SelectTrigger id="category_7810b2" className="w-full bg-white border border-burgundy/20 rounded-xl px-4 py-2 h-auto min-h-[42px] font-body text-sm text-burgundy outline-none focus:border-burgundy/50 transition-colors">
+                <SelectValue placeholder="Select Category" />
+              </SelectTrigger>
+              <SelectContent alignItemWithTrigger={false} sideOffset={8} className="bg-ivory border border-burgundy/10 shadow-xl rounded-2xl z-[100] outline-none focus:outline-none overflow-hidden p-0">
+                <ScrollArea className="h-64 rounded-2xl">
+                  <div className="p-1.5">
+                    {categories.map((c) => (
+                      <SelectItem key={c.id} value={c.id} className="font-body text-base sm:text-sm text-burgundy cursor-pointer focus:bg-champagne/50 focus:text-burgundy rounded-xl pl-3 pr-8 py-2.5 transition-colors">
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
@@ -137,17 +145,22 @@ export function ProductFormUI({
 
           <div className="space-y-2">
             <label htmlFor="field_7d2c3d" className="text-sm font-semibold text-burgundy">Badge (Optional)</label>
-            <select id="field_7d2c3d" aria-label="Action" 
-              value={formData.badge}
-              onChange={(e) => setFormData(prev => ({...prev, badge: e.target.value}))}
-              className="w-full bg-white border border-burgundy/20 rounded-xl px-4 py-2 font-body text-sm text-burgundy outline-none focus:border-burgundy/50 transition-colors cursor-pointer"
-            >
-              <option value="">None</option>
-              <option value="best-seller">Best Seller</option>
-              <option value="trending">Trending</option>
-              <option value="new">New</option>
-              <option value="limited">Limited</option>
-            </select>
+            <Select value={formData.badge || "none"} onValueChange={(val) => setFormData(prev => ({...prev, badge: (val === "none" || !val) ? "" : val}))}>
+              <SelectTrigger id="field_7d2c3d" className="w-full bg-white border border-burgundy/20 rounded-xl px-4 py-2 h-auto min-h-[42px] font-body text-sm text-burgundy outline-none focus:border-burgundy/50 transition-colors">
+                <SelectValue placeholder="None" />
+              </SelectTrigger>
+              <SelectContent alignItemWithTrigger={false} sideOffset={8} className="bg-ivory border border-burgundy/10 shadow-xl rounded-2xl z-[100] outline-none focus:outline-none overflow-hidden p-0">
+                <ScrollArea className="h-48 rounded-2xl">
+                  <div className="p-1.5">
+                    <SelectItem value="none" className="font-body text-base sm:text-sm text-burgundy cursor-pointer focus:bg-champagne/50 focus:text-burgundy rounded-xl pl-3 pr-8 py-2.5 transition-colors">None</SelectItem>
+                    <SelectItem value="best-seller" className="font-body text-base sm:text-sm text-burgundy cursor-pointer focus:bg-champagne/50 focus:text-burgundy rounded-xl pl-3 pr-8 py-2.5 transition-colors">Best Seller</SelectItem>
+                    <SelectItem value="trending" className="font-body text-base sm:text-sm text-burgundy cursor-pointer focus:bg-champagne/50 focus:text-burgundy rounded-xl pl-3 pr-8 py-2.5 transition-colors">Trending</SelectItem>
+                    <SelectItem value="new" className="font-body text-base sm:text-sm text-burgundy cursor-pointer focus:bg-champagne/50 focus:text-burgundy rounded-xl pl-3 pr-8 py-2.5 transition-colors">New</SelectItem>
+                    <SelectItem value="limited" className="font-body text-base sm:text-sm text-burgundy cursor-pointer focus:bg-champagne/50 focus:text-burgundy rounded-xl pl-3 pr-8 py-2.5 transition-colors">Limited</SelectItem>
+                  </div>
+                </ScrollArea>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
