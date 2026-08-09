@@ -34,7 +34,8 @@ export async function updateProductDetailsAction(id: string, payload: any) {
     revalidatePath('/', 'layout');
     return { success: true, product: structuredClone(record) };
   } catch (error: any) {
-    return { error: error.message || 'Failed to update product' };
+    console.error('Update Product Details Error:', error.message, error.data);
+    return { error: error.message || 'Failed to update product', details: error.data };
   }
 }
 

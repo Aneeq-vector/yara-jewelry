@@ -257,38 +257,31 @@ export default function ProductsManager() {
       }
       const categoryId = categories.find(c => c.name === editingProduct.category)?.id || editingProduct.category;
       
-      const submitData = new FormData();
-      submitData.append('name', editingProduct.name);
-      if (editingProduct.price !== undefined) submitData.append('price', editingProduct.price.toString());
-      if (editingProduct.originalPrice !== undefined) submitData.append('originalPrice', editingProduct.originalPrice.toString());
-      if (categoryId) submitData.append('category', categoryId);
-      if (editingProduct.inStock !== undefined) submitData.append('inStock', editingProduct.inStock.toString());
-      if (editingProduct.badge) submitData.append('badge', editingProduct.badge);
-      if (editingProduct.shortDescription) submitData.append('shortDescription', editingProduct.shortDescription);
-      
       const desc = editingProduct.description.startsWith('<p>') ? editingProduct.description : `<p>${editingProduct.description}</p>`;
-      submitData.append('description', desc);
       
-      if (editingProduct.material) submitData.append('material', editingProduct.material);
-      if (editingProduct.weight) submitData.append('weight', editingProduct.weight);
-      if (editingProduct.rating !== undefined) submitData.append('rating', editingProduct.rating.toString());
-      if (editingProduct.reviewCount !== undefined) submitData.append('reviewCount', editingProduct.reviewCount.toString());
+      const payload: any = {
+        name: editingProduct.name,
+        price: editingProduct.price,
+        originalPrice: editingProduct.originalPrice,
+        category: categoryId,
+        inStock: editingProduct.inStock,
+        badge: editingProduct.badge || '',
+        shortDescription: editingProduct.shortDescription || '',
+        description: desc,
+        material: editingProduct.material || '',
+        weight: editingProduct.weight || '',
+        rating: editingProduct.rating || 0,
+        reviewCount: editingProduct.reviewCount || 0,
+        colors: editingProduct.colors || [],
+        tags: editingProduct.tags || [],
+      };
       
-      if (editingProduct.colors && editingProduct.colors.length > 0) {
-        editingProduct.colors.forEach(c => submitData.append('colors', c));
-      }
-      
-      if (editingProduct.tags && editingProduct.tags.length > 0) {
-        editingProduct.tags.forEach(t => submitData.append('tags', t));
-      }
-      
-      // DO NOT attach new images to submitData to avoid 1MB/4.5MB Vercel/Nginx limits
-      // We will upload them directly from the browser below.
       if (imagesToDelete.current.length > 0) {
-        imagesToDelete.current.forEach(filename => {
-          submitData.append('images.-', filename);
-        });
+        payload['images.-'] = imagesToDelete.current;
       }
+
+      // Save previous state for rollback
+      const previousProduct = productList.find(p => p.id === editingProduct.id);
 
       // OPTIMISTIC UI UPDATE: Instantly close modal and update table
       setProductList(prev => prev.map(p => p.id === editingProduct.id ? editingProduct : p));
@@ -300,7 +293,7 @@ export default function ProductsManager() {
         try {
           // 1. Update text details and process deletions
           const { updateProductDetailsAction, getAdminTokenAction } = await import('@/app/actions/products');
-          const res = await updateProductDetailsAction(editingProduct.id, submitData as any);
+          const res = await updateProductDetailsAction(editingProduct.id, payload);
           if (res.error) throw new Error(res.error);
 
           // 2. Upload new images directly and sequentially
@@ -328,8 +321,12 @@ export default function ProductsManager() {
           }
           
           fetch('/api/revalidate?path=/', { method: 'POST' }).catch(() => {});
-        } catch (err) {
+        } catch (err: any) {
           console.error('Background save failed', err);
+          showNotification(`Error saving product: ${err.message}`);
+          if (previousProduct) {
+            setProductList(prev => prev.map(p => p.id === previousProduct.id ? previousProduct : p));
+          }
         }
       })();
 
