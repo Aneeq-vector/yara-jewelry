@@ -251,7 +251,7 @@ export default function OrdersManager() {
           </div>
           <div className="flex items-center gap-3">
             <button 
-              onClick={fetchOrders}
+              onClick={() => fetchOrders()}
               className="px-3 py-2 text-burgundy/60 hover:text-burgundy hover:bg-burgundy/5 rounded-full transition-colors flex items-center gap-2 text-sm font-medium disabled:opacity-50"
               title="Refresh Orders"
               disabled={loading}
