@@ -43,6 +43,8 @@ export default function AddProductPage() {
   });
   
   const imageFiles = useRef<File[]>([]);
+  const pendingCompressions = useRef<Promise<any>[]>([]);
+  
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
   useEffect(() => {
@@ -106,7 +108,7 @@ export default function AddProductPage() {
       };
 
       // 3. Compress in the background without blocking the UI
-      filesArray.forEach(async (originalFile) => {
+      const compressionPromises = filesArray.map(async (originalFile) => {
         try {
           const compressedFile = await imageCompression(originalFile, options);
           // Find by exact reference in case user reordered or deleted images while compressing
@@ -119,6 +121,7 @@ export default function AddProductPage() {
           // If it fails, the original file is already in the array
         }
       });
+      pendingCompressions.current.push(...compressionPromises);
     }
   };
 
@@ -155,6 +158,10 @@ export default function AddProductPage() {
     setError(null);
 
     try {
+      if (pendingCompressions.current.length > 0) {
+        await Promise.all(pendingCompressions.current);
+        pendingCompressions.current = [];
+      }
       const pb = createClient();
       const submitData = new FormData();
 

@@ -40,6 +40,7 @@ export default function ProductsManager() {
   const [categories, setCategories] = useState<{id: string, name: string}[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const newImageFiles = useRef<File[]>([]);
+  const pendingCompressions = useRef<Promise<any>[]>([]);
   const [newImagePreviews, setNewImagePreviews] = useState<string[]>([]);
   const imagesToDelete = useRef<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -158,7 +159,7 @@ export default function ProductsManager() {
       };
 
       // 3. Compress in the background without blocking the UI
-      filesArray.forEach(async (originalFile) => {
+      const compressionPromises = filesArray.map(async (originalFile) => {
         try {
           const compressedFile = await imageCompression(originalFile, options);
           // Find by exact reference in case user reordered or deleted images while compressing
@@ -171,6 +172,7 @@ export default function ProductsManager() {
           // If it fails, the original file is already in the array
         }
       });
+      pendingCompressions.current.push(...compressionPromises);
     }
   };
 
@@ -196,6 +198,10 @@ export default function ProductsManager() {
     if (!editingProduct) return;
     setIsSaving(true);
     try {
+      if (pendingCompressions.current.length > 0) {
+        await Promise.all(pendingCompressions.current);
+        pendingCompressions.current = [];
+      }
       const categoryId = categories.find(c => c.name === editingProduct.category)?.id || editingProduct.category;
       
       const submitData = new FormData();
