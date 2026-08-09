@@ -57,6 +57,19 @@ export default function ProductsManager() {
   const [categoryFilter, setCategoryFilter] = useState('All Categories');
   const [sortOption, setSortOption] = useState('Sort by: Newest');
 
+  // Confirm Modal State
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    description: '',
+    onConfirm: () => {}
+  });
+
   useEffect(() => {
     return () => {
       newImagePreviews.forEach(url => URL.revokeObjectURL(url));
@@ -84,59 +97,77 @@ export default function ProductsManager() {
     fetchProducts();
   }, []);
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this product?')) {
-      // Optimistic UI update: instantly remove from screen
-      const previousList = [...productList];
-      setProductList(prev => prev.filter(p => p.id !== id));
-      setSelectedIds(prev => prev.filter(selectedId => selectedId !== id));
-      
-      const res = await deleteProductAction(id);
-      
-      if (res?.error) {
-        // Rollback on failure
-        setProductList(previousList);
-        alert(`Failed to delete: ${res.error}`);
-        return;
+  const handleDelete = (id: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Product',
+      description: 'Are you sure you want to delete this product? This action cannot be undone.',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        // Optimistic UI update: instantly remove from screen
+        const previousList = [...productList];
+        setProductList(prev => prev.filter(p => p.id !== id));
+        setSelectedIds(prev => prev.filter(selectedId => selectedId !== id));
+        
+        const res = await deleteProductAction(id);
+        
+        if (res?.error) {
+          // Rollback on failure
+          setProductList(previousList);
+          alert(`Failed to delete: ${res.error}`);
+          return;
+        }
+        showNotification('Product deleted successfully');
       }
-      showNotification('Product deleted successfully');
-    }
+    });
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedIds.length === 0) return;
-    if (window.confirm(`Are you sure you want to delete ${selectedIds.length} products?`)) {
-      const count = selectedIds.length;
-      const idsToDelete = [...selectedIds];
-      
-      // Optimistic UI update
-      const previousList = [...productList];
-      setProductList(prev => prev.filter(p => !idsToDelete.includes(p.id)));
-      setSelectedIds([]);
-      
-      const res = await deleteProductsAction(idsToDelete);
-      
-      if (res?.error) {
-        // Rollback
-        setProductList(previousList);
-        setSelectedIds(idsToDelete);
-        alert(`Failed to delete products: ${res.error}`);
-        return;
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Multiple Products',
+      description: `Are you sure you want to delete ${selectedIds.length} products?`,
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        const count = selectedIds.length;
+        const idsToDelete = [...selectedIds];
+        
+        // Optimistic UI update
+        const previousList = [...productList];
+        setProductList(prev => prev.filter(p => !idsToDelete.includes(p.id)));
+        setSelectedIds([]);
+        
+        const res = await deleteProductsAction(idsToDelete);
+        
+        if (res?.error) {
+          // Rollback
+          setProductList(previousList);
+          setSelectedIds(idsToDelete);
+          alert(`Failed to delete products: ${res.error}`);
+          return;
+        }
+        
+        showNotification(`Successfully deleted ${count} products`);
       }
-      
-      showNotification(`Successfully deleted ${count} products`);
-    }
+    });
   };
 
-  const handleDuplicate = async (id: string) => {
-    if (window.confirm('Are you sure you want to duplicate this product?')) {
-      const res = await duplicateProductAction(id);
-      if (res.error) {
-        alert(res.error);
-        return;
+  const handleDuplicate = (id: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Duplicate Product',
+      description: 'Are you sure you want to duplicate this product?',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        const res = await duplicateProductAction(id);
+        if (res.error) {
+          alert(res.error);
+          return;
+        }
+        getAllProducts().then(setProductList);
       }
-      getAllProducts().then(setProductList);
-    }
+    });
   };
 
   const handleToggleVisibility = async (product: Product) => {
@@ -421,6 +452,42 @@ export default function ProductsManager() {
           removeExistingImage={removeExistingImage}
         />
       )}
+
+      {/* Confirm Modal */}
+      <AnimatePresence>
+        {confirmModal.isOpen && (
+          <m.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          >
+            <m.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-burgundy/10"
+            >
+              <h3 className="font-heading font-bold text-xl text-burgundy mb-2">{confirmModal.title}</h3>
+              <p className="font-body text-burgundy/70 text-sm mb-6">{confirmModal.description}</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                  className="flex-1 py-3 px-4 rounded-xl font-ui font-semibold text-burgundy bg-ivory/50 hover:bg-champagne/50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmModal.onConfirm}
+                  className="flex-1 py-3 px-4 rounded-xl font-ui font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </m.div>
+          </m.div>
+        )}
+      </AnimatePresence>
 
       {/* Notification Toast */}
       <AnimatePresence>
