@@ -66,8 +66,7 @@ export async function createOrderAction(formData: FormData) {
 
 export async function getAllOrdersAction(page: number = 1, perPage: number = 50) {
   try {
-    await validateSession();
-    const pb = await getAdminClient();
+    const { pb } = await validateSession();
     const result = await pb.collection('orders').getList(page, perPage, {
       sort: '-orderDate',
       fields: 'id,orderId,orderDate,status,paymentStatus,totalAmount,shippingName,shippingEmail,shippingPhone,shippingCity,paymentMethod,cartDetails,user,expand',
@@ -88,8 +87,7 @@ export async function getAllOrdersAction(page: number = 1, perPage: number = 50)
 
 export async function updateOrderStatusAction(orderId: string, status: string) {
   try {
-    await validateSession();
-    const pb = await getAdminClient();
+    const { pb } = await validateSession();
     
     // Use pb.send to bypass any SDK update() specific issues while keeping SDK auth
     await pb.send(`/api/collections/orders/records/${orderId}`, {
@@ -107,8 +105,7 @@ export async function updateOrderStatusAction(orderId: string, status: string) {
 
 export async function updateOrderPaymentStatusAction(orderId: string, paymentStatus: string) {
   try {
-    await validateSession();
-    const pb = await getAdminClient();
+    const { pb } = await validateSession();
     
     // Use pb.send to bypass any SDK update() specific issues while keeping SDK auth
     await pb.send(`/api/collections/orders/records/${orderId}`, {
@@ -126,8 +123,7 @@ export async function updateOrderPaymentStatusAction(orderId: string, paymentSta
 
 export async function deleteOrdersAction(orderIds: string[]) {
   try {
-    await validateSession();
-    const pb = await getAdminClient();
+    const { pb } = await validateSession();
     
     // Delete all selected orders
     await Promise.all(

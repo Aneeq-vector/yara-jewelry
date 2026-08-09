@@ -1,6 +1,6 @@
 import { DollarSign, ShoppingBag, Users, TrendingUp } from 'lucide-react';
 import Image from 'next/image';
-import { getAdminClient } from '@/lib/pocketbase-server';
+import { validateSession } from '@/lib/pocketbase-server';
 import { PB_URL } from '@/lib/pocketbase';
 
 export const dynamic = 'force-dynamic'; // Ensures this page is dynamically rendered
@@ -13,8 +13,7 @@ export default async function AdminDashboard() {
   let activeCustomersCount = 0;
 
   try {
-    const pb = await getAdminClient();
-    
+    const { pb } = await validateSession();
     const [ordersRes, productsRes, usersRes, revenueRes] = await Promise.all([
       pb.collection('orders').getList(1, 5, { sort: '-orderDate', expand: 'user' }).catch(() => ({ items: [], totalItems: 0 })),
       pb.collection('products').getList(1, 4, { sort: '-reviewCount' }).catch(() => ({ items: [] })),

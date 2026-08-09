@@ -5,8 +5,7 @@ import { revalidatePath } from 'next/cache';
 
 export async function getCustomersAction() {
   try {
-    await validateSession();
-    const pb = await getAdminClient();
+    const { pb } = await validateSession();
     
     // Fetch users, orders, and addresses concurrently to drastically reduce load time
     const [records, orders, addresses] = await Promise.all([
@@ -71,8 +70,7 @@ export async function getCustomersAction() {
 
 export async function deleteCustomerAction(id: string) {
   try {
-    await validateSession();
-    const pb = await getAdminClient();
+    const { pb } = await validateSession();
     await pb.collection('users').delete(id);
     
     revalidatePath('/yara-admin/customers');
@@ -85,8 +83,7 @@ export async function deleteCustomerAction(id: string) {
 
 export async function deleteCustomersAction(ids: string[]) {
   try {
-    await validateSession();
-    const pb = await getAdminClient();
+    const { pb } = await validateSession();
     
     // Delete all selected customers concurrently
     await Promise.all(
@@ -103,8 +100,7 @@ export async function deleteCustomersAction(ids: string[]) {
 
 export async function updateCustomerStatusAction(id: string, status: string) {
   try {
-    await validateSession();
-    const pb = await getAdminClient();
+    const { pb } = await validateSession();
     // Update the customer record with the new status
     // Note: This requires a 'status' field to exist in the 'users' collection in PocketBase.
     await pb.collection('users').update(id, { status });
