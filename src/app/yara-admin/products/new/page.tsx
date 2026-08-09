@@ -206,7 +206,7 @@ export default function AddProductPage() {
       submitData.append('rating', formData.rating.toString());
       submitData.append('reviewCount', formData.reviewCount.toString());
 
-      // 0. Get Token (must happen before navigation so the server action request isn't aborted)
+      // 0. Get Token
       const { getAdminTokenAction } = await import('@/app/actions/products');
       const tokenResult = await getAdminTokenAction();
       if (!tokenResult.token) {
@@ -215,72 +215,45 @@ export default function AddProductPage() {
          return;
       }
 
-      // 1. INSTANT REDIRECT (Optimistic UI via sessionStorage)
-      const optimisticProduct = {
-        id: 'temp-' + Date.now(),
-        name: formData.name,
-        productCode: finalProductCode,
-        category: formData.category,
-        price: parseFloat(formData.price) || 0,
-        originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : 0,
-        inStock: formData.inStock,
-        isActive: true,
-        images: imageFiles.current.length > 0 ? imageFiles.current.map(f => URL.createObjectURL(f)) : ['/placeholder.png'],
-        description: `<p>${formData.description}</p>`,
-        shortDescription: formData.shortDescription,
-        material: formData.material,
-        weight: formData.weight,
-        colors: formData.colors,
-        tags: formData.tags,
-        rating: formData.rating,
-        reviewCount: formData.reviewCount,
-        badge: formData.badge,
-        created: new Date().toISOString()
-      };
-      sessionStorage.setItem('optimisticProduct', JSON.stringify(optimisticProduct));
+      // 1. Append all images to the initial POST request formData
+      for (let i = 0; i < imageFiles.current.length; i++) {
+        const file = imageFiles.current[i];
+        const fileName = (file as File).name || `image-${i}.jpg`;
+        const mimeType = file.type || 'image/jpeg';
+        submitData.append('images', new File([file], fileName, { type: mimeType }));
+      }
       
-      router.push('/yara-admin/products');
+      // 2. Await the fetch so it doesn't get aborted by router.push
+      const createRes = await fetch(`${process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pb.yarasl.shop'}/api/collections/products/records`, {
+        method: 'POST',
+        headers: { Authorization: tokenResult.token as string },
+        body: submitData, 
+      });
+
+      if (!createRes.ok) {
+        const errBody = await createRes.text();
+        console.error("Pocketbase creation failed:", errBody);
+        setError("Failed to create product. Check if all required fields are valid.");
+        setLoading(false);
+        return;
+      }
       
-      // 2. FIRE AND FORGET EVERYTHING ELSE
-      (async () => {
-        try {
-          // Append all images to the initial POST request formData
-          for (let i = 0; i < imageFiles.current.length; i++) {
-            const file = imageFiles.current[i];
-            const fileName = (file as File).name || `image-${i}.jpg`;
-            const mimeType = file.type || 'image/jpeg';
-            submitData.append('images', new File([file], fileName, { type: mimeType }));
-          }
+      const { revalidateProductsAction } = await import('@/app/actions/products');
+      await revalidateProductsAction();
+      
+      // Attempt revalidation
+      fetch('/api/revalidate?path=/', { method: 'POST' }).catch(() => {});
 
-          const PB_BASE = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pb.yarasl.shop'; 
-
-          const createRes = await fetch(`${PB_BASE}/api/collections/products/records`, {
-            method: 'POST',
-            headers: { Authorization: tokenResult.token as string },
-            body: submitData, 
-          });
-          
-          if (!createRes.ok) {
-             console.error("Create failed:", await createRes.text());
-             throw new Error('Create failed');
-          }
-          
-          const { revalidateProductsAction } = await import('@/app/actions/products');
-          await revalidateProductsAction();
-          
-          // Notify the products list page that the real product is ready
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new Event('product-created-bg'));
-          }
-        } catch (err) {
-          console.error('Background upload failed', err);
-        }
-      })();
-
+      setShowSuccess(true);
+      
+      // Give a tiny delay so the user sees the success state before navigating
+      setTimeout(() => {
+        router.push('/yara-admin/products');
+      }, 600);
+      
     } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'Failed to process form');
-    } finally {
+      console.error("Create failed", err);
+      setError("An unexpected error occurred while saving.");
       setLoading(false);
     }
   };

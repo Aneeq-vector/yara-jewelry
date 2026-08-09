@@ -60,12 +60,16 @@ export function EditProductModal({
             <div>
               <span className="block text-xs font-bold text-burgundy/60 mb-2 font-ui uppercase tracking-wider">Category</span>
               <DropdownMenu>
-                <DropdownMenuTrigger className="w-full flex justify-between items-center bg-ivory/30 border border-burgundy/10 rounded-xl px-4 h-12 font-body text-burgundy focus:border-burgundy/30 outline-none transition-colors cursor-pointer data-[state=open]:border-burgundy/30">
-                  <span>{editingProduct.category || 'Select Category'}</span>
-                  <ChevronDown size={16} className="opacity-50" />
+                <DropdownMenuTrigger id="product-category" className="w-full bg-ivory/30 border border-burgundy/10 rounded-xl px-4 h-12 font-body text-burgundy focus:border-burgundy/30 outline-none transition-colors flex items-center justify-between text-left">
+                  <span className="truncate">
+                    {editingProduct.category 
+                      ? categories.find(c => c.id === editingProduct.category)?.name || editingProduct.category 
+                      : 'Select a category'}
+                  </span>
+                  <ChevronDown size={16} className="text-burgundy/40 flex-shrink-0" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent 
-                  className="w-(--anchor-width) min-w-[200px] bg-white border border-burgundy/10 shadow-lg shadow-burgundy/5 rounded-xl p-1 z-[100]"
+                  className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[200px] bg-white border border-burgundy/10 shadow-lg shadow-burgundy/5 rounded-xl p-1 z-[100]"
                 >
                   <DropdownMenuItem 
                     onClick={() => setEditingProduct({...editingProduct, category: '' as any})}

@@ -88,23 +88,12 @@ export default function ProductsManager() {
     setIsLoading(true);
     try {
       let products = await getAllProducts();
-      
-      // Check for optimistic product
-      const optStr = sessionStorage.getItem('optimisticProduct');
-      if (optStr) {
-        const optProd = JSON.parse(optStr);
-        // Ensure it's not already in the fetched list (in case it actually finished very fast)
-        if (!products.some(p => p.productCode === optProd.productCode)) {
-          products = [optProd, ...products];
-        }
-      }
-      
       setProductList(products);
       
       const records = await createClient().collection('categories').getFullList({ sort: 'name' });
       setCategories(records.map(r => ({ id: r.id, name: r.name })));
     } catch (err) {
-      console.error(err);
+      console.error('Failed to fetch products', err);
     } finally {
       setIsLoading(false);
     }
