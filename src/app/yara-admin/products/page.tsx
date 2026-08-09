@@ -275,6 +275,12 @@ export default function ProductsManager() {
         tags: editingProduct.tags || [],
       };
       
+      if (!editingProduct.name.trim() || (editingProduct.price as any) === '' || editingProduct.price === null || editingProduct.price === undefined || !editingProduct.shortDescription?.trim() || !editingProduct.description?.trim()) {
+        showNotification("Error: Name, Price, Short Description, and Full Description are required.");
+        setIsSaving(false);
+        return;
+      }
+      
       if (imagesToDelete.current.length > 0) {
         payload['images.-'] = imagesToDelete.current;
       }
@@ -316,6 +322,8 @@ export default function ProductsManager() {
                   });
                 } catch (err) {}
               }
+              const { revalidateProductsAction } = await import('@/app/actions/products');
+              await revalidateProductsAction();
             }
           }
           

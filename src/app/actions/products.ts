@@ -27,8 +27,9 @@ export async function deleteProductsAction(ids: string[]) {
   }
 }
 
-export async function updateProductDetailsAction(id: string, payload: any) {
+export async function updateProductDetailsAction(id: string, payloadStr: string) {
   try {
+    const payload = JSON.parse(payloadStr);
     const pb = await getAdminClient();
     const record = await pb.collection('products').update(id, payload);
     revalidatePath('/', 'layout');
@@ -102,4 +103,8 @@ export async function getAdminTokenAction(): Promise<{ token?: string; error?: s
   } catch (error: any) {
     return { error: error.message || 'Failed to get admin token' };
   }
+}
+
+export async function revalidateProductsAction() {
+  revalidatePath('/', 'layout');
 }

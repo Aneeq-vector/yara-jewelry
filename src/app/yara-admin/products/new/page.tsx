@@ -222,7 +222,7 @@ export default function AddProductPage() {
           const tokenResult = await getAdminTokenAction();
           if (!tokenResult.token) throw new Error(tokenResult.error || 'Admin auth failed');
 
-          const PB_BASE = '/pb'; 
+          const PB_BASE = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pb.yarasl.shop'; 
 
           const createRes = await fetch(`${PB_BASE}/api/collections/products/records`, {
             method: 'POST',
@@ -234,9 +234,6 @@ export default function AddProductPage() {
           
           const newProduct = await createRes.json();
           
-          // Revalidate cache so storefront updates
-          fetch('/api/revalidate?path=/', { method: 'POST' }).catch(() => {});
-
           // Upload images sequentially
           for (let i = 0; i < imageFiles.current.length; i++) {
             const file = imageFiles.current[i];
@@ -244,16 +241,18 @@ export default function AddProductPage() {
             const mimeType = file.type || 'image/jpeg';
             
             const imageFormData = new FormData();
-            imageFormData.append('images+', new File([file], fileName, { type: mimeType }));
+            imageFormData.append('images', new File([file], fileName, { type: mimeType }));
             
             try {
               await fetch(`${PB_BASE}/api/collections/products/records/${newProduct.id}`, {
                 method: 'PATCH',
-                headers: { Authorization: tokenResult.token as string },
+                headers: { Authorization: tokenResult.token },
                 body: imageFormData,
               });
             } catch (err) {}
           }
+          const { revalidateProductsAction } = await import('@/app/actions/products');
+          await revalidateProductsAction();
           
           // Notify the products list page that the real product is ready
           if (typeof window !== 'undefined') {
