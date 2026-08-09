@@ -63,23 +63,23 @@ export default function LoginPage() {
         return;
       }
       
-      // Sync client state
+      // Sync client auth state immediately
       useAuthStore.setState({ user: result.user as any, isAuthenticated: true });
       
-      // Sync wishlist
-      try {
-        const { syncWishlistAction } = await import('@/app/actions/wishlist');
-        const { useWishlistStore } = await import('@/lib/store/wishlist-store');
-        const localItems = useWishlistStore.getState().items.map(i => i.id);
-        const syncRes = await syncWishlistAction(localItems);
-        if (syncRes.success && syncRes.items) {
-          useWishlistStore.getState().setWishlist(syncRes.items);
-        }
-      } catch (e) {
-        console.error('Failed to sync wishlist on login', e);
-      }
-      
+      // Navigate immediately — don't wait for wishlist sync
       router.push('/dashboard');
+
+      // Fire wishlist sync in background after navigation starts
+      import('@/app/actions/wishlist').then(({ syncWishlistAction }) => {
+        import('@/lib/store/wishlist-store').then(({ useWishlistStore }) => {
+          const localItems = useWishlistStore.getState().items.map(i => i.id);
+          syncWishlistAction(localItems).then(syncRes => {
+            if (syncRes.success && syncRes.items) {
+              useWishlistStore.getState().setWishlist(syncRes.items);
+            }
+          }).catch(() => {});
+        });
+      });
     } finally {
       setLoading(false);
     }

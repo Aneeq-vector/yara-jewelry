@@ -52,8 +52,12 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
     return () => { document.body.style.overflow = ''; };
   }, [mobileOpen]);
 
-  // Sync auth and wishlist with Pocketbase
+  // Sync auth and wishlist with Pocketbase — only once per browser session
   useEffect(() => {
+    // Skip if already synced this session (fast path for subsequent navigations)
+    const alreadySynced = sessionStorage.getItem('yara_synced');
+    if (alreadySynced) return;
+
     const syncWithServer = async () => {
       try {
         const { getUserAction } = await import('@/app/actions/auth');
@@ -61,20 +65,21 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
         
         if (serverUser && serverUser.id) {
           useAuthStore.setState({ user: serverUser as any, isAuthenticated: true });
-          
-          // Sync wishlist
-          try {
-            const { syncWishlistAction } = await import('@/app/actions/wishlist');
+          // Mark as synced so subsequent page navigations skip this
+          sessionStorage.setItem('yara_synced', '1');
+
+          // Sync wishlist in background — don't block anything
+          import('@/app/actions/wishlist').then(({ syncWishlistAction }) => {
             const localItems = useWishlistStore.getState().items.map(i => i.id);
-            const res = await syncWishlistAction(localItems);
-            if (res.success && res.items) {
-              useWishlistStore.getState().setWishlist(res.items);
-            }
-          } catch (e) {
-            console.error('Failed to sync wishlist on load', e);
-          }
+            syncWishlistAction(localItems).then(res => {
+              if (res.success && res.items) {
+                useWishlistStore.getState().setWishlist(res.items);
+              }
+            }).catch(() => {});
+          });
         } else if (serverUser === null) {
           useAuthStore.setState({ user: null, isAuthenticated: false });
+          sessionStorage.removeItem('yara_synced');
         }
       } catch (err) {}
     };

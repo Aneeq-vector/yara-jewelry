@@ -57,6 +57,8 @@ export default function DashboardLayout({
 
   const handleLogout = async () => {
     try { await logoutAction(); } catch (err) { console.error('Logout failed:', err); }
+    // Clear the session sync flag so the next login re-syncs properly
+    if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('yara_synced');
     logout();
     router.refresh();
     router.push('/');
