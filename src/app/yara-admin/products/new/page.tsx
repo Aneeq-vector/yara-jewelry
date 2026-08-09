@@ -107,6 +107,24 @@ export default function AddProductPage() {
     setImagePreviews(prev => prev.filter((_: any, i: number) => i !== index));
   };
 
+  const reorderImages = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    
+    // Reorder imageFiles
+    const files = [...imageFiles.current];
+    const [movedFile] = files.splice(fromIndex, 1);
+    files.splice(toIndex, 0, movedFile);
+    imageFiles.current = files;
+    
+    // Reorder imagePreviews
+    setImagePreviews(prev => {
+      const previews = [...prev];
+      const [movedPreview] = previews.splice(fromIndex, 1);
+      previews.splice(toIndex, 0, movedPreview);
+      return previews;
+    });
+  };
+
   useEffect(() => {
     // Empty cleanup since we no longer use ObjectURLs
   }, [imagePreviews]);
@@ -210,6 +228,7 @@ export default function AddProductPage() {
         imagePreviews={imagePreviews}
         handleImageChange={handleImageChange}
         removeImage={removeImage}
+        reorderImages={reorderImages}
         handleSubmit={handleSubmit}
         loading={loading}
       />

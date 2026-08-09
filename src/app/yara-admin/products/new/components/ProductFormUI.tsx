@@ -35,6 +35,7 @@ interface ProductFormUIProps {
   imagePreviews: string[];
   handleImageChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   removeImage: (index: number) => void;
+  reorderImages?: (fromIndex: number, toIndex: number) => void;
   handleSubmit: (e: React.FormEvent) => void;
   loading: boolean;
 }
@@ -47,9 +48,35 @@ export function ProductFormUI({
   imagePreviews,
   handleImageChange,
   removeImage,
+  reorderImages,
   handleSubmit,
   loading,
 }: ProductFormUIProps) {
+  const [draggedIdx, setDraggedIdx] = React.useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = React.useState<number | null>(null);
+
+  const handleDragStart = (idx: number) => {
+    setDraggedIdx(idx);
+  };
+
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    setDragOverIdx(idx);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetIdx: number) => {
+    e.preventDefault();
+    if (draggedIdx !== null && draggedIdx !== targetIdx && reorderImages) {
+      reorderImages(draggedIdx, targetIdx);
+    }
+    setDraggedIdx(null);
+    setDragOverIdx(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIdx(null);
+    setDragOverIdx(null);
+  };
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
       <div className="bg-white rounded-2xl border border-burgundy/5 shadow-sm p-6 space-y-6">
@@ -179,12 +206,20 @@ export function ProductFormUI({
         <div className="space-y-4">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {imagePreviews.map((preview, idx) => (
-              <div key={preview} className="relative aspect-square rounded-xl overflow-hidden border border-burgundy/10 group bg-champagne">
-                <Image src={preview} alt="Preview" fill sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw" className="object-cover" />
+              <div 
+                key={preview + idx} 
+                draggable={!!reorderImages}
+                onDragStart={() => handleDragStart(idx)}
+                onDragOver={(e) => handleDragOver(e, idx)}
+                onDrop={(e) => handleDrop(e, idx)}
+                onDragEnd={handleDragEnd}
+                className={`relative aspect-square rounded-xl overflow-hidden border group bg-champagne ${!!reorderImages ? 'cursor-move' : ''} ${dragOverIdx === idx ? 'border-burgundy border-2 scale-105' : 'border-burgundy/10'} ${draggedIdx === idx ? 'opacity-50' : 'opacity-100'} transition-all duration-200`}
+              >
+                <Image src={preview} alt="Preview" fill sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw" className="object-cover pointer-events-none" />
                 <button aria-label="Action" 
                   type="button"
-                  onClick={() => removeImage(idx)}
-                  className="absolute top-2 right-2 bg-white/80 p-1.5 rounded-full text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100"
+                  onClick={(e) => { e.stopPropagation(); removeImage(idx); }}
+                  className="absolute top-2 right-2 bg-white/80 p-1.5 rounded-full text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer z-10"
                 >
                   <X size={14} />
                 </button>
