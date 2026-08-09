@@ -108,9 +108,13 @@ export function EditProductModal({
             </div>
 
             <div className="md:col-span-2">
-              <label htmlFor="product-short-desc" className="block text-xs font-bold text-burgundy/60 mb-2 font-ui uppercase tracking-wider">Short Description</label>
+              <div className="flex justify-between items-center mb-2">
+                <label htmlFor="product-short-desc" className="block text-xs font-bold text-burgundy/60 font-ui uppercase tracking-wider">Short Description</label>
+                <span className="text-xs text-burgundy/50 font-body">{(editingProduct.shortDescription || '').length}/120</span>
+              </div>
               <textarea 
                 id="product-short-desc"
+                maxLength={120}
                 value={editingProduct.shortDescription || ''}
                 onChange={(e) => setEditingProduct({...editingProduct, shortDescription: e.target.value})}
                 rows={2}

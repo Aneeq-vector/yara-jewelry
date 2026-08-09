@@ -204,10 +204,14 @@ export function ProductFormUI({
         
         <div className="space-y-4">
           <div className="space-y-2">
-            <label htmlFor="field_f0159c" className="text-sm font-semibold text-burgundy">Short Description *</label>
+            <div className="flex justify-between items-center">
+              <label htmlFor="field_f0159c" className="text-sm font-semibold text-burgundy">Short Description *</label>
+              <span className="text-xs text-burgundy/50">{formData.shortDescription.length}/120</span>
+            </div>
             <input id="field_f0159c" aria-label="Brief one-liner describing the product." 
               type="text" 
               required
+              maxLength={120}
               value={formData.shortDescription}
               onChange={(e) => setFormData(prev => ({...prev, shortDescription: e.target.value}))}
               className="w-full bg-white border border-burgundy/20 rounded-xl px-4 py-2 font-body text-sm text-burgundy outline-none focus:border-burgundy/50 transition-colors"
