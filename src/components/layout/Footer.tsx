@@ -195,10 +195,10 @@ export default function Footer() {
       <AnimatePresence>
         {showToast && (
           <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.95, x: "-50%" }}
-            animate={{ opacity: 1, y: 0, scale: 1, x: "-50%" }}
-            exit={{ opacity: 0, y: 50, scale: 0.95, x: "-50%" }}
-            className="fixed bottom-6 left-1/2 z-50 flex items-center gap-3 px-6 py-4 rounded-2xl bg-ivory text-burgundy shadow-2xl border border-rose-gold/20"
+            initial={{ opacity: 0, y: -50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -50, scale: 0.95 }}
+            className="fixed top-6 right-6 z-50 flex items-center gap-3 px-6 py-4 rounded-2xl bg-ivory text-burgundy shadow-2xl border border-rose-gold/20"
           >
             <span className="font-body text-sm font-medium">We are currently working on this page. Check back soon!</span>
             <button aria-label="Action" onClick={() => setShowToast(false)} className="text-burgundy/60 hover:text-burgundy transition-colors ml-2">
