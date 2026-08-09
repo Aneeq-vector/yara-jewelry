@@ -18,6 +18,7 @@ export async function getAddressesAction(): Promise<{ success: boolean; addresse
       city: record.city,
       state: record.state,
       zipCode: record.zip, // mapping 'zip' in DB to 'zipCode' in type
+      country: record.country,
       phone: record.phone,
       isDefault: record.isDefault
     })) as Address[];
@@ -46,6 +47,7 @@ export async function addAddressAction(data: Partial<Address>): Promise<{ succes
       city: data.city,
       state: data.state,
       zip: data.zipCode,
+      country: data.country,
       phone: data.phone,
       isDefault: data.isDefault || false
     });
@@ -73,6 +75,7 @@ export async function updateAddressAction(id: string, data: Partial<Address>): P
       city: data.city,
       state: data.state,
       zip: data.zipCode,
+      country: data.country,
       phone: data.phone,
       isDefault: data.isDefault
     });

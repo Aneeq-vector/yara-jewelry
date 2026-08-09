@@ -5,6 +5,7 @@ import { m as motion } from 'framer-motion';
 import { MapPin, Plus, Check, Loader2 } from 'lucide-react';
 import { getAddressesAction, addAddressAction, updateAddressAction, deleteAddressAction } from '@/app/actions/addresses';
 import { Address } from '@/types';
+import { COUNTRIES } from '@/lib/countries';
 
 export default function AddressesPage() {
   const [addresses, setAddresses] = useState<Address[]>([]);
@@ -14,7 +15,7 @@ export default function AddressesPage() {
   const [editForm, setEditForm] = useState<any>({});
   
   const [isAdding, setIsAdding] = useState(false);
-  const [newForm, setNewForm] = useState({ name: '', street: '', city: '', state: '', zipCode: '', phone: '', isDefault: false });
+  const [newForm, setNewForm] = useState({ name: '', street: '', city: '', state: '', zipCode: '', phone: '', country: 'Sri Lanka', isDefault: false });
 
   const inputClass = "w-full px-3 py-2 rounded-xl bg-transparent border border-burgundy/20 font-body text-sm text-burgundy placeholder:text-burgundy/50 focus:outline-none focus:border-burgundy transition-colors";
 
@@ -75,7 +76,7 @@ export default function AddressesPage() {
     }
     await fetchAddresses();
     setIsAdding(false);
-    setNewForm({ name: '', street: '', city: '', state: '', zipCode: '', phone: '', isDefault: false });
+    setNewForm({ name: '', street: '', city: '', state: '', zipCode: '', phone: '', country: 'Sri Lanka', isDefault: false });
     setSaving(false);
   };
 
@@ -126,6 +127,12 @@ export default function AddressesPage() {
                 <input aria-label="ZIP Code" value={newForm.zipCode} onChange={(e) => setNewForm(p => ({ ...p, zipCode: e.target.value }))} placeholder="ZIP Code" className={inputClass} />
                 <input aria-label="Phone Number" value={newForm.phone} onChange={(e) => setNewForm(p => ({ ...p, phone: e.target.value }))} placeholder="Phone Number" className={inputClass} />
               </div>
+              <div className="grid grid-cols-1 gap-2">
+                <select aria-label="Country" value={newForm.country} onChange={(e) => setNewForm(p => ({ ...p, country: e.target.value }))} className={inputClass}>
+                  <option value="" disabled>Select Country</option>
+                  {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
               <div className="flex items-center gap-2 mt-2">
                 <input type="checkbox" id="new-default" checked={newForm.isDefault} onChange={(e) => setNewForm(p => ({ ...p, isDefault: e.target.checked }))} className="rounded border-burgundy/20 text-burgundy focus:ring-burgundy" />
                 <label htmlFor="new-default" className="font-body text-xs text-burgundy cursor-pointer">Set as default</label>
@@ -158,6 +165,12 @@ export default function AddressesPage() {
                   <input aria-label="ZIP Code" value={editForm.zipCode} onChange={(e) => setEditForm((p: any) => ({ ...p, zipCode: e.target.value }))} placeholder="ZIP Code" className={inputClass} />
                   <input aria-label="Phone Number" value={editForm.phone} onChange={(e) => setEditForm((p: any) => ({ ...p, phone: e.target.value }))} placeholder="Phone Number" className={inputClass} />
                 </div>
+                <div className="grid grid-cols-1 gap-2">
+                  <select aria-label="Country" value={editForm.country || 'Sri Lanka'} onChange={(e) => setEditForm((p: any) => ({ ...p, country: e.target.value }))} className={inputClass}>
+                    <option value="" disabled>Select Country</option>
+                    {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
                 <div className="flex items-center gap-2 mt-2">
                   <input type="checkbox" id={`edit-default-${addr.id}`} checked={editForm.isDefault} onChange={(e) => setEditForm((p: any) => ({ ...p, isDefault: e.target.checked }))} className="rounded border-burgundy/20 text-burgundy focus:ring-burgundy" />
                   <label htmlFor={`edit-default-${addr.id}`} className="font-body text-xs text-burgundy cursor-pointer">Set as default</label>
@@ -180,6 +193,7 @@ export default function AddressesPage() {
                     <h3 className="font-ui font-semibold text-sm text-burgundy">{addr.name}</h3>
                     <p className="font-body text-sm text-burgundy/60 mt-1">{addr.street}</p>
                     <p className="font-body text-sm text-burgundy/60">{addr.city}, {addr.state} {addr.zipCode}</p>
+                    <p className="font-body text-sm text-burgundy/60">{addr.country || 'Sri Lanka'}</p>
                     <p className="font-body text-xs text-burgundy/40 mt-2">{addr.phone}</p>
                   </div>
                 </div>
