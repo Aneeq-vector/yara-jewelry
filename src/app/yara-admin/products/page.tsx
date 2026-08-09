@@ -84,17 +84,44 @@ export default function ProductsManager() {
     setCurrentPage(1);
   }, [searchQuery, categoryFilter, sortOption, rowsPerPage]);
 
-  const fetchProducts = () => {
+  const fetchProducts = async () => {
     setIsLoading(true);
-    getAllProducts().then(setProductList);
-    createClient().collection('categories').getFullList({ sort: 'name' })
-      .then(records => setCategories(records.map(r => ({ id: r.id, name: r.name }))))
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
+    try {
+      let products = await getAllProducts();
+      
+      // Check for optimistic product
+      const optStr = sessionStorage.getItem('optimisticProduct');
+      if (optStr) {
+        const optProd = JSON.parse(optStr);
+        // Ensure it's not already in the fetched list (in case it actually finished very fast)
+        if (!products.some(p => p.productCode === optProd.productCode)) {
+          products = [optProd, ...products];
+        }
+      }
+      
+      setProductList(products);
+      
+      const records = await createClient().collection('categories').getFullList({ sort: 'name' });
+      setCategories(records.map(r => ({ id: r.id, name: r.name })));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
     fetchProducts();
+    
+    // Listen for background completion
+    const handleBgCompletion = () => {
+      sessionStorage.removeItem('optimisticProduct');
+      showNotification('Product created successfully!');
+      fetchProducts();
+    };
+    
+    window.addEventListener('product-created-bg', handleBgCompletion);
+    return () => window.removeEventListener('product-created-bg', handleBgCompletion);
   }, []);
 
   const handleDelete = (id: string) => {
