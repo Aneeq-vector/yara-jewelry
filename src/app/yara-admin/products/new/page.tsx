@@ -8,7 +8,7 @@ import { ArrowLeft, Upload, Loader2, Save, X } from 'lucide-react';
 import { createClient } from '@/lib/pocketbase';
 import { createProductWithFilesAction } from '@/app/actions/products';
 import { getAllProducts } from '@/lib/data/products';
-import { ProductFormUI } from './components/ProductFormUI';
+import { ProductFormUI, FormDataState } from './components/ProductFormUI';
 import imageCompression from 'browser-image-compression';
 
 interface Category {
@@ -24,7 +24,7 @@ export default function AddProductPage() {
   const [showSuccess, setShowSuccess] = useState(false);
 
   // Form State
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormDataState>({
     name: '',
     productCode: 'Loading...',
     price: '',

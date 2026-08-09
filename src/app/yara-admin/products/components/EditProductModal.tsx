@@ -91,8 +91,8 @@ export function EditProductModal({
               <input 
                 id="product-price"
                 type="number" 
-                value={editingProduct.price || ''}
-                onChange={(e) => setEditingProduct({...editingProduct, price: e.target.value ? Number(e.target.value) : 0})}
+                value={editingProduct.price ?? ''}
+                onChange={(e) => setEditingProduct({...editingProduct, price: e.target.value === '' ? '' as any : Number(e.target.value)})}
                 className="w-full bg-ivory/30 border border-burgundy/10 rounded-xl px-4 h-12 font-body text-burgundy focus:border-burgundy/30 outline-none transition-colors"
               />
             </div>
@@ -101,8 +101,8 @@ export function EditProductModal({
               <input 
                 id="product-original-price"
                 type="number" 
-                value={editingProduct.originalPrice || ''}
-                onChange={(e) => setEditingProduct({...editingProduct, originalPrice: e.target.value ? Number(e.target.value) : undefined})}
+                value={editingProduct.originalPrice ?? ''}
+                onChange={(e) => setEditingProduct({...editingProduct, originalPrice: e.target.value === '' ? '' as any : Number(e.target.value)})}
                 className="w-full bg-ivory/30 border border-burgundy/10 rounded-xl px-4 h-12 font-body text-burgundy focus:border-burgundy/30 outline-none transition-colors"
               />
             </div>
@@ -216,8 +216,8 @@ export function EditProductModal({
                 min="1"
                 max="5"
                 step="1"
-                value={editingProduct.rating || 1}
-                onChange={(e) => setEditingProduct({...editingProduct, rating: e.target.value ? Number(e.target.value) : 1})}
+                value={editingProduct.rating ?? 1}
+                onChange={(e) => setEditingProduct({...editingProduct, rating: e.target.value === '' ? '' as any : Number(e.target.value)})}
                 className="w-full bg-ivory/30 border border-burgundy/10 rounded-xl px-4 h-12 font-body text-burgundy focus:border-burgundy/30 outline-none transition-colors"
               />
             </div>
@@ -228,8 +228,8 @@ export function EditProductModal({
                 type="number" 
                 min="0"
                 step="1"
-                value={editingProduct.reviewCount || 0}
-                onChange={(e) => setEditingProduct({...editingProduct, reviewCount: e.target.value ? Math.floor(Number(e.target.value)) : 0})}
+                value={editingProduct.reviewCount ?? 0}
+                onChange={(e) => setEditingProduct({...editingProduct, reviewCount: e.target.value === '' ? '' as any : Math.floor(Number(e.target.value))})}
                 onKeyDown={(e) => { if (e.key === '.' || e.key === 'e') e.preventDefault(); }}
                 className="w-full bg-ivory/30 border border-burgundy/10 rounded-xl px-4 h-12 font-body text-burgundy focus:border-burgundy/30 outline-none transition-colors"
               />

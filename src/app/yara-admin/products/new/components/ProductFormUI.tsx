@@ -23,8 +23,8 @@ export interface FormDataState {
   weight: string;
   colors: string[];
   tags: string[];
-  rating: number;
-  reviewCount: number;
+  rating: number | string;
+  reviewCount: number | string;
 }
 
 interface ProductFormUIProps {
@@ -361,7 +361,7 @@ export function ProductFormUI({
                 max="5"
                 step="1"
                 value={formData.rating}
-                onChange={(e) => setFormData(prev => ({...prev, rating: Number(e.target.value)}))}
+                onChange={(e) => setFormData(prev => ({...prev, rating: e.target.value === '' ? '' : Number(e.target.value)}))}
                 className="w-full bg-white border border-burgundy/20 rounded-xl px-4 py-2 font-body text-sm text-burgundy outline-none focus:border-burgundy/50 transition-colors"
               />
             </div>
@@ -373,7 +373,7 @@ export function ProductFormUI({
                 min="0"
                 step="1"
                 value={formData.reviewCount}
-                onChange={(e) => setFormData(prev => ({...prev, reviewCount: Math.floor(Number(e.target.value))}))}
+                onChange={(e) => setFormData(prev => ({...prev, reviewCount: e.target.value === '' ? '' : Math.floor(Number(e.target.value))}))}
                 onKeyDown={(e) => { if (e.key === '.' || e.key === 'e') e.preventDefault(); }}
                 className="w-full bg-white border border-burgundy/20 rounded-xl px-4 py-2 font-body text-sm text-burgundy outline-none focus:border-burgundy/50 transition-colors"
               />
