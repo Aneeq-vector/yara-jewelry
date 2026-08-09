@@ -6,8 +6,7 @@ import { productSchema } from '@/lib/schemas';
 
 export async function deleteProductAction(id: string) {
   try {
-    await validateSession();
-    const pb = await getAdminClient();
+    const { pb } = await validateSession();
     await pb.collection('products').delete(id);
     return { success: true };
   } catch (error: any) {
@@ -17,8 +16,7 @@ export async function deleteProductAction(id: string) {
 
 export async function deleteProductsAction(ids: string[]) {
   try {
-    await validateSession();
-    const pb = await getAdminClient();
+    const { pb } = await validateSession();
     await Promise.all(ids.map(id => pb.collection('products').delete(id).catch(e => console.error(`Failed to delete ${id}`, e))));
     return { success: true };
   } catch (error: any) {
@@ -28,9 +26,7 @@ export async function deleteProductsAction(ids: string[]) {
 
 export async function updateProductDetailsAction(id: string, payload: any) {
   try {
-    await validateSession();
-    const pb = await getAdminClient();
-    // getAdminClient automatically authenticates as admin, so we don't need to check authStore validity
+    const { pb } = await validateSession();
     const record = await pb.collection('products').update(id, payload);
     return { success: true, product: structuredClone(record) };
   } catch (error: any) {
@@ -64,8 +60,7 @@ export async function createProductWithFilesAction(formData: FormData) {
 
 export async function duplicateProductAction(id: string) {
   try {
-    await validateSession();
-    const pb = await getAdminClient();
+    const { pb } = await validateSession();
     const original = await pb.collection('products').getOne(id);
     
     // Duplicate data
