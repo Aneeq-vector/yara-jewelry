@@ -222,9 +222,19 @@ export default function AddProductPage() {
         productCode: finalProductCode,
         category: formData.category,
         price: parseFloat(formData.price) || 0,
+        originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : 0,
         inStock: formData.inStock,
         isActive: true,
         images: imageFiles.current.length > 0 ? imageFiles.current.map(f => URL.createObjectURL(f)) : ['/placeholder.png'],
+        description: `<p>${formData.description}</p>`,
+        shortDescription: formData.shortDescription,
+        material: formData.material,
+        weight: formData.weight,
+        colors: formData.colors,
+        tags: formData.tags,
+        rating: formData.rating,
+        reviewCount: formData.reviewCount,
+        badge: formData.badge,
         created: new Date().toISOString()
       };
       sessionStorage.setItem('optimisticProduct', JSON.stringify(optimisticProduct));
