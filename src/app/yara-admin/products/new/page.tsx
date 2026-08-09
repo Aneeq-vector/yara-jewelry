@@ -160,6 +160,13 @@ export default function AddProductPage() {
     setError(null);
 
     try {
+      if (!formData.name.trim() || formData.price === '' || formData.price === null || formData.price === undefined || !formData.shortDescription?.trim() || !formData.description?.trim()) {
+        setError("Error: Name, Price, Short Description, and Full Description are required.");
+        setLoading(false);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
       if (pendingCompressions.current.length > 0) {
         // Wait for compressions if they are literally still happening
         await Promise.all(pendingCompressions.current);

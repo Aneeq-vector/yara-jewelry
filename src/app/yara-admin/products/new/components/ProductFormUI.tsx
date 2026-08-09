@@ -87,7 +87,6 @@ export function ProductFormUI({
             <label className="text-sm font-semibold text-burgundy" htmlFor="productname_2d7a62">Product Name *</label>
             <input id="productname_2d7a62" aria-label="e.g. Diamond Solitaire Ring" 
               type="text" 
-              required
               value={formData.name}
               onChange={handleNameChange}
               className="w-full bg-white border border-burgundy/20 rounded-xl px-4 py-2 font-body text-sm text-burgundy outline-none focus:border-burgundy/50 transition-colors"
@@ -138,7 +137,6 @@ export function ProductFormUI({
             <input 
               id="product-price"
               type="number" 
-              required
               value={formData.price}
               onChange={(e) => setFormData(prev => ({...prev, price: e.target.value}))}
               onKeyDown={(e) => { if (!/^[0-9.]$/.test(e.key) && !['Backspace', 'Tab', 'ArrowLeft', 'ArrowRight', 'Delete', 'Enter'].includes(e.key)) e.preventDefault(); }}
@@ -255,7 +253,6 @@ export function ProductFormUI({
             </div>
             <input id="field_f0159c" aria-label="Brief one-liner describing the product." 
               type="text" 
-              required
               maxLength={120}
               value={formData.shortDescription}
               onChange={(e) => setFormData(prev => ({...prev, shortDescription: e.target.value}))}
@@ -267,7 +264,6 @@ export function ProductFormUI({
           <div className="space-y-2">
             <label className="text-sm font-semibold text-burgundy" htmlFor="fulldescription_3965cd">Full Description *</label>
             <textarea id="fulldescription_3965cd" aria-label="Detailed description..." 
-              required
               rows={5}
               value={formData.description}
               onChange={(e) => setFormData(prev => ({...prev, description: e.target.value}))}
