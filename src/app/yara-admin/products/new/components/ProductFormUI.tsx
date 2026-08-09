@@ -302,7 +302,7 @@ export function ProductFormUI({
               <div className="flex flex-wrap gap-2">
                 {(() => {
                   const colorSet = new Set(formData.colors);
-                  return ["Rose Gold", "Yellow Gold", "White Gold", "Silver", "Platinum", "Two-Tone", "Black", "Custom"].map(color => (
+                  return ["Gold", "Silver", "Rose Gold", "Platinum", "Black"].map(color => (
                   <button
                     key={color}
                     type="button"
