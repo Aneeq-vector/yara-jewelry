@@ -259,45 +259,51 @@ export default function ProductsManager() {
         });
       }
 
-      // 1. Update text details and process deletions
-      const { updateProductDetailsAction, getAdminTokenAction } = await import('@/app/actions/products');
-      const res = await updateProductDetailsAction(editingProduct.id, submitData as any);
-      if (res.error) {
-        throw new Error(res.error);
-      }
-
-      // 2. Upload new images directly and sequentially to avoid all limits & race conditions
-      if (newImageFiles.current && newImageFiles.current.length > 0) {
-        const tokenResult = await getAdminTokenAction();
-        if (tokenResult.token) {
-          const PB_BASE = '/pb';
-          for (let i = 0; i < newImageFiles.current.length; i++) {
-            const file = newImageFiles.current[i];
-            const fileName = (file as File).name || `image-new-${i}.jpg`;
-            const mimeType = file.type || 'image/jpeg';
-            
-            const imageFormData = new FormData();
-            imageFormData.append('images+', new File([file], fileName, { type: mimeType }));
-            
-            try {
-              const uploadRes = await fetch(`${PB_BASE}/api/collections/products/records/${editingProduct.id}`, {
-                method: 'PATCH',
-                headers: { Authorization: tokenResult.token },
-                body: imageFormData,
-              });
-              if (!uploadRes.ok) console.error(`Failed to upload new image ${i+1}`);
-            } catch (err) {
-              console.error(`Network error uploading new image ${i+1}:`, err);
-            }
-          }
-        }
-      }
+      // OPTIMISTIC UI UPDATE: Instantly close modal and update table
       setProductList(prev => prev.map(p => p.id === editingProduct.id ? editingProduct : p));
       setEditingProduct(null);
+      setIsSaving(false);
+
+      // FIRE AND FORGET BACKGROUND TASKS
+      (async () => {
+        try {
+          // 1. Update text details and process deletions
+          const { updateProductDetailsAction, getAdminTokenAction } = await import('@/app/actions/products');
+          const res = await updateProductDetailsAction(editingProduct.id, submitData as any);
+          if (res.error) throw new Error(res.error);
+
+          // 2. Upload new images directly and sequentially
+          if (newImageFiles.current && newImageFiles.current.length > 0) {
+            const tokenResult = await getAdminTokenAction();
+            if (tokenResult.token) {
+              const PB_BASE = '/pb';
+              for (let i = 0; i < newImageFiles.current.length; i++) {
+                const file = newImageFiles.current[i];
+                const fileName = (file as File).name || `image-new-${i}.jpg`;
+                const mimeType = file.type || 'image/jpeg';
+                
+                const imageFormData = new FormData();
+                imageFormData.append('images+', new File([file], fileName, { type: mimeType }));
+                
+                try {
+                  await fetch(`${PB_BASE}/api/collections/products/records/${editingProduct.id}`, {
+                    method: 'PATCH',
+                    headers: { Authorization: tokenResult.token },
+                    body: imageFormData,
+                  });
+                } catch (err) {}
+              }
+            }
+          }
+          
+          fetch('/api/revalidate?path=/', { method: 'POST' }).catch(() => {});
+        } catch (err) {
+          console.error('Background save failed', err);
+        }
+      })();
+
     } catch (err: any) {
-      console.error('Failed to update product', err);
-      alert(`Failed to update product: ${err.message || err.toString()}\n${JSON.stringify(err.response?.data || {})}`);
-    } finally {
+      console.error('Failed to prepare update', err);
       setIsSaving(false);
     }
   };
