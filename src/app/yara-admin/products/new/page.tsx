@@ -75,6 +75,11 @@ export default function AddProductPage() {
         setFormData(prev => ({ ...prev, productCode: `YARA-${nextCodeNum}` }));
       } catch (err) {
         console.error('Failed to load initial data', err);
+        // Fallback if DB fetch fails (e.g. CORS or network error)
+        setFormData(prev => ({ 
+          ...prev, 
+          productCode: prev.productCode === 'Loading...' ? `YARA-${Math.floor(Date.now() / 1000).toString().slice(-4)}` : prev.productCode 
+        }));
       }
     }
     loadInitialData();
