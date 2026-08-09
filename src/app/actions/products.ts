@@ -86,3 +86,13 @@ export async function duplicateProductAction(id: string) {
   }
 }
 
+// Returns only the admin token so the browser can upload directly to PocketBase
+// This avoids sending large file payloads through Vercel's server action body size limit
+export async function getAdminTokenAction(): Promise<{ token?: string; error?: string }> {
+  try {
+    const pb = await getAdminClient();
+    return { token: pb.authStore.token };
+  } catch (error: any) {
+    return { error: error.message || 'Failed to get admin token' };
+  }
+}

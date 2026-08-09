@@ -177,14 +177,11 @@ export default function AddProductPage() {
       
       // Text Fields
       submitData.append('shortDescription', formData.shortDescription);
-      // For editor fields, we send string, but ideally it should be HTML
       submitData.append('description', `<p>${formData.description}</p>`);
       
       if (formData.material) submitData.append('material', formData.material);
       if (formData.weight) submitData.append('weight', formData.weight);
       
-      // Multi-select fields (colors, tags) - stored as JSON arrays in some cases or multi-select in PocketBase
-      // PocketBase handles comma separated or multiple append for select fields
       if (formData.colors && formData.colors.length > 0) {
         formData.colors.forEach(c => submitData.append('colors', c));
       }
@@ -196,27 +193,34 @@ export default function AddProductPage() {
       submitData.append('rating', formData.rating.toString());
       submitData.append('reviewCount', formData.reviewCount.toString());
 
-      // Images
+      // Images — append with proper filename
       imageFiles.current.forEach((file: File | Blob, index: number) => {
         const fileName = (file as File).name || `image-${index}.jpg`;
         const mimeType = file.type || 'image/jpeg';
-        
-        // Ensure it's a File object with proper type before appending
-        const properFile = new File([file], fileName, { type: mimeType });
-        submitData.append('images', properFile);
+        submitData.append('images', new File([file], fileName, { type: mimeType }));
       });
 
-      const res = await createProductWithFilesAction(submitData);
-      
-      if (res.error) {
-        console.error('Create error:', res.error, res.details);
-        throw new Error(res.error + (res.details ? ': ' + JSON.stringify(res.details) : ''));
+      // Upload DIRECTLY from browser to PocketBase (bypasses Vercel's body size limit)
+      // Get admin token via a lightweight server action (no files = tiny payload)
+      const { getAdminTokenAction } = await import('@/app/actions/products');
+      const tokenResult = await getAdminTokenAction();
+      if (!tokenResult.token) throw new Error(tokenResult.error || 'Admin auth failed');
+
+      const PB_BASE = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pb.yarasl.shop';
+      const response = await fetch(`${PB_BASE}/api/collections/products/records`, {
+        method: 'POST',
+        headers: { Authorization: tokenResult.token },
+        body: submitData,
+      });
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errData.message || 'Upload failed'}`);
       }
       
       setShowSuccess(true);
       setTimeout(() => {
         router.push('/yara-admin/products');
-        router.refresh(); // Force refresh to see new product
+        router.refresh(); 
       }, 2000);
     } catch (err: any) {
       console.error(err);
