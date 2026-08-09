@@ -164,7 +164,13 @@ export default function AddProductPage() {
 
       // Basic Fields
       submitData.append('name', formData.name);
-      submitData.append('productCode', formData.productCode);
+      
+      // Prevent saving "Loading..." if user clicks submit too fast
+      const finalProductCode = formData.productCode === 'Loading...' 
+        ? `YARA-${Math.floor(Date.now() / 1000).toString().slice(-4)}`
+        : formData.productCode;
+      submitData.append('productCode', finalProductCode);
+      
       submitData.append('price', formData.price);
       if (formData.originalPrice) submitData.append('originalPrice', formData.originalPrice);
       if (formData.category) submitData.append('category', formData.category);
