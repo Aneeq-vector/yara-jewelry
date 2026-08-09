@@ -141,12 +141,18 @@ export default function ProductsManager() {
 
   const handleToggleVisibility = async (product: Product) => {
     const newState = !product.isActive;
+    
+    // Optimistic UI update: instantly change state
+    const previousList = [...productList];
+    setProductList(prev => prev.map(p => p.id === product.id ? { ...p, isActive: newState } : p));
+    
     const res = await updateProductDetailsAction(product.id, { is_active: newState });
-    if (res.error) {
-      alert(res.error);
+    if (res?.error) {
+      // Rollback on failure
+      setProductList(previousList);
+      alert(`Failed to update visibility: ${res.error}`);
       return;
     }
-    setProductList(prev => prev.map(p => p.id === product.id ? { ...p, isActive: newState } : p));
   };
 
   const handleEdit = (product: Product) => {
