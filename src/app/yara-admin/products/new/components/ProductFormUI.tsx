@@ -363,7 +363,16 @@ export function ProductFormUI({
                 max="5"
                 step="1"
                 value={formData.rating}
-                onChange={(e) => setFormData(prev => ({...prev, rating: e.target.value === '' ? '' : Number(e.target.value)}))}
+                onChange={(e) => {
+                  if (e.target.value === '') {
+                    setFormData(prev => ({...prev, rating: ''}));
+                  } else {
+                    let val = Number(e.target.value);
+                    if (val > 5) val = 5;
+                    if (val < 1) val = 1;
+                    setFormData(prev => ({...prev, rating: val}));
+                  }
+                }}
                 onKeyDown={(e) => { if (!/^[0-9]$/.test(e.key) && !['Backspace', 'Tab', 'ArrowLeft', 'ArrowRight', 'Delete', 'Enter'].includes(e.key)) e.preventDefault(); }}
                 className="w-full bg-white border border-burgundy/20 rounded-xl px-4 py-2 font-body text-sm text-burgundy outline-none focus:border-burgundy/50 transition-colors"
               />

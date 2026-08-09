@@ -219,7 +219,16 @@ export function EditProductModal({
                 max="5"
                 step="1"
                 value={editingProduct.rating ?? 1}
-                onChange={(e) => setEditingProduct({...editingProduct, rating: e.target.value === '' ? '' as any : Number(e.target.value)})}
+                onChange={(e) => {
+                  if (e.target.value === '') {
+                    setEditingProduct({...editingProduct, rating: '' as any});
+                  } else {
+                    let val = Number(e.target.value);
+                    if (val > 5) val = 5;
+                    if (val < 1) val = 1;
+                    setEditingProduct({...editingProduct, rating: val});
+                  }
+                }}
                 onKeyDown={(e) => { if (!/^[0-9]$/.test(e.key) && !['Backspace', 'Tab', 'ArrowLeft', 'ArrowRight', 'Delete', 'Enter'].includes(e.key)) e.preventDefault(); }}
                 className="w-full bg-ivory/30 border border-burgundy/10 rounded-xl px-4 h-12 font-body text-burgundy focus:border-burgundy/30 outline-none transition-colors"
               />
