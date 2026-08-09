@@ -170,10 +170,11 @@ export function ProductFormUI({
               </div>
             ))}
             
-            <label className="aspect-square rounded-xl border-2 border-dashed border-burgundy/20 hover:border-burgundy/50 hover:bg-ivory/30 transition-colors flex flex-col items-center justify-center gap-2 cursor-pointer text-burgundy/60 hover:text-burgundy" htmlFor="field_f0159c">
+            <label className="aspect-square rounded-xl border-2 border-dashed border-burgundy/20 hover:border-burgundy/50 hover:bg-ivory/30 transition-colors flex flex-col items-center justify-center gap-2 cursor-pointer text-burgundy/60 hover:text-burgundy" htmlFor="image_upload">
               <Upload size={24} />
               <span className="text-xs font-medium font-ui">Upload Image</span>
               <input 
+                id="image_upload"
                 type="file" 
                 accept="image/*" 
                 multiple 
