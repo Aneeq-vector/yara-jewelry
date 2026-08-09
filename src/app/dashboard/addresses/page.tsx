@@ -6,6 +6,8 @@ import { MapPin, Plus, Check, Loader2 } from 'lucide-react';
 import { getAddressesAction, addAddressAction, updateAddressAction, deleteAddressAction } from '@/app/actions/addresses';
 import { Address } from '@/types';
 import { COUNTRIES } from '@/lib/countries';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function AddressesPage() {
   const [addresses, setAddresses] = useState<Address[]>([]);
@@ -128,10 +130,22 @@ export default function AddressesPage() {
                 <input aria-label="Phone Number" value={newForm.phone} onChange={(e) => setNewForm(p => ({ ...p, phone: e.target.value }))} placeholder="Phone Number" className={inputClass} />
               </div>
               <div className="grid grid-cols-1 gap-2">
-                <select aria-label="Country" value={newForm.country} onChange={(e) => setNewForm(p => ({ ...p, country: e.target.value }))} className={inputClass}>
-                  <option value="" disabled>Select Country</option>
-                  {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <Select value={newForm.country} onValueChange={(val) => setNewForm(p => ({ ...p, country: val || 'Sri Lanka' }))}>
+                  <SelectTrigger className={inputClass}>
+                    <SelectValue aria-label="Country" placeholder="Country" />
+                  </SelectTrigger>
+                  <SelectContent alignItemWithTrigger={false} sideOffset={8} className="bg-ivory border border-burgundy/10 shadow-xl rounded-2xl z-[100] outline-none focus:outline-none overflow-hidden p-0">
+                    <ScrollArea className="h-64 rounded-2xl">
+                      <div className="p-1.5">
+                        {COUNTRIES.map((c) => (
+                          <SelectItem key={c} value={c} className="font-body text-base sm:text-sm text-burgundy cursor-pointer focus:bg-champagne/50 focus:text-burgundy rounded-xl pl-3 pr-8 py-2.5 transition-colors">
+                            {c}
+                          </SelectItem>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex items-center gap-2 mt-2">
                 <input type="checkbox" id="new-default" checked={newForm.isDefault} onChange={(e) => setNewForm(p => ({ ...p, isDefault: e.target.checked }))} className="rounded border-burgundy/20 text-burgundy focus:ring-burgundy" />
@@ -166,10 +180,22 @@ export default function AddressesPage() {
                   <input aria-label="Phone Number" value={editForm.phone} onChange={(e) => setEditForm((p: any) => ({ ...p, phone: e.target.value }))} placeholder="Phone Number" className={inputClass} />
                 </div>
                 <div className="grid grid-cols-1 gap-2">
-                  <select aria-label="Country" value={editForm.country || 'Sri Lanka'} onChange={(e) => setEditForm((p: any) => ({ ...p, country: e.target.value }))} className={inputClass}>
-                    <option value="" disabled>Select Country</option>
-                    {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
+                  <Select value={editForm.country || 'Sri Lanka'} onValueChange={(val) => setEditForm((p: any) => ({ ...p, country: val || 'Sri Lanka' }))}>
+                    <SelectTrigger className={inputClass}>
+                      <SelectValue aria-label="Country" placeholder="Country" />
+                    </SelectTrigger>
+                    <SelectContent alignItemWithTrigger={false} sideOffset={8} className="bg-ivory border border-burgundy/10 shadow-xl rounded-2xl z-[100] outline-none focus:outline-none overflow-hidden p-0">
+                      <ScrollArea className="h-64 rounded-2xl">
+                        <div className="p-1.5">
+                          {COUNTRIES.map((c) => (
+                            <SelectItem key={c} value={c} className="font-body text-base sm:text-sm text-burgundy cursor-pointer focus:bg-champagne/50 focus:text-burgundy rounded-xl pl-3 pr-8 py-2.5 transition-colors">
+                              {c}
+                            </SelectItem>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="flex items-center gap-2 mt-2">
                   <input type="checkbox" id={`edit-default-${addr.id}`} checked={editForm.isDefault} onChange={(e) => setEditForm((p: any) => ({ ...p, isDefault: e.target.checked }))} className="rounded border-burgundy/20 text-burgundy focus:ring-burgundy" />
