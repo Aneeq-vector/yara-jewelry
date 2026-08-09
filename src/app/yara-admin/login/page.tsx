@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { m as motion } from 'framer-motion';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, ArrowRight, Loader2, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, Loader2, ShieldCheck, AlertCircle } from 'lucide-react';
 import { loginAction } from '@/app/actions/auth';
 import { useAdminAuthStore } from '@/lib/store/admin-auth-store';
 
@@ -91,12 +91,12 @@ export default function AdminLoginPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
               <motion.div 
-                initial={{ opacity: 0, y: -10 }} 
-                animate={{ opacity: 1, y: 0 }} 
-                className="bg-red-50 text-red-600 text-sm font-body px-4 py-3 rounded-xl border border-red-100 flex items-center gap-2"
+                initial={{ opacity: 0, y: -10, scale: 0.95 }} 
+                animate={{ opacity: 1, y: 0, scale: 1 }} 
+                className="bg-red-50/80 backdrop-blur-md text-red-700 text-sm font-ui px-5 py-4 rounded-2xl border border-red-200 shadow-sm flex items-start gap-3"
               >
-                <div className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" />
-                {error}
+                <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" strokeWidth={2} />
+                <span className="leading-relaxed font-medium">{error}</span>
               </motion.div>
             )}
             <div className="relative pt-5">
