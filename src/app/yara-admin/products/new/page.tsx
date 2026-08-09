@@ -231,7 +231,7 @@ export default function AddProductPage() {
             const mimeType = file.type || 'image/jpeg';
             
             const imageFormData = new FormData();
-            imageFormData.append('images', new File([file], fileName, { type: mimeType }));
+            imageFormData.append('images+', new File([file], fileName, { type: mimeType }));
             
             try {
               await fetch(`${PB_BASE}/api/collections/products/records/${newProduct.id}`, {

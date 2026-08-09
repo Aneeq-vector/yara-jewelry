@@ -277,7 +277,7 @@ export default function ProductsManager() {
             const mimeType = file.type || 'image/jpeg';
             
             const imageFormData = new FormData();
-            imageFormData.append('images', new File([file], fileName, { type: mimeType }));
+            imageFormData.append('images+', new File([file], fileName, { type: mimeType }));
             
             try {
               const uploadRes = await fetch(`${PB_BASE}/api/collections/products/records/${editingProduct.id}`, {
