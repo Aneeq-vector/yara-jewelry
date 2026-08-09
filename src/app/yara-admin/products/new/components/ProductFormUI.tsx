@@ -82,7 +82,9 @@ export function ProductFormUI({
             <label className="text-sm font-semibold text-burgundy" htmlFor="category_7810b2">Category</label>
             <Select value={formData.category} onValueChange={(val) => setFormData(prev => ({...prev, category: val || ''}))}>
               <SelectTrigger id="category_7810b2" className="w-full bg-white border border-burgundy/20 rounded-xl px-4 py-2 h-auto min-h-[42px] font-body text-sm text-burgundy outline-none focus:border-burgundy/50 transition-colors">
-                <SelectValue placeholder="Select Category" />
+                <SelectValue placeholder="Select Category">
+                  {formData.category ? categories.find(c => c.id === formData.category)?.name : "Select Category"}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent alignItemWithTrigger={false} sideOffset={8} className="bg-ivory border border-burgundy/10 shadow-xl rounded-2xl z-[100] outline-none focus:outline-none overflow-hidden p-0">
                 <ScrollArea className="h-64 rounded-2xl">
@@ -147,7 +149,13 @@ export function ProductFormUI({
             <label htmlFor="field_7d2c3d" className="text-sm font-semibold text-burgundy">Badge (Optional)</label>
             <Select value={formData.badge || "none"} onValueChange={(val) => setFormData(prev => ({...prev, badge: (val === "none" || !val) ? "" : val}))}>
               <SelectTrigger id="field_7d2c3d" className="w-full bg-white border border-burgundy/20 rounded-xl px-4 py-2 h-auto min-h-[42px] font-body text-sm text-burgundy outline-none focus:border-burgundy/50 transition-colors">
-                <SelectValue placeholder="None" />
+                <SelectValue placeholder="None">
+                  {formData.badge === 'best-seller' ? 'Best Seller' : 
+                   formData.badge === 'trending' ? 'Trending' : 
+                   formData.badge === 'new' ? 'New' : 
+                   formData.badge === 'limited' ? 'Limited' : 
+                   'None'}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent alignItemWithTrigger={false} sideOffset={8} className="bg-ivory border border-burgundy/10 shadow-xl rounded-2xl z-[100] outline-none focus:outline-none overflow-hidden p-0">
                 <ScrollArea className="h-48 rounded-2xl">
