@@ -50,13 +50,19 @@ export async function updateProductWithFilesAction(id: string, formData: FormDat
 
 export async function createProductWithFilesAction(formData: FormData) {
   try {
+    const adminEmail = process.env.POCKETBASE_ADMIN_EMAIL;
+    const adminPassword = process.env.POCKETBASE_ADMIN_PASSWORD;
+    if (!adminEmail || !adminPassword) {
+      return { error: `Missing env vars: EMAIL=${!!adminEmail} PASS=${!!adminPassword}`, details: {} };
+    }
     const pb = await getAdminClient();
     const record = await pb.collection('products').create(formData);
     return { success: true, product: structuredClone(record) };
   } catch (error: any) {
-    console.error('POCKETBASE CREATE ERROR FULL:', error);
-    console.error('ORIGINAL ERROR CAUSE:', error?.originalError);
-    return { error: error.message || 'Failed to create product', details: error.data };
+    const details = error?.data || error?.response?.data || {};
+    const msg = `[${error?.status || 'no-status'}] ${error?.message || 'unknown'}`;
+    console.error('CREATE PRODUCT ERROR:', msg, JSON.stringify(details));
+    return { error: msg, details };
   }
 }
 
