@@ -83,10 +83,23 @@ export async function validateSession() {
 }
 
 
+// ─── Admin Client Cache ──────────────────────────────────────────────────────
+// Caches the admin auth token in memory to avoid a full HTTP login on every
+// single admin panel request. Tokens are refreshed 5 minutes before expiry.
+let _adminClientCache: { pb: PocketBase; expiresAt: number } | null = null;
+
 // Client for Admin-only operations using env credentials
 export async function getAdminClient() {
+  const now = Date.now();
+  const CACHE_TTL_MS = 55 * 60 * 1000; // 55 minutes (tokens last 1 hour)
+
+  // Return cached client if it's still valid
+  if (_adminClientCache && now < _adminClientCache.expiresAt) {
+    return _adminClientCache.pb;
+  }
+
   const pb = new PocketBase(PB_URL);
-  
+
   const adminEmail = process.env.POCKETBASE_ADMIN_EMAIL;
   const adminPassword = process.env.POCKETBASE_ADMIN_PASSWORD;
 
@@ -94,8 +107,10 @@ export async function getAdminClient() {
     throw new Error('PocketBase admin credentials are not set in .env');
   }
 
-  // Authenticate as admin
+  // Authenticate as admin and cache the result
   await pb.admins.authWithPassword(adminEmail, adminPassword);
-  
+
+  _adminClientCache = { pb, expiresAt: now + CACHE_TTL_MS };
+
   return pb;
 }

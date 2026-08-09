@@ -64,16 +64,22 @@ export async function createOrderAction(formData: FormData) {
   }
 }
 
-export async function getAllOrdersAction() {
+export async function getAllOrdersAction(page: number = 1, perPage: number = 50) {
   try {
     await validateSession();
     const pb = await getAdminClient();
-    const records = await pb.collection('orders').getFullList({
+    const result = await pb.collection('orders').getList(page, perPage, {
       sort: '-orderDate',
       fields: 'id,orderId,orderDate,status,paymentStatus,totalAmount,shippingName,shippingEmail,shippingPhone,shippingCity,paymentMethod,cartDetails,user,expand',
-      expand: 'user'
+      expand: 'user',
     });
-    return { success: true, orders: structuredClone(records) };
+    return {
+      success: true,
+      orders: structuredClone(result.items),
+      totalItems: result.totalItems,
+      totalPages: result.totalPages,
+      page: result.page,
+    };
   } catch (error: any) {
     console.error('Failed to fetch orders:', error);
     return { success: false, error: error.message || 'Failed to fetch orders' };

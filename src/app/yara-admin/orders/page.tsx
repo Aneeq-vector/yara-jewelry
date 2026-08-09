@@ -29,37 +29,41 @@ import * as XLSX from 'xlsx';
 export default function OrdersManager() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All Statuses');
-  const [dateFilter, setDateFilter] = useState('all'); // 'all', 'today', 'yesterday', 'week', 'month', 'custom'
+  const [dateFilter, setDateFilter] = useState('all');
   const [customDate, setCustomDate] = useState('');
   
   const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [rowsPerPage, setRowsPerPage] = useState(50);
   
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
 
-  const fetchOrders = () => {
+  const fetchOrders = (page = currentPage) => {
     setLoading(true);
-    getAllOrdersAction().then(res => {
+    getAllOrdersAction(page, rowsPerPage).then(res => {
       if (res.success && res.orders) {
         setOrders(res.orders);
+        setTotalItems(res.totalItems ?? 0);
+        setTotalPages(res.totalPages ?? 1);
       } else if (res.error) {
-        console.error("Orders fetch error:", res.error);
-        alert("Orders Error: " + res.error);
+        console.error('Orders fetch error:', res.error);
       }
       setLoading(false);
     }).catch(err => {
-      alert("Network Error: " + err);
+      console.error('Network Error:', err);
       setLoading(false);
     });
   };
 
   useEffect(() => {
-    fetchOrders();
-  }, []);
+    fetchOrders(currentPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, rowsPerPage]);
 
   const handleStatusChange = async (id: string, newStatus: string) => {
     setOrders((prev: any[]) => prev.map(o => o.id === id ? { ...o, status: newStatus } : o));
@@ -137,6 +141,7 @@ export default function OrdersManager() {
     XLSX.writeFile(workbook, `yara_orders_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
+  // Client-side filtering is applied on the current page of results
   const filteredOrders = useMemo(() => {
     return orders.filter(order => {
       const matchesSearch = 
@@ -181,11 +186,8 @@ export default function OrdersManager() {
     });
   }, [orders, searchQuery, statusFilter, dateFilter, customDate]);
 
-  const totalPages = Math.ceil(filteredOrders.length / rowsPerPage) || 1;
-  const paginatedOrders = useMemo(() => {
-    const start = (currentPage - 1) * rowsPerPage;
-    return filteredOrders.slice(start, start + rowsPerPage);
-  }, [filteredOrders, currentPage, rowsPerPage]);
+  // All filtered results shown directly (server already paginated)
+  const paginatedOrders = filteredOrders;
 
   const handlePageChange = (page: number) => {
     if (page < 1 || page > totalPages) return;

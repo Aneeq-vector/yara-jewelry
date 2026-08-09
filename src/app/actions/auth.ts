@@ -179,32 +179,18 @@ export async function getUserAction() {
   const { pb, user } = await getServerSession();
   if (!user) return null;
 
-  try {
-    // Fetch fresh user record from DB to avoid stale cookie data
-    const freshRecord = await pb.collection('users').getOne(user.id);
-    
-    if (freshRecord.status === 'Inactive') {
-      pb.authStore.clear();
-      const cookieStore = await cookies();
-      cookieStore.delete('pb_auth');
-      return null;
-    }
-    
-    // Update the cookie with the fresh record
+  // Trust the session cookie data — it already contains fresh user info from
+  // the last login or update. No extra DB round-trip needed on every page load.
+  if (user.status === 'Inactive') {
+    pb.authStore.clear();
     const cookieStore = await cookies();
-    const authPayload = JSON.stringify({ token: pb.authStore.token, model: freshRecord });
-    cookieStore.set('pb_auth', authPayload, {
-      path: '/',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-    });
-    
-    return structuredClone(freshRecord);
-  } catch (err) {
+    cookieStore.delete('pb_auth');
     return null;
   }
+
+  return structuredClone(user);
 }
+
 
 export async function updateUserAction(id: string, updates: Record<string, any>) {
   try {
