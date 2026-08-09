@@ -170,7 +170,7 @@ export default function AddProductPage() {
       submitData.append('name', formData.name);
       submitData.append('productCode', formData.productCode);
       submitData.append('price', formData.price);
-      if (formData.compareAtPrice) submitData.append('originalPrice', formData.compareAtPrice);
+      if (formData.originalPrice) submitData.append('originalPrice', formData.originalPrice);
       if (formData.category) submitData.append('category', formData.category);
       submitData.append('inStock', formData.inStock.toString());
       if (formData.badge) submitData.append('badge', formData.badge);
@@ -198,7 +198,7 @@ export default function AddProductPage() {
 
       // Images
       imageFiles.current.forEach((file: File | Blob, index: number) => {
-        const fileName = (file as File).name || \`image-\${index}.jpg\`;
+        const fileName = (file as File).name || `image-${index}.jpg`;
         const mimeType = file.type || 'image/jpeg';
         
         // Ensure it's a File object with proper type before appending
