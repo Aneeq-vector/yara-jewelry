@@ -197,26 +197,28 @@ function ViewAllCard({ bgImage }: { bgImage?: string }) {
       transition={{ duration: 0.5 }}
       className="group shrink-0 w-[75vw] sm:w-[280px] snap-center"
     >
-      <div className="relative rounded-3xl overflow-hidden bg-champagne/30 mb-4 h-full aspect-square block">
-        {bgImage && (
-          <Image
-            src={bgImage}
-            alt="View All Background"
-            fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            className="object-cover opacity-60 group-hover:scale-105 transition duration-700"
-            unoptimized
-          />
-        )}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-burgundy/30 to-transparent z-0" />
-        <Link href="/shop" className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-burgundy/10 group-hover:bg-burgundy/30 transition duration-500">
-          <div className="w-14 h-14 rounded-full bg-white/20 border border-white/40 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 group-hover:bg-white/30 transition duration-300">
-            <ArrowRight size={22} className="text-white" />
-          </div>
-          <div className="text-center px-4">
-            <p className="font-heading font-bold text-xl text-white leading-tight">View All</p>
-            <p className="font-heading font-bold text-xl text-white/90 leading-tight">Collections</p>
-          </div>
-        </Link>
+      <div className="relative rounded-3xl overflow-hidden bg-champagne/30 mb-4">
+        <div className="block relative aspect-square overflow-hidden">
+          {bgImage && (
+            <Image
+              src={bgImage}
+              alt="View All Background"
+              fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              className="object-cover opacity-60 group-hover:scale-105 transition duration-700"
+              unoptimized
+            />
+          )}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-burgundy/30 to-transparent z-0" />
+          <Link href="/shop" className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-burgundy/10 group-hover:bg-burgundy/30 transition duration-500">
+            <div className="w-14 h-14 rounded-full bg-white/20 border border-white/40 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 group-hover:bg-white/30 transition duration-300">
+              <ArrowRight size={22} className="text-white" />
+            </div>
+            <div className="text-center px-4">
+              <p className="font-heading font-bold text-xl text-white leading-tight">View All</p>
+              <p className="font-heading font-bold text-xl text-white/90 leading-tight">Collections</p>
+            </div>
+          </Link>
+        </div>
       </div>
     </motion.div>
   );
