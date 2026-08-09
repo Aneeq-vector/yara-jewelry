@@ -233,7 +233,7 @@ export default function TrendingProducts({ products = [] }: { products?: Product
         </motion.div>
 
         {/* Products Carousel */}
-        <div className="flex overflow-x-auto gap-4 sm:gap-6 pb-8 snap-x snap-mandatory no-scrollbar w-full">
+        <div className="flex overflow-x-auto gap-4 sm:gap-6 pb-8 snap-x snap-mandatory no-scrollbar w-full -mx-4 px-4 sm:mx-0 sm:px-0">
           {products.map((product, i) => (
             <ProductCard
               key={product.id}
@@ -242,6 +242,8 @@ export default function TrendingProducts({ products = [] }: { products?: Product
               isViewAll={i === products.length - 1}
             />
           ))}
+          {/* Spacer for right edge on mobile */}
+          <div className="w-1 shrink-0 sm:hidden"></div>
         </div>
       </div>
     </section>

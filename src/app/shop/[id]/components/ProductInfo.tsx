@@ -197,6 +197,31 @@ export function ProductInfo({
                   );
                 })}
               </div>
+              
+              {/* Mobile Sticky Add to Cart Footer */}
+              {product.inStock && (
+                <div className="fixed bottom-0 left-0 right-0 p-4 bg-ivory/95 backdrop-blur-md border-t border-nude/30 z-[60] lg:hidden flex items-center justify-between gap-4 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)]">
+                  <div className="flex flex-col">
+                    <span className="font-ui font-bold text-lg text-burgundy leading-none mb-1">{formatPrice(product.price)}</span>
+                    {(product.originalPrice || 0) > 0 && (
+                      <span className="font-body text-xs text-burgundy/40 line-through leading-none">{formatPrice(product.originalPrice || 0)}</span>
+                    )}
+                  </div>
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleAddToCart}
+                    disabled={isAdding}
+                    className="btn-primary flex-1 max-w-[200px] flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed py-3.5"
+                  >
+                    {isAdding ? (
+                      <Loader2 size={16} className="animate-spin relative z-10" />
+                    ) : (
+                      <ShoppingBag size={16} className="relative z-10" />
+                    )}
+                    <span>{isAdding ? 'Adding...' : 'Add to Cart'}</span>
+                  </motion.button>
+                </div>
+              )}
 
     </>
   );

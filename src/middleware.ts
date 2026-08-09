@@ -7,7 +7,7 @@ export function middleware(request: NextRequest) {
   // Protect /yara-admin and all subpaths
   if (path.startsWith('/yara-admin')) {
     // Allow access to the admin login page
-    if (path === '/yara-admin/login') {
+    if (path === '/yara-admin/login' || path === '/yara-admin/login/') {
       return NextResponse.next();
     }
     const authCookie = request.cookies.get('pb_admin_auth');

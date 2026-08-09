@@ -54,7 +54,7 @@ export default function Hero() {
       
       {/* Island Banner Container */}
       <div 
-        className="relative w-[96%] max-w-[1800px] h-[75vh] md:h-[82vh] rounded-[2rem] sm:rounded-[2.5rem] lg:rounded-[3.5rem] overflow-hidden shadow-2xl shadow-burgundy/15"
+        className="relative w-[96%] max-w-[1800px] min-h-[550px] h-[85vh] md:h-[82vh] rounded-[2rem] sm:rounded-[2.5rem] lg:rounded-[3.5rem] overflow-hidden shadow-2xl shadow-burgundy/15"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
       >
@@ -80,9 +80,9 @@ export default function Hero() {
             <div className="absolute inset-0 bg-gradient-to-t from-burgundy/90 via-burgundy/20 to-transparent" />
             
             {/* Content Container */}
-            <div className="absolute inset-0 flex items-center z-10 max-w-7xl mx-auto px-6 sm:px-12 lg:px-16">
+            <div className="absolute inset-0 flex items-center z-10 max-w-7xl mx-auto px-4 sm:px-12 lg:px-16">
               <div 
-                className={`w-full max-w-2xl ${
+                className={`w-full max-w-2xl mt-12 sm:mt-0 ${
                   BANNERS[active].align === 'center' ? 'mx-auto text-center' :
                   BANNERS[active].align === 'right' ? 'ml-auto text-right' : 'text-left'
                 }`}
@@ -91,13 +91,13 @@ export default function Hero() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.8, delay: 0.3 }}
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 mb-6 shadow-lg ${
+                  className={`inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 mb-4 sm:mb-6 shadow-lg ${
                     BANNERS[active].align === 'center' ? 'mx-auto' :
                     BANNERS[active].align === 'right' ? 'ml-auto' : ''
                   }`}
                 >
                   <Sparkles size={14} className="text-champagne" />
-                  <span className="font-ui text-xs font-bold uppercase tracking-[0.2em] text-white">
+                  <span className="font-ui text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] text-white">
                     {BANNERS[active].tag}
                   </span>
                 </motion.div>
@@ -106,7 +106,7 @@ export default function Hero() {
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.8, delay: 0.4 }}
-                  className="font-heading text-4xl sm:text-6xl lg:text-[6rem] font-bold leading-[0.95] text-white mb-6 drop-shadow-md"
+                  className="font-heading text-[2.75rem] leading-[1] sm:text-6xl lg:text-[6rem] font-bold sm:leading-[0.95] text-white mb-4 sm:mb-6 drop-shadow-md"
                 >
                   {BANNERS[active].title}
                 </motion.h1>
@@ -115,7 +115,7 @@ export default function Hero() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.8, delay: 0.5 }}
-                  className={`font-body text-lg sm:text-xl text-white/80 leading-relaxed mb-10 max-w-lg drop-shadow-sm ${
+                  className={`font-body text-base sm:text-xl text-white/90 leading-relaxed mb-8 sm:mb-10 max-w-lg drop-shadow-sm ${
                     BANNERS[active].align === 'center' ? 'mx-auto' :
                     BANNERS[active].align === 'right' ? 'ml-auto' : ''
                   }`}
@@ -132,12 +132,12 @@ export default function Hero() {
                     BANNERS[active].align === 'right' ? 'justify-end' : 'justify-start'
                   }`}
                 >
-                  <Link href="/shop" className="group relative isolate flex items-center gap-3 px-8 py-4 rounded-full bg-white/95 text-burgundy shadow-xl hover:shadow-2xl transition duration-500 hover:scale-105 overflow-hidden">
+                  <Link href="/shop" className="group relative isolate flex items-center gap-3 px-6 sm:px-8 py-3.5 sm:py-4 rounded-full bg-white/95 text-burgundy shadow-xl hover:shadow-2xl transition duration-500 hover:scale-105 overflow-hidden">
                     {/* Animated gradient background on hover */}
                     <div className="absolute inset-0 bg-gradient-to-r from-[#F6EBDD] via-[#E8C4B0] to-[#F6EBDD] bg-[length:200%_auto] opacity-0 group-hover:opacity-100 group-hover:animate-shimmer transition-opacity duration-500 -z-10" />
                     
-                    <span className="font-ui font-bold text-sm tracking-[0.1em] uppercase relative z-10">Shop Collection</span>
-                    <div className="w-7 h-7 rounded-full bg-burgundy/10 flex items-center justify-center group-hover:bg-burgundy group-hover:text-white transition duration-300 relative z-10">
+                    <span className="font-ui font-bold text-xs sm:text-sm tracking-[0.1em] uppercase relative z-10">Shop Collection</span>
+                    <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-burgundy/10 flex items-center justify-center group-hover:bg-burgundy group-hover:text-white transition duration-300 relative z-10">
                       <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
                     </div>
                   </Link>

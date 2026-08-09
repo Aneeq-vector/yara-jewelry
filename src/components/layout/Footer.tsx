@@ -41,13 +41,13 @@ export default function Footer() {
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Top CTA */}
-        <div className="py-16 border-b border-ivory/10">
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
+        <div className="py-12 sm:py-16 border-b border-ivory/10">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-6 sm:gap-8 text-center lg:text-left">
             <div>
-              <h3 className="font-heading text-3xl sm:text-4xl font-semibold text-ivory mb-2">
+              <h3 className="font-heading text-2xl sm:text-3xl lg:text-4xl font-semibold text-ivory mb-2">
                 Join the Yara Community
               </h3>
-              <p className="font-body text-ivory/60 max-w-md">
+              <p className="font-body text-sm sm:text-base text-ivory/60 max-w-md mx-auto lg:mx-0">
                 Subscribe for exclusive drops, early access & styling inspiration.
               </p>
             </div>
@@ -57,7 +57,7 @@ export default function Footer() {
                 placeholder="Your email address"
                 className="flex-1 min-w-0 bg-transparent px-4 sm:px-6 py-3.5 text-sm font-body text-ivory placeholder:text-ivory/40 focus:outline-none"
               />
-              <button className="bg-gradient-to-r from-rose-gold to-rose-gold-light text-burgundy px-5 sm:px-8 py-3.5 font-ui font-semibold text-sm uppercase tracking-wider hover:opacity-90 transition-opacity whitespace-nowrap">
+              <button className="bg-gradient-to-r from-rose-gold to-rose-gold-light text-burgundy px-4 sm:px-8 py-3.5 font-ui font-semibold text-xs sm:text-sm uppercase tracking-wider hover:opacity-90 transition-opacity whitespace-nowrap shrink-0">
                 Subscribe
               </button>
             </div>
@@ -65,7 +65,7 @@ export default function Footer() {
         </div>
 
         {/* Links Grid */}
-        <div className="py-16 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 lg:gap-12">
+        <div className="py-12 sm:py-16 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 lg:gap-12">
           {/* Brand Column */}
           <div className="col-span-2 md:col-span-4 lg:col-span-1 mb-4 lg:mb-0 -mt-6 lg:-mt-8">
             <Image
@@ -73,7 +73,7 @@ export default function Footer() {
               alt="Yara"
               width={500}
               height={200}
-              className="h-40 w-auto brightness-0 invert opacity-90 -mb-10 -mt-4"
+              className="h-32 sm:h-40 w-auto brightness-0 invert opacity-90 -mb-8 sm:-mb-10 -mt-2 sm:-mt-4"
             />
             <p className="font-body text-sm text-ivory/50 leading-relaxed max-w-xs">
               Premium imitation jewelry designed to elevate every moment. Crafted for elegance, made for you.
@@ -84,7 +84,7 @@ export default function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Follow us on Instagram"
-                className="w-10 h-10 rounded-full bg-ivory/10 flex items-center justify-center hover:bg-ivory/20 transition-colors"
+                className="w-10 h-10 rounded-full bg-ivory/10 flex items-center justify-center hover:bg-ivory/20 transition-colors shrink-0"
               >
                 <InstagramIcon size={16} />
               </a>
@@ -93,7 +93,7 @@ export default function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Follow us on Facebook"
-                className="w-10 h-10 rounded-full bg-ivory/10 flex items-center justify-center hover:bg-ivory/20 transition-colors"
+                className="w-10 h-10 rounded-full bg-ivory/10 flex items-center justify-center hover:bg-ivory/20 transition-colors shrink-0"
               >
                 <FacebookIcon size={16} />
               </a>
@@ -102,7 +102,7 @@ export default function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Follow us on TikTok"
-                className="w-10 h-10 rounded-full bg-ivory/10 flex items-center justify-center hover:bg-ivory/20 transition-colors"
+                className="w-10 h-10 rounded-full bg-ivory/10 flex items-center justify-center hover:bg-ivory/20 transition-colors shrink-0"
               >
                 <svg width="15" height="15" viewBox="0 0 448 512" fill="currentColor">
                   <path d="M448,209.91a210.06,210.06,0,0,1-122.77-39.25V349.38A162.55,162.55,0,1,1,185,188.31V278.2a74.62,74.62,0,1,0,52.23,71.18V0l88,0a121.18,121.18,0,0,0,1.86,22.17h0A122.18,122.18,0,0,0,381,102.39a121.43,121.43,0,0,0,67,20.14Z" />
