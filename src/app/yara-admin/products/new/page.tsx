@@ -214,33 +214,29 @@ export default function AddProductPage() {
       
       const newProduct = await createRes.json();
 
-      // 3. Upload images SEQUENTIALLY (one by one)
-      // This completely bypasses both Nginx's 1MB limit and Vercel's 4.5MB limit!
-      for (let i = 0; i < imageFiles.current.length; i++) {
-        const file = imageFiles.current[i];
+      // 3. Upload images IN PARALLEL (concurrently) but as separate requests
+      // This bypasses Nginx's 1MB limit while being extremely fast
+      const uploadPromises = imageFiles.current.map((file: File | Blob, i: number) => {
         const fileName = (file as File).name || `image-${i}.jpg`;
         const mimeType = file.type || 'image/jpeg';
         
         const imageFormData = new FormData();
         imageFormData.append('images', new File([file], fileName, { type: mimeType }));
         
-        const uploadRes = await fetch(`${PB_BASE}/api/collections/products/records/${newProduct.id}`, {
+        return fetch(`${PB_BASE}/api/collections/products/records/${newProduct.id}`, {
           method: 'PATCH',
-          headers: { Authorization: tokenResult.token },
+          headers: { Authorization: tokenResult.token as string },
           body: imageFormData,
+        }).then(res => {
+          if (!res.ok) console.error(`Failed to upload image ${i+1}`);
         });
-        
-        if (!uploadRes.ok) {
-          console.error(`Failed to upload image ${i+1}`);
-          // We don't throw here to ensure the product at least stays created with partial images
-        }
-      }
+      });
+
+      await Promise.all(uploadPromises);
       
-      setShowSuccess(true);
-      setTimeout(() => {
-        router.push('/yara-admin/products');
-        router.refresh(); 
-      }, 2000);
+      // Redirect instantly, NO artificial delays
+      router.push('/yara-admin/products');
+      router.refresh(); 
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'Failed to create product');
