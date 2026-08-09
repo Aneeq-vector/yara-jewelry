@@ -206,6 +206,15 @@ export default function AddProductPage() {
       submitData.append('rating', formData.rating.toString());
       submitData.append('reviewCount', formData.reviewCount.toString());
 
+      // 0. Get Token (must happen before navigation so the server action request isn't aborted)
+      const { getAdminTokenAction } = await import('@/app/actions/products');
+      const tokenResult = await getAdminTokenAction();
+      if (!tokenResult.token) {
+         setError(tokenResult.error || 'Admin auth failed');
+         setLoading(false);
+         return;
+      }
+
       // 1. INSTANT REDIRECT (Optimistic UI via sessionStorage)
       const optimisticProduct = {
         id: 'temp-' + Date.now(),
@@ -214,6 +223,7 @@ export default function AddProductPage() {
         category: formData.category,
         price: parseFloat(formData.price) || 0,
         inStock: formData.inStock,
+        isActive: true,
         images: imageFiles.current.length > 0 ? imageFiles.current.map(f => URL.createObjectURL(f)) : ['/placeholder.png'],
         created: new Date().toISOString()
       };
@@ -224,10 +234,6 @@ export default function AddProductPage() {
       // 2. FIRE AND FORGET EVERYTHING ELSE
       (async () => {
         try {
-          const { getAdminTokenAction } = await import('@/app/actions/products');
-          const tokenResult = await getAdminTokenAction();
-          if (!tokenResult.token) throw new Error(tokenResult.error || 'Admin auth failed');
-
           // Append all images to the initial POST request formData
           for (let i = 0; i < imageFiles.current.length; i++) {
             const file = imageFiles.current[i];
@@ -240,7 +246,7 @@ export default function AddProductPage() {
 
           const createRes = await fetch(`${PB_BASE}/api/collections/products/records`, {
             method: 'POST',
-            headers: { Authorization: tokenResult.token },
+            headers: { Authorization: tokenResult.token as string },
             body: submitData, 
           });
           
