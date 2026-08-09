@@ -206,7 +206,7 @@ export default function AddProductPage() {
       const tokenResult = await getAdminTokenAction();
       if (!tokenResult.token) throw new Error(tokenResult.error || 'Admin auth failed');
 
-      const PB_BASE = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pb.yarasl.shop';
+      const PB_BASE = '/pb'; // Uses the proxy rewrite in next.config.ts — avoids CORS
       const response = await fetch(`${PB_BASE}/api/collections/products/records`, {
         method: 'POST',
         headers: { Authorization: tokenResult.token },
