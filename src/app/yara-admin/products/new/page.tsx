@@ -228,9 +228,11 @@ export default function AddProductPage() {
         });
       });
 
-      await Promise.all(uploadPromises);
+      // Fire and forget! Let images upload in the background silently
+      // This makes the "Create Product" button feel absolutely instant
+      Promise.all(uploadPromises).catch(console.error);
       
-      // Redirect instantly, NO artificial delays
+      // Redirect instantly!
       router.push('/yara-admin/products');
       router.refresh(); 
     } catch (err: any) {
