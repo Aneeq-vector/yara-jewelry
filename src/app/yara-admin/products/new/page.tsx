@@ -214,8 +214,7 @@ export default function AddProductPage() {
         category: formData.category,
         price: parseFloat(formData.price) || 0,
         inStock: formData.inStock,
-        isActive: true,
-        images: [],
+        images: imageFiles.current.length > 0 ? imageFiles.current.map(f => URL.createObjectURL(f)) : ['/placeholder.png'],
         created: new Date().toISOString()
       };
       sessionStorage.setItem('optimisticProduct', JSON.stringify(optimisticProduct));
