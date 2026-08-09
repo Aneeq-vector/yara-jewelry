@@ -135,12 +135,13 @@ export function ProductFormUI({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <label className="text-sm font-semibold text-burgundy" htmlFor="pricers_6d6a82">Price (Rs.) *</label>
-            <input id="pricers_6d6a82" aria-label="e.g. 45000" 
+            <input 
+              id="product-price"
               type="number" 
               required
-              min="0"
               value={formData.price}
               onChange={(e) => setFormData(prev => ({...prev, price: e.target.value}))}
+              onKeyDown={(e) => { if (!/^[0-9.]$/.test(e.key) && !['Backspace', 'Tab', 'ArrowLeft', 'ArrowRight', 'Delete', 'Enter'].includes(e.key)) e.preventDefault(); }}
               className="w-full bg-white border border-burgundy/20 rounded-xl px-4 py-2 font-body text-sm text-burgundy outline-none focus:border-burgundy/50 transition-colors"
               placeholder="e.g. 45000"
             />
@@ -148,11 +149,12 @@ export function ProductFormUI({
           
           <div className="space-y-2">
             <label className="text-sm font-semibold text-burgundy" htmlFor="field_c80a3d">Original Price (Optional, Rs.)</label>
-            <input id="field_c80a3d" aria-label="e.g. 55000" 
+            <input 
+              id="product-original-price"
               type="number" 
-              min="0"
               value={formData.originalPrice}
               onChange={(e) => setFormData(prev => ({...prev, originalPrice: e.target.value}))}
+              onKeyDown={(e) => { if (!/^[0-9.]$/.test(e.key) && !['Backspace', 'Tab', 'ArrowLeft', 'ArrowRight', 'Delete', 'Enter'].includes(e.key)) e.preventDefault(); }}
               className="w-full bg-white border border-burgundy/20 rounded-xl px-4 py-2 font-body text-sm text-burgundy outline-none focus:border-burgundy/50 transition-colors"
               placeholder="e.g. 55000"
             />
@@ -362,6 +364,7 @@ export function ProductFormUI({
                 step="1"
                 value={formData.rating}
                 onChange={(e) => setFormData(prev => ({...prev, rating: e.target.value === '' ? '' : Number(e.target.value)}))}
+                onKeyDown={(e) => { if (!/^[0-9]$/.test(e.key) && !['Backspace', 'Tab', 'ArrowLeft', 'ArrowRight', 'Delete', 'Enter'].includes(e.key)) e.preventDefault(); }}
                 className="w-full bg-white border border-burgundy/20 rounded-xl px-4 py-2 font-body text-sm text-burgundy outline-none focus:border-burgundy/50 transition-colors"
               />
             </div>
@@ -374,7 +377,7 @@ export function ProductFormUI({
                 step="1"
                 value={formData.reviewCount}
                 onChange={(e) => setFormData(prev => ({...prev, reviewCount: e.target.value === '' ? '' : Math.floor(Number(e.target.value))}))}
-                onKeyDown={(e) => { if (e.key === '.' || e.key === 'e') e.preventDefault(); }}
+                onKeyDown={(e) => { if (!/^[0-9]$/.test(e.key) && !['Backspace', 'Tab', 'ArrowLeft', 'ArrowRight', 'Delete', 'Enter'].includes(e.key)) e.preventDefault(); }}
                 className="w-full bg-white border border-burgundy/20 rounded-xl px-4 py-2 font-body text-sm text-burgundy outline-none focus:border-burgundy/50 transition-colors"
               />
             </div>
