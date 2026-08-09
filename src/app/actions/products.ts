@@ -40,8 +40,7 @@ export async function updateProductDetailsAction(id: string, payload: any) {
 
 export async function updateProductWithFilesAction(id: string, formData: FormData) {
   try {
-    await validateSession();
-    const pb = await getAdminClient();
+    const { pb } = await validateSession();
     
     // Convert FormData to standard PocketBase payload
     // PocketBase's SDK natively handles FormData instances for file uploads!
@@ -55,8 +54,7 @@ export async function updateProductWithFilesAction(id: string, formData: FormDat
 
 export async function createProductWithFilesAction(formData: FormData) {
   try {
-    await validateSession();
-    const pb = await getAdminClient();
+    const { pb } = await validateSession();
     const record = await pb.collection('products').create(formData);
     return { success: true, product: structuredClone(record) };
   } catch (error: any) {
