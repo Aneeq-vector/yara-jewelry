@@ -161,16 +161,15 @@ export default function AddProductPage() {
 
     try {
       if (pendingCompressions.current.length > 0) {
+        // Wait for compressions if they are literally still happening
         await Promise.all(pendingCompressions.current);
         pendingCompressions.current = [];
       }
-      const pb = createClient();
+      
       const submitData = new FormData();
-
       // Basic Fields
       submitData.append('name', formData.name);
       
-      // Prevent saving "Loading..." if user clicks submit too fast
       const finalProductCode = formData.productCode === 'Loading...' 
         ? `YARA-${Math.floor(Date.now() / 1000).toString().slice(-4)}`
         : formData.productCode;
@@ -199,60 +198,57 @@ export default function AddProductPage() {
 
       submitData.append('rating', formData.rating.toString());
       submitData.append('reviewCount', formData.reviewCount.toString());
-      
-      // 1. Get admin token via a lightweight server action
-      const { getAdminTokenAction } = await import('@/app/actions/products');
-      const tokenResult = await getAdminTokenAction();
-      if (!tokenResult.token) throw new Error(tokenResult.error || 'Admin auth failed');
 
-      const PB_BASE = '/pb'; // Proxy avoids CORS
-
-      // 2. Create the product FIRST without any images (tiny JSON-like payload)
-      const createRes = await fetch(`${PB_BASE}/api/collections/products/records`, {
-        method: 'POST',
-        headers: { Authorization: tokenResult.token },
-        body: submitData, // Currently has everything EXCEPT images
-      });
+      // 1. INSTANT REDIRECT (Optimistic UI)
+      router.push('/yara-admin/products');
       
-      if (!createRes.ok) {
-        const errData = await createRes.json().catch(() => ({}));
-        throw new Error(`[${createRes.status}] Create failed: ${errData.message || ''}`);
-      }
-      
-      const newProduct = await createRes.json();
-
-      // 3. Upload images SEQUENTIALLY in the background
-      // We run this as a fire-and-forget async function so it doesn't block the UI redirect.
-      // We MUST do it sequentially to prevent a race condition in PocketBase where parallel
-      // PATCH requests overwrite each other's appended images.
+      // 2. FIRE AND FORGET EVERYTHING ELSE
       (async () => {
-        for (let i = 0; i < imageFiles.current.length; i++) {
-          const file = imageFiles.current[i];
-          const fileName = (file as File).name || `image-${i}.jpg`;
-          const mimeType = file.type || 'image/jpeg';
+        try {
+          const { getAdminTokenAction } = await import('@/app/actions/products');
+          const tokenResult = await getAdminTokenAction();
+          if (!tokenResult.token) throw new Error(tokenResult.error || 'Admin auth failed');
+
+          const PB_BASE = '/pb'; 
+
+          const createRes = await fetch(`${PB_BASE}/api/collections/products/records`, {
+            method: 'POST',
+            headers: { Authorization: tokenResult.token },
+            body: submitData, 
+          });
           
-          const imageFormData = new FormData();
-          imageFormData.append('images', new File([file], fileName, { type: mimeType }));
+          if (!createRes.ok) throw new Error('Create failed');
           
-          try {
-            const res = await fetch(`${PB_BASE}/api/collections/products/records/${newProduct.id}`, {
-              method: 'PATCH',
-              headers: { Authorization: tokenResult.token as string },
-              body: imageFormData,
-            });
-            if (!res.ok) console.error(`Failed to upload image ${i+1}`);
-          } catch (err) {
-            console.error(`Network error uploading image ${i+1}:`, err);
+          const newProduct = await createRes.json();
+          
+          // Revalidate cache so storefront updates
+          fetch('/api/revalidate?path=/', { method: 'POST' }).catch(() => {});
+
+          // Upload images sequentially
+          for (let i = 0; i < imageFiles.current.length; i++) {
+            const file = imageFiles.current[i];
+            const fileName = (file as File).name || `image-${i}.jpg`;
+            const mimeType = file.type || 'image/jpeg';
+            
+            const imageFormData = new FormData();
+            imageFormData.append('images', new File([file], fileName, { type: mimeType }));
+            
+            try {
+              await fetch(`${PB_BASE}/api/collections/products/records/${newProduct.id}`, {
+                method: 'PATCH',
+                headers: { Authorization: tokenResult.token as string },
+                body: imageFormData,
+              });
+            } catch (err) {}
           }
+        } catch (err) {
+          console.error('Background upload failed', err);
         }
       })();
-      
-      // Redirect instantly!
-      router.push('/yara-admin/products');
-      router.refresh(); 
+
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'Failed to create product');
+      setError(err.message || 'Failed to process form');
     } finally {
       setLoading(false);
     }
