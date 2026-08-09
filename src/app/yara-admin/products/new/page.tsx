@@ -199,7 +199,20 @@ export default function AddProductPage() {
       submitData.append('rating', formData.rating.toString());
       submitData.append('reviewCount', formData.reviewCount.toString());
 
-      // 1. INSTANT REDIRECT (Optimistic UI)
+      // 1. INSTANT REDIRECT (Optimistic UI via sessionStorage)
+      const optimisticProduct = {
+        id: 'temp-' + Date.now(),
+        name: formData.name,
+        productCode: finalProductCode,
+        category: formData.category,
+        price: parseFloat(formData.price) || 0,
+        inStock: formData.inStock,
+        isActive: true,
+        images: [],
+        created: new Date().toISOString()
+      };
+      sessionStorage.setItem('optimisticProduct', JSON.stringify(optimisticProduct));
+      
       router.push('/yara-admin/products');
       
       // 2. FIRE AND FORGET EVERYTHING ELSE
@@ -240,6 +253,11 @@ export default function AddProductPage() {
                 body: imageFormData,
               });
             } catch (err) {}
+          }
+          
+          // Notify the products list page that the real product is ready
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new Event('product-created-bg'));
           }
         } catch (err) {
           console.error('Background upload failed', err);
