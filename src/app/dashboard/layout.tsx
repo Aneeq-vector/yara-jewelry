@@ -32,14 +32,10 @@ export default function DashboardLayout({
   useEffect(() => {
     setIsClient(true);
     setHasHydrated(useAuthStore.persist.hasHydrated());
-    
     const unsub = useAuthStore.persist.onFinishHydration(() => {
       setHasHydrated(true);
     });
-    
-    return () => {
-      unsub();
-    };
+    return () => { unsub(); };
   }, []);
 
   if (!isClient || !hasHydrated) return null;
@@ -59,22 +55,87 @@ export default function DashboardLayout({
     );
   }
 
+  const handleLogout = async () => {
+    try { await logoutAction(); } catch (err) { console.error('Logout failed:', err); }
+    logout();
+    router.refresh();
+    router.push('/');
+  };
+
   return (
     <PageWrapper>
-      <div className="pt-28 pb-20">
+      <div className="pt-24 pb-24 lg:pt-28 lg:pb-20">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
-            <h1 className="font-heading text-4xl font-bold text-burgundy mb-2">
+
+          {/* Greeting */}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+            <h1 className="font-heading text-2xl sm:text-3xl lg:text-4xl font-bold text-burgundy mb-1">
               Hello, {user?.name?.split(' ')[0]} ✨
             </h1>
-            <p className="font-body text-burgundy/50">Welcome to your Yara dashboard.</p>
+            <p className="font-body text-sm text-burgundy/50">Welcome to your Yara dashboard.</p>
           </motion.div>
 
-          <div className="grid lg:grid-cols-12 gap-8">
-            {/* Left: Quick Stats & Menu */}
-            <div className="lg:col-span-3 space-y-6">
-              {/* Profile Card Sidebar */}
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card rounded-3xl p-6">
+          {/* ── MOBILE: profile card + 3×2 nav grid ────────────────── */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="lg:hidden glass-card rounded-2xl p-4 mb-6"
+          >
+            {/* Profile row */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="shrink-0 w-11 h-11 rounded-full gradient-rose-gold flex items-center justify-center text-white font-heading text-base font-bold">
+                {user?.name?.charAt(0)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-ui font-semibold text-burgundy text-sm truncate">{user?.name}</h3>
+                <p className="font-body text-xs text-burgundy/40 truncate">{user?.email}</p>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-50 text-red-500 font-ui text-xs font-semibold shrink-0"
+              >
+                <LogOut size={13} />
+                Sign Out
+              </button>
+            </div>
+
+            {/* 3-col nav grid */}
+            <div className="grid grid-cols-3 gap-2">
+              {menuItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl transition-colors ${
+                      isActive
+                        ? 'bg-burgundy text-ivory shadow-sm'
+                        : 'bg-champagne/40 text-burgundy/70 hover:bg-champagne/70'
+                    }`}
+                  >
+                    <Icon size={17} />
+                    <span className="font-ui text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap">
+                      {item.label}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </motion.div>
+
+          {/* ── DESKTOP LAYOUT ──────────────────────────────────────── */}
+          <div className="grid lg:grid-cols-12 gap-6 lg:gap-8">
+
+            {/* Desktop sidebar */}
+            <div className="hidden lg:block lg:col-span-3 space-y-6">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="glass-card rounded-3xl p-6"
+              >
                 <div className="flex items-center gap-4 mb-6 overflow-hidden">
                   <div className="shrink-0 w-14 h-14 rounded-full gradient-rose-gold flex items-center justify-center text-white font-heading text-xl font-bold">
                     {user?.name?.charAt(0)}
@@ -85,57 +146,47 @@ export default function DashboardLayout({
                   </div>
                 </div>
 
-                <nav className="flex overflow-x-auto lg:flex-col gap-2 lg:gap-1 pb-4 lg:pb-0 -mx-6 px-6 lg:mx-0 lg:px-0 no-scrollbar">
+                <nav className="flex flex-col gap-1">
                   {menuItems.map((item) => {
                     const Icon = item.icon;
-                    // For the Overview/Home page, we highlight if pathname is exactly /dashboard
                     const isActive = pathname === item.href;
-                    
                     return (
                       <Link
                         key={item.href}
                         href={item.href}
-                        className={`flex-shrink-0 flex items-center justify-between p-3 rounded-xl transition-colors group ${
-                          isActive ? 'bg-champagne/80 shadow-sm' : 'bg-champagne/30 lg:bg-transparent hover:bg-champagne/40'
+                        className={`flex items-center justify-between p-3 rounded-xl transition-colors group ${
+                          isActive ? 'bg-champagne/80 shadow-sm' : 'hover:bg-champagne/40'
                         }`}
                       >
                         <div className="flex items-center gap-3">
                           <Icon size={16} className={isActive ? 'text-burgundy' : 'text-burgundy/50'} />
-                          <span className={`font-ui text-sm font-medium group-hover:text-burgundy whitespace-nowrap ${
+                          <span className={`font-ui text-sm font-medium group-hover:text-burgundy ${
                             isActive ? 'text-burgundy font-bold' : 'text-burgundy/70'
                           }`}>
                             {item.label}
                           </span>
                         </div>
-                        <ChevronRight size={14} className={`hidden lg:block ${isActive ? 'text-burgundy/50' : 'text-burgundy/20'}`} />
+                        <ChevronRight size={14} className={isActive ? 'text-burgundy/50' : 'text-burgundy/20'} />
                       </Link>
                     );
                   })}
                   <button
-                    onClick={async () => {
-                      try {
-                        await logoutAction();
-                      } catch (err) {
-                        console.error('Logout action failed:', err);
-                      }
-                      logout();
-                      router.refresh();
-                      router.push('/');
-                    }}
-                    className="flex-shrink-0 flex items-center gap-3 p-3 rounded-xl hover:bg-red-50 transition-colors lg:w-full text-left group lg:mt-2 bg-red-50/50 lg:bg-transparent"
+                    onClick={handleLogout}
+                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-red-50 transition-colors w-full text-left group mt-2"
                   >
                     <LogOut size={16} className="text-red-400" />
-                    <span className="font-ui text-sm font-medium text-red-400 group-hover:text-red-500 whitespace-nowrap">Sign Out</span>
+                    <span className="font-ui text-sm font-medium text-red-400 group-hover:text-red-500">Sign Out</span>
                   </button>
                 </nav>
               </motion.div>
             </div>
 
-            {/* Right: Dynamic Content Area */}
-            <div className="lg:col-span-9 space-y-6">
+            {/* Content */}
+            <div className="lg:col-span-9 space-y-5">
               {children}
             </div>
           </div>
+
         </div>
       </div>
     </PageWrapper>

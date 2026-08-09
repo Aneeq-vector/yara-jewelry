@@ -151,7 +151,7 @@ export default function Navbar({ onSearchOpen }: NavbarProps) {
                 <Search size={19} strokeWidth={1.8} />
               </m.button>
 
-              <Link href="/wishlist" className="hidden sm:block relative outline-none focus:outline-none">
+              <Link href="/wishlist" className="relative outline-none focus:outline-none">
                 <m.div
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}

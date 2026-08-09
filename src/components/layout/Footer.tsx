@@ -41,17 +41,17 @@ export default function Footer() {
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Top CTA */}
-        <div className="py-12 sm:py-16 border-b border-ivory/10">
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-6 sm:gap-8 text-center lg:text-left">
+        <div className="py-10 sm:py-16 border-b border-ivory/10">
+          <div className="flex flex-col gap-6 text-center">
             <div>
-              <h3 className="font-heading text-2xl sm:text-3xl lg:text-4xl font-semibold text-ivory mb-2">
+              <h3 className="font-heading text-xl sm:text-3xl lg:text-4xl font-semibold text-ivory mb-2">
                 Join the Yara Community
               </h3>
-              <p className="font-body text-sm sm:text-base text-ivory/60 max-w-md mx-auto lg:mx-0">
-                Subscribe for exclusive drops, early access & styling inspiration.
+              <p className="font-body text-sm text-ivory/60 max-w-sm mx-auto">
+                Subscribe for exclusive drops, early access &amp; styling inspiration.
               </p>
             </div>
-            <div className="flex w-full max-w-md border border-ivory/20 rounded-full overflow-hidden focus-within:border-rose-gold/50 transition-colors bg-ivory/10">
+            <div className="flex w-full max-w-md mx-auto border border-ivory/20 rounded-full overflow-hidden focus-within:border-rose-gold/50 transition-colors bg-ivory/10">
               <input aria-label="Your email address"
                 type="email"
                 placeholder="Your email address"
@@ -182,7 +182,7 @@ export default function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="hidden sm:flex py-6 border-t border-ivory/10 flex-col sm:flex-row items-center justify-center gap-4">
+        <div className="flex py-5 border-t border-ivory/10 items-center justify-center">
           <p className="font-body text-xs text-ivory/40 text-center">
             © {currentYear} Yara Jewelry. All rights reserved.
           </p>
