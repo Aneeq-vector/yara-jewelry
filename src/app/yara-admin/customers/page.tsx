@@ -30,6 +30,8 @@ const WhatsappIcon = ({ size = 16, className = "" }) => (
   </svg>
 );
 
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
+
 export default function CustomersManager() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,6 +41,13 @@ export default function CustomersManager() {
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [selectedCustomerForAddress, setSelectedCustomerForAddress] = useState<Customer | null>(null);
+  
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    description: '',
+    onConfirm: () => {},
+  });
 
   useEffect(() => {
     fetchCustomers();
@@ -67,19 +76,24 @@ export default function CustomersManager() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this customer?')) return;
-    
-    // Optimistic update
-    setCustomers(customers.filter(c => c.id !== id));
-    
-    // Server update
-    const res = await deleteCustomerAction(id);
-    if (!res.success) {
-      // Revert on failure
-      fetchCustomers();
-      alert('Failed to delete customer');
-    }
+  const handleDelete = (id: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Customer',
+      description: 'Are you sure you want to delete this customer?',
+      onConfirm: async () => {
+        // Optimistic update
+        setCustomers(prev => prev.filter(c => c.id !== id));
+        
+        // Server update
+        const res = await deleteCustomerAction(id);
+        if (!res.success) {
+          // Revert on failure
+          fetchCustomers();
+          alert('Failed to delete customer');
+        }
+      }
+    });
   };
 
   const handleSelectAll = (checked: boolean) => {
@@ -100,23 +114,29 @@ export default function CustomersManager() {
     setSelectedCustomerIds(newSelected);
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedCustomerIds.size === 0) return;
-    if (!confirm(`Are you sure you want to delete ${selectedCustomerIds.size} customers?`)) return;
-
-    const idsToDelete = Array.from(selectedCustomerIds);
     
-    // Optimistic update
-    setCustomers(customers.filter(c => !selectedCustomerIds.has(c.id)));
-    setSelectedCustomerIds(new Set());
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Multiple Customers',
+      description: `Are you sure you want to delete ${selectedCustomerIds.size} customers?`,
+      onConfirm: async () => {
+        const idsToDelete = Array.from(selectedCustomerIds);
+        
+        // Optimistic update
+        setCustomers(prev => prev.filter(c => !selectedCustomerIds.has(c.id)));
+        setSelectedCustomerIds(new Set());
 
-    // Server update
-    const res = await deleteCustomersAction(idsToDelete);
-    if (!res.success) {
-      // Revert on failure
-      fetchCustomers();
-      alert('Failed to delete some customers');
-    }
+        // Server update
+        const res = await deleteCustomersAction(idsToDelete);
+        if (!res.success) {
+          // Revert on failure
+          fetchCustomers();
+          alert('Failed to delete some customers');
+        }
+      }
+    });
   };
 
   const filteredCustomers = customers.filter(customer => {
@@ -226,6 +246,16 @@ export default function CustomersManager() {
 
       {/* Address Modal */}
       {selectedCustomerForAddress && <AddressModal selectedCustomerForAddress={selectedCustomerForAddress} setSelectedCustomerForAddress={setSelectedCustomerForAddress} />}
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        description={confirmModal.description}
+        variant="danger"
+        confirmText="Delete"
+      />
     </div>
   );
 }
