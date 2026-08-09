@@ -105,6 +105,7 @@ export default function AddProductPage() {
         maxSizeMB: 0.8,
         maxWidthOrHeight: 1920,
         useWebWorker: true,
+        fileType: 'image/jpeg' as string, // Force JPEG to bypass strict MIME checking
       };
 
       // 3. Compress in the background without blocking the UI
@@ -198,7 +199,11 @@ export default function AddProductPage() {
       // Images
       imageFiles.current.forEach((file: File | Blob, index: number) => {
         const fileName = (file as File).name || \`image-\${index}.jpg\`;
-        submitData.append('images', file, fileName);
+        const mimeType = file.type || 'image/jpeg';
+        
+        // Ensure it's a File object with proper type before appending
+        const properFile = new File([file], fileName, { type: mimeType });
+        submitData.append('images', properFile);
       });
 
       const res = await createProductWithFilesAction(submitData);
