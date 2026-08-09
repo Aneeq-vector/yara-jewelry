@@ -140,9 +140,16 @@ export default function ProductsManager() {
     imagesToDelete.current = [];
   };
 
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const filesArray = Array.from(e.target.files);
+      
+      // 1. Immediately show previews for instant UI feedback
+      const newPreviews = filesArray.map(file => URL.createObjectURL(file));
+      setNewImagePreviews(prev => [...prev, ...newPreviews]);
+      
+      // 2. Temporarily push original files to maintain order and allow immediate saving
+      newImageFiles.current.push(...filesArray);
       
       const options = {
         maxSizeMB: 0.8,
@@ -150,27 +157,20 @@ export default function ProductsManager() {
         useWebWorker: true,
       };
 
-      for (const file of filesArray) {
+      // 3. Compress in the background without blocking the UI
+      filesArray.forEach(async (originalFile) => {
         try {
-          const compressedFile = await imageCompression(file, options);
-          newImageFiles.current.push(compressedFile);
-          
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            setNewImagePreviews(prev => [...prev, reader.result as string]);
-          };
-          reader.readAsDataURL(compressedFile);
+          const compressedFile = await imageCompression(originalFile, options);
+          // Find by exact reference in case user reordered or deleted images while compressing
+          const index = newImageFiles.current.findIndex(f => f === originalFile);
+          if (index !== -1) {
+            newImageFiles.current[index] = compressedFile;
+          }
         } catch (error) {
           console.error("Error compressing image:", error);
-          newImageFiles.current.push(file);
-          
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            setNewImagePreviews(prev => [...prev, reader.result as string]);
-          };
-          reader.readAsDataURL(file);
+          // If it fails, the original file is already in the array
         }
-      }
+      });
     }
   };
 
