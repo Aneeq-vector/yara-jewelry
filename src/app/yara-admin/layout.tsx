@@ -24,7 +24,6 @@ import { adminLogoutAction } from '@/app/actions/auth';
 
 const SIDEBAR_ITEMS = [
   { name: 'Dashboard', href: '/yara-admin', icon: LayoutDashboard },
-  { name: 'Products', href: '/yara-admin/products', icon: ShoppingBag },
   { name: 'Orders', href: '/yara-admin/orders', icon: ShoppingCart },
   { name: 'Customers', href: '/yara-admin/customers', icon: Users },
   { name: 'Gift Boxes', href: '/yara-admin/gift-boxes', icon: Gift },
