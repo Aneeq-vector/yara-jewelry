@@ -176,8 +176,7 @@ export default function ProductsManager() {
     // Optimistic UI update: instantly change state
     const previousList = [...productList];
     setProductList(prev => prev.map(p => p.id === product.id ? { ...p, isActive: newState } : p));
-    
-    const res = await updateProductDetailsAction(product.id, { is_active: newState });
+    const res = await updateProductDetailsAction(product.id, JSON.stringify({ is_active: newState }));
     if (res?.error) {
       // Rollback on failure
       setProductList(previousList);
@@ -293,7 +292,7 @@ export default function ProductsManager() {
         try {
           // 1. Update text details and process deletions
           const { updateProductDetailsAction, getAdminTokenAction } = await import('@/app/actions/products');
-          const res = await updateProductDetailsAction(editingProduct.id, payload);
+          const res = await updateProductDetailsAction(editingProduct.id, JSON.stringify(payload));
           if (res.error) throw new Error(res.error);
 
           // 2. Upload new images directly and sequentially
