@@ -80,29 +80,12 @@ export async function getTrendingProducts(): Promise<Product[]> {
   try {
     const pb = createClient();
 
-    // Fetch trending/best-seller in-stock products first
+    // Fetch trending in-stock products
     const trendingRecords = await pb.collection('products').getList(1, TRENDING_SLOTS, {
-      filter: '(badge="trending" || badge="best-seller") && inStock=true',
+      filter: 'badge="trending" && inStock=true',
       expand: 'category'
     });
-    const trending = trendingRecords.items.map(mapRecordToProduct);
-
-    // If we already have enough, return them
-    if (trending.length >= TRENDING_SLOTS) return trending;
-
-    // Backfill with any other in-stock products not already in the list
-    const trendingIds = trending.map((p) => p.id);
-    const needed = TRENDING_SLOTS - trending.length;
-    const idFilter = trendingIds.length > 0
-      ? trendingIds.map((id) => `id!="${id}"`).join(' && ') + ' && '
-      : '';
-    const backfillRecords = await pb.collection('products').getList(1, needed, {
-      filter: `${idFilter}inStock=true`,
-      expand: 'category'
-    });
-    const backfill = backfillRecords.items.map(mapRecordToProduct);
-
-    return [...trending, ...backfill];
+    return trendingRecords.items.map(mapRecordToProduct);
   } catch (error) {
     return [];
   }

@@ -11,7 +11,7 @@ import { formatPrice, calculateDiscount } from '@/lib/utils';
 import { BADGE_CONFIG } from '@/lib/constants';
 import { Product } from '@/types';
 
-function ProductCard({ product, index, isViewAll }: { product: Product; index: number; isViewAll?: boolean }) {
+function ProductCard({ product, index }: { product: Product; index: number }) {
   const addToCart = useCartStore((s) => s.addItem);
   const { isInWishlist, toggleItem } = useWishlistStore();
   const isMounted = useSyncExternalStore(
@@ -66,7 +66,7 @@ function ProductCard({ product, index, isViewAll }: { product: Product; index: n
           </Link>
 
           {/* Navigation Arrows */}
-          {product.images.length > 1 && !isViewAll && (
+          {product.images.length > 1 && (
             <div className="absolute inset-0 flex items-center justify-between px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none">
               <button
                 onClick={prevImage}
@@ -86,7 +86,7 @@ function ProductCard({ product, index, isViewAll }: { product: Product; index: n
         </div>
 
         {/* Badge */}
-        {product.badge && !isViewAll && (
+        {product.badge && (
           <div className="absolute top-3 left-3 z-10">
             <span className={`px-3 py-1.5 rounded-full text-[10px] font-ui font-bold uppercase tracking-wider text-white ${BADGE_CONFIG[product.badge]?.color || 'bg-burgundy'}`}>
               {BADGE_CONFIG[product.badge]?.label || product.badge}
@@ -95,7 +95,7 @@ function ProductCard({ product, index, isViewAll }: { product: Product; index: n
         )}
 
         {/* Discount Badge */}
-        {(product.originalPrice || 0) > 0 && !isViewAll && (
+        {(product.originalPrice || 0) > 0 && (
           <div className="absolute top-3 right-3 z-10">
             <span className="px-2.5 py-1 rounded-full bg-burgundy/90 text-[10px] font-ui font-bold text-ivory">
               -{calculateDiscount(product.price, product.originalPrice || 0)}%
@@ -104,7 +104,7 @@ function ProductCard({ product, index, isViewAll }: { product: Product; index: n
         )}
 
         {/* Out of Stock Overlay */}
-        {!product.inStock && !isViewAll && (
+        {!product.inStock && (
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none">
             <span className="px-4 py-2 bg-white/90 text-burgundy font-ui font-bold text-sm uppercase tracking-wider rounded-full shadow-lg whitespace-nowrap">
               Out of Stock
@@ -112,22 +112,8 @@ function ProductCard({ product, index, isViewAll }: { product: Product; index: n
           </div>
         )}
 
-        {/* View All Overlay */}
-        {isViewAll && (
-          <Link href="/shop" className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-burgundy/20 group-hover:bg-burgundy/40 transition duration-500">
-            <div className="w-14 h-14 rounded-full bg-white/20 border border-white/40 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 group-hover:bg-white/30 transition duration-300">
-              <ArrowRight size={22} className="text-white" />
-            </div>
-            <div className="text-center px-4">
-              <p className="font-heading font-bold text-xl text-white leading-tight">View All</p>
-              <p className="font-heading font-bold text-xl text-white/80 leading-tight">Collections</p>
-            </div>
-          </Link>
-        )}
-
         {/* Quick Actions */}
-        {!isViewAll && (
-          <div className="absolute bottom-3 left-3 right-3 z-10 opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition duration-300">
+        <div className="absolute bottom-3 left-3 right-3 z-10 opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition duration-300">
             <div className="flex items-center gap-2">
               {product.inStock ? (
                 <motion.button
@@ -165,12 +151,10 @@ function ProductCard({ product, index, isViewAll }: { product: Product; index: n
               </Link>
             </div>
           </div>
-        )}
       </div>
 
       {/* Product Info */}
-      {!isViewAll && (
-        <Link href={`/shop/${product.id}`}>
+      <Link href={`/shop/${product.id}`}>
           <h3 className="font-ui font-semibold text-sm text-burgundy group-hover:text-wine transition-colors mb-1 line-clamp-1">
             {product.name}
           </h3>
@@ -200,7 +184,40 @@ function ProductCard({ product, index, isViewAll }: { product: Product; index: n
             )}
           </div>
         </Link>
-      )}
+    </motion.div>
+  );
+}
+
+function ViewAllCard({ bgImage }: { bgImage?: string }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 40 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-50px' }}
+      transition={{ duration: 0.5 }}
+      className="group shrink-0 w-[75vw] sm:w-[280px] snap-center"
+    >
+      <div className="relative rounded-3xl overflow-hidden bg-champagne/30 mb-4 h-full aspect-square block">
+        {bgImage && (
+          <Image
+            src={bgImage}
+            alt="View All Background"
+            fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            className="object-cover opacity-60 group-hover:scale-105 transition duration-700"
+            unoptimized
+          />
+        )}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-burgundy/30 to-transparent z-0" />
+        <Link href="/shop" className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-burgundy/10 group-hover:bg-burgundy/30 transition duration-500">
+          <div className="w-14 h-14 rounded-full bg-white/20 border border-white/40 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 group-hover:bg-white/30 transition duration-300">
+            <ArrowRight size={22} className="text-white" />
+          </div>
+          <div className="text-center px-4">
+            <p className="font-heading font-bold text-xl text-white leading-tight">View All</p>
+            <p className="font-heading font-bold text-xl text-white/90 leading-tight">Collections</p>
+          </div>
+        </Link>
+      </div>
     </motion.div>
   );
 }
@@ -239,9 +256,9 @@ export default function TrendingProducts({ products = [] }: { products?: Product
               key={product.id}
               product={product}
               index={i}
-              isViewAll={i === products.length - 1}
             />
           ))}
+          <ViewAllCard bgImage={products.length > 0 ? products[products.length - 1].images[0] : undefined} />
           {/* Spacer for right edge on mobile */}
           <div className="w-1 shrink-0 sm:hidden"></div>
         </div>
