@@ -229,6 +229,14 @@ export default function AddProductPage() {
           const tokenResult = await getAdminTokenAction();
           if (!tokenResult.token) throw new Error(tokenResult.error || 'Admin auth failed');
 
+          // Append all images to the initial POST request formData
+          for (let i = 0; i < imageFiles.current.length; i++) {
+            const file = imageFiles.current[i];
+            const fileName = (file as File).name || `image-${i}.jpg`;
+            const mimeType = file.type || 'image/jpeg';
+            submitData.append('images', new File([file], fileName, { type: mimeType }));
+          }
+
           const PB_BASE = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pb.yarasl.shop'; 
 
           const createRes = await fetch(`${PB_BASE}/api/collections/products/records`, {
@@ -237,27 +245,11 @@ export default function AddProductPage() {
             body: submitData, 
           });
           
-          if (!createRes.ok) throw new Error('Create failed');
-          
-          const newProduct = await createRes.json();
-          
-          // Upload images sequentially
-          for (let i = 0; i < imageFiles.current.length; i++) {
-            const file = imageFiles.current[i];
-            const fileName = (file as File).name || `image-${i}.jpg`;
-            const mimeType = file.type || 'image/jpeg';
-            
-            const imageFormData = new FormData();
-            imageFormData.append('images', new File([file], fileName, { type: mimeType }));
-            
-            try {
-              await fetch(`${PB_BASE}/api/collections/products/records/${newProduct.id}`, {
-                method: 'PATCH',
-                headers: { Authorization: tokenResult.token },
-                body: imageFormData,
-              });
-            } catch (err) {}
+          if (!createRes.ok) {
+             console.error("Create failed:", await createRes.text());
+             throw new Error('Create failed');
           }
+          
           const { revalidateProductsAction } = await import('@/app/actions/products');
           await revalidateProductsAction();
           

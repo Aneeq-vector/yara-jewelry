@@ -306,21 +306,34 @@ export default function ProductsManager() {
             const tokenResult = await getAdminTokenAction();
             if (tokenResult.token) {
               const PB_BASE = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pb.yarasl.shop';
+              const imageFormData = new FormData();
+              
+              // Retain existing images by appending their filenames
+              if (editingProduct.images && editingProduct.images.length > 0) {
+                editingProduct.images.forEach(img => {
+                  imageFormData.append('images', img);
+                });
+              }
+              
+              // Append all new image files
               for (let i = 0; i < newImageFiles.current.length; i++) {
                 const file = newImageFiles.current[i];
                 const fileName = (file as File).name || `image-new-${i}.jpg`;
                 const mimeType = file.type || 'image/jpeg';
-                
-                const imageFormData = new FormData();
                 imageFormData.append('images', new File([file], fileName, { type: mimeType }));
-                
-                try {
-                  await fetch(`${PB_BASE}/api/collections/products/records/${editingProduct.id}`, {
-                    method: 'PATCH',
-                    headers: { Authorization: tokenResult.token },
-                    body: imageFormData,
-                  });
-                } catch (err) {}
+              }
+              
+              try {
+                const imgRes = await fetch(`${PB_BASE}/api/collections/products/records/${editingProduct.id}`, {
+                  method: 'PATCH',
+                  headers: { Authorization: tokenResult.token },
+                  body: imageFormData,
+                });
+                if (!imgRes.ok) {
+                   console.error("Image upload failed:", await imgRes.text());
+                }
+              } catch (err) {
+                console.error("Fetch error during image upload:", err);
               }
               const { revalidateProductsAction } = await import('@/app/actions/products');
               await revalidateProductsAction();
