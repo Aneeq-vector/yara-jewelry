@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter, redirect } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, 
   ShoppingBag, 
@@ -40,36 +40,35 @@ export default function AdminLayout({
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { user, isAuthenticated, logout } = useAdminAuthStore();
-  const [isClient, setIsClient] = useState(false);
-  const [hasHydrated, setHasHydrated] = useState(false);
+  const [ready, setReady] = useState(false);
 
-  useEffect(() => {
-    setIsClient(true);
-    setHasHydrated(useAdminAuthStore.persist.hasHydrated());
-    
-    const unsub = useAdminAuthStore.persist.onFinishHydration(() => {
-      setHasHydrated(true);
-    });
-    
-    return () => {
-      unsub();
-    };
+  useLayoutEffect(() => {
+    // Check hydration immediately — useLayoutEffect runs synchronously after DOM paint
+    if (useAdminAuthStore.persist.hasHydrated()) {
+      setReady(true);
+    } else {
+      const unsub = useAdminAuthStore.persist.onFinishHydration(() => {
+        setReady(true);
+        unsub();
+      });
+    }
   }, []);
 
-  // Prevent hydration mismatch or showing admin UI briefly before redirect
-  if (!isClient || !hasHydrated) {
-    return null;
-  }
+  if (!ready) return null;
 
   if (pathname === '/yara-admin/login') {
     if (isAuthenticated && user?.role === 'admin') {
-      redirect('/yara-admin');
+      router.push('/yara-admin');
+      return null;
     }
     return <>{children}</>;
   }
 
   if (!isAuthenticated || user?.role !== 'admin') {
-    if (pathname !== '/yara-admin/login') { redirect('/yara-admin/login'); }
+    if (pathname !== '/yara-admin/login') {
+      router.push('/yara-admin/login');
+      return null;
+    }
   }
 
   const handleLogout = async () => {

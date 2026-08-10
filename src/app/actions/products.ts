@@ -8,12 +8,12 @@ function toPlain<T>(data: T): T {
   return JSON.parse(JSON.stringify(data));
 }
 
-// Revalidate every page that shows products
+// Revalidate public-facing pages that display products.
+// Admin pages prefetch server-side so they don't need cache invalidation.
 function revalidateAll() {
-  revalidatePath('/', 'layout');
   revalidatePath('/shop', 'page');
   revalidatePath('/shop/[id]', 'page');
-  revalidatePath('/yara-admin/products', 'page');
+  revalidatePath('/', 'page'); // home page (trending products etc)
 }
 
 export async function getProductsAction() {
