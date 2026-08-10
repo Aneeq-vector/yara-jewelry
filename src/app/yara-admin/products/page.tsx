@@ -285,8 +285,12 @@ function ProductFormModal({
     fd.append('inStock', (form.inStock as boolean) ? 'true' : 'false');
     (form.colors as string[]).forEach(c => fd.append('colors', c));
     (form.tags as string[]).forEach(t => fd.append('tags', t));
-    (form.images as File[]).forEach(f => fd.append('images', f));
-    if (mode === 'edit') {
+    if (mode === 'add') {
+      // For new records, standard append works
+      (form.images as File[]).forEach(f => fd.append('images', f));
+    } else {
+      // For updates, use PocketBase array modifiers (+) and (-) to avoid conflict
+      (form.images as File[]).forEach(f => fd.append('images+', f));
       (form.deletedImages as string[]).forEach(img => fd.append('images-', img));
     }
 
@@ -310,7 +314,17 @@ function ProductFormModal({
       res = { success: true, product: record };
     } catch (err: any) {
       console.error('Direct upload error:', err);
-      const msg = err.response?.message || err.message || 'Failed to save product';
+      let msg = err.response?.message || err.message || 'Failed to save product';
+      
+      // Extract specific field errors from PocketBase validation
+      if (err.response?.data) {
+        const fields = Object.keys(err.response.data);
+        if (fields.length > 0) {
+          const fieldErrors = fields.map(f => `${f}: ${err.response.data[f]?.message}`).join(', ');
+          msg = `${msg} (${fieldErrors})`;
+        }
+      }
+      
       res = { error: msg };
     }
 
