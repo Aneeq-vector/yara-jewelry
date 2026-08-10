@@ -290,6 +290,7 @@ function ProductFormModal({
       (form.deletedImages as string[]).forEach(img => fd.append('images-', img));
     }
 
+    let res: any;
     try {
       // Get admin token to bypass server action limits and speed up uploads
       const tokenRes = await getAdminTokenAction();
