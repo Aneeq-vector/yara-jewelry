@@ -1,6 +1,9 @@
 import { getAdminClient } from '@/lib/pocketbase-server';
 import OrdersClient from './_OrdersClient';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function OrdersPage() {
   let initialOrders: any[] = [];
   let initialTotal = 0;

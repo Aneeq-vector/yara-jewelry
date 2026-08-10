@@ -2,6 +2,9 @@ import { getAdminClient } from '@/lib/pocketbase-server';
 import { Customer } from '@/lib/store/customers-store';
 import CustomersClient from './_CustomersClient';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function CustomersPage() {
   let initialCustomers: Customer[] = [];
   try {

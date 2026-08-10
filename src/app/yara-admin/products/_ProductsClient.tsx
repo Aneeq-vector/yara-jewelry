@@ -305,9 +305,9 @@ function ProductFormModal({
         (form.deletedImages as string[]).forEach(img => fd.append('images-', img));
       }
 
-      // Step 3: Upload directly to PocketBase using the safe PB_URL proxy
-      // Use PB_URL so the browser proxy handles it locally to prevent CORS/mixed content issues
-      const pbBaseUrl = PB_URL;
+      // Step 3: Upload directly to PocketBase API (bypasses Next.js 4.5MB limit)
+      // Do NOT use PB_URL because it maps to /pb and goes through Vercel's edge, crashing on large image uploads
+      const pbBaseUrl = (process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pb.yarasl.shop').replace(/\/$/, '');
       const url =
         mode === 'add'
           ? `${pbBaseUrl}/api/collections/products/records`
