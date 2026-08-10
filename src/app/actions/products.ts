@@ -4,6 +4,29 @@ import { getAdminClient, getServerClient, validateSession } from '@/lib/pocketba
 import { productSchema } from '@/lib/schemas';
 import { revalidatePath } from 'next/cache';
 
+export async function getProductsAction() {
+  try {
+    const pb = await getAdminClient();
+    const records = await pb.collection('products').getFullList({
+      sort: '-created',
+      expand: 'category',
+    });
+    return { success: true, products: structuredClone(records) };
+  } catch (error: any) {
+    console.error('Failed to fetch products:', error);
+    return { success: false, error: error.message || 'Failed to fetch products' };
+  }
+}
+
+export async function getCategoriesAction() {
+  try {
+    const pb = await getAdminClient();
+    const records = await pb.collection('categories').getFullList({ sort: 'name' });
+    return { success: true, categories: structuredClone(records) };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to fetch categories' };
+  }
+}
 
 export async function deleteProductAction(id: string) {
   try {
