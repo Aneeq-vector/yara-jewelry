@@ -29,7 +29,7 @@ import {
   revalidateProductsAction,
   getAdminTokenAction,
 } from '@/app/actions/products';
-import { PB_URL, createClient } from '@/lib/pocketbase';
+import { PB_URL } from '@/lib/pocketbase';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -269,63 +269,74 @@ function ProductFormModal({
     if (!validate()) return;
     setSaving(true);
 
-    const fd = new FormData();
-    if (form.productCode) fd.append('productCode', form.productCode.toString());
-    fd.append('name', form.name.toString());
-    fd.append('price', form.price.toString());
-    if (form.originalPrice) fd.append('originalPrice', form.originalPrice.toString());
-    fd.append('shortDescription', form.shortDescription.toString());
-    fd.append('description', form.description.toString());
-    if (form.category) fd.append('category', form.category.toString()); else fd.append('category', '');
-    fd.append('badge', form.badge.toString());
-    if (form.rating) fd.append('rating', form.rating.toString());
-    if (form.reviewCount) fd.append('reviewCount', form.reviewCount.toString());
-    if (form.material) fd.append('material', form.material.toString());
-    if (form.weight) fd.append('weight', form.weight.toString());
-    fd.append('inStock', (form.inStock as boolean) ? 'true' : 'false');
-    (form.colors as string[]).forEach(c => fd.append('colors', c));
-    (form.tags as string[]).forEach(t => fd.append('tags', t));
-    if (mode === 'add') {
-      // For new records, standard append works
-      (form.images as File[]).forEach(f => fd.append('images', f));
-    } else {
-      // For updates, use PocketBase array modifiers (+) and (-) to avoid conflict
-      (form.images as File[]).forEach(f => fd.append('images+', f));
-      (form.deletedImages as string[]).forEach(img => fd.append('images-', img));
-    }
-
     let res: any;
     try {
-      // Get admin token to bypass server action limits and speed up uploads
+      // Step 1: Get admin token + direct PocketBase URL from server
       const tokenRes = await getAdminTokenAction();
-      if (!tokenRes.token) throw new Error(tokenRes.error || 'Failed to get auth token for upload');
+      if (!tokenRes.token || !tokenRes.pbUrl) {
+        throw new Error(tokenRes.error || 'Could not get upload credentials');
+      }
 
-      const pb = createClient();
-      pb.authStore.save(tokenRes.token, null);
+      // Step 2: Build FormData
+      const fd = new FormData();
+      if (form.productCode) fd.append('productCode', form.productCode.toString());
+      fd.append('name', form.name.toString());
+      fd.append('price', form.price.toString());
+      if (form.originalPrice) fd.append('originalPrice', form.originalPrice.toString());
+      fd.append('shortDescription', form.shortDescription.toString());
+      fd.append('description', form.description.toString());
+      fd.append('category', form.category ? form.category.toString() : '');
+      fd.append('badge', form.badge.toString());
+      if (form.rating) fd.append('rating', form.rating.toString());
+      if (form.reviewCount) fd.append('reviewCount', form.reviewCount.toString());
+      if (form.material) fd.append('material', form.material.toString());
+      if (form.weight) fd.append('weight', form.weight.toString());
+      fd.append('inStock', (form.inStock as boolean) ? 'true' : 'false');
+      // Colors & tags — PocketBase accepts repeated keys for arrays
+      (form.colors as string[]).forEach(c => fd.append('colors', c));
+      (form.tags as string[]).forEach(t => fd.append('tags', t));
 
-      let record;
       if (mode === 'add') {
-        record = await pb.collection('products').create(fd);
+        // New product: append images directly
+        (form.images as File[]).forEach(f => fd.append('images', f));
       } else {
-        record = await pb.collection('products').update(product!.id, fd);
+        // Update: use `images+` to ADD files, `images-` to REMOVE by filename
+        (form.images as File[]).forEach(f => fd.append('images+', f));
+        (form.deletedImages as string[]).forEach(img => fd.append('images-', img));
       }
-      
+
+      // Step 3: Upload directly to PocketBase REST API (bypasses Next.js limits)
+      const pbBaseUrl = tokenRes.pbUrl.replace(/\/$/, '');
+      const url =
+        mode === 'add'
+          ? `${pbBaseUrl}/api/collections/products/records`
+          : `${pbBaseUrl}/api/collections/products/records/${product!.id}`;
+      const method = mode === 'add' ? 'POST' : 'PATCH';
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          Authorization: `Bearer ${tokenRes.token}`,
+        },
+        body: fd,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const details = data?.data
+          ? Object.entries(data.data).map(([k, v]: any) => `${k}: ${v?.message}`).join(', ')
+          : '';
+        throw new Error(data?.message || `HTTP ${response.status}${details ? ` (${details})` : ''}`);
+      }
+
+      // Step 4: Revalidate Next.js cache so shop page shows updates instantly
       await revalidateProductsAction();
-      res = { success: true, product: record };
+      res = { success: true, product: data };
+
     } catch (err: any) {
-      console.error('Direct upload error:', err);
-      let msg = err.response?.message || err.message || 'Failed to save product';
-      
-      // Extract specific field errors from PocketBase validation
-      if (err.response?.data) {
-        const fields = Object.keys(err.response.data);
-        if (fields.length > 0) {
-          const fieldErrors = fields.map(f => `${f}: ${err.response.data[f]?.message}`).join(', ');
-          msg = `${msg} (${fieldErrors})`;
-        }
-      }
-      
-      res = { error: msg };
+      console.error('Product save error:', err);
+      res = { error: err.message || 'Failed to save product' };
     }
 
     setSaving(false);

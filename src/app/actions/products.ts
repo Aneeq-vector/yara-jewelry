@@ -1,8 +1,20 @@
 'use server';
 
-import { getAdminClient, getServerClient, validateSession } from '@/lib/pocketbase-server';
-import { productSchema } from '@/lib/schemas';
+import { getAdminClient } from '@/lib/pocketbase-server';
 import { revalidatePath } from 'next/cache';
+
+// Safe serializer: converts PocketBase RecordModel → plain JSON
+function toPlain<T>(data: T): T {
+  return JSON.parse(JSON.stringify(data));
+}
+
+// Revalidate every page that shows products
+function revalidateAll() {
+  revalidatePath('/', 'layout');
+  revalidatePath('/shop', 'page');
+  revalidatePath('/shop/[id]', 'page');
+  revalidatePath('/yara-admin/products', 'page');
+}
 
 export async function getProductsAction() {
   try {
@@ -11,9 +23,9 @@ export async function getProductsAction() {
       sort: '-created',
       expand: 'category',
     });
-    return { success: true, products: structuredClone(records) };
+    return { success: true, products: toPlain(records) };
   } catch (error: any) {
-    console.error('Failed to fetch products:', error);
+    console.error('getProductsAction error:', error.message);
     return { success: false, error: error.message || 'Failed to fetch products' };
   }
 }
@@ -22,7 +34,7 @@ export async function getCategoriesAction() {
   try {
     const pb = await getAdminClient();
     const records = await pb.collection('categories').getFullList({ sort: 'name' });
-    return { success: true, categories: structuredClone(records) };
+    return { success: true, categories: toPlain(records) };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to fetch categories' };
   }
@@ -32,67 +44,23 @@ export async function deleteProductAction(id: string) {
   try {
     const pb = await getAdminClient();
     await pb.collection('products').delete(id);
-    revalidatePath('/', 'layout');
+    revalidateAll();
     return { success: true };
   } catch (error: any) {
-    return { error: error.message || 'Failed to delete product' };
+    return { success: false, error: error.message || 'Failed to delete product' };
   }
 }
 
 export async function deleteProductsAction(ids: string[]) {
   try {
     const pb = await getAdminClient();
-    await Promise.all(ids.map(id => pb.collection('products').delete(id).catch(e => console.error(`Failed to delete ${id}`, e))));
-    revalidatePath('/', 'layout');
+    await Promise.all(
+      ids.map(id => pb.collection('products').delete(id).catch(e => console.error(`Delete ${id} failed:`, e)))
+    );
+    revalidateAll();
     return { success: true };
   } catch (error: any) {
-    return { error: error.message || 'Failed to delete products' };
-  }
-}
-
-export async function updateProductDetailsAction(id: string, payloadStr: string) {
-  try {
-    const payload = JSON.parse(payloadStr);
-    const pb = await getAdminClient();
-    const record = await pb.collection('products').update(id, payload);
-    revalidatePath('/', 'layout');
-    return { success: true, product: structuredClone(record) };
-  } catch (error: any) {
-    console.error('Update Product Details Error:', error.message, error.data);
-    return { error: error.message || 'Failed to update product', details: error.data };
-  }
-}
-
-export async function updateProductWithFilesAction(id: string, formData: FormData) {
-  try {
-    const pb = await getAdminClient();
-    
-    // Convert FormData to standard PocketBase payload
-    // PocketBase's SDK natively handles FormData instances for file uploads!
-    const record = await pb.collection('products').update(id, formData);
-    revalidatePath('/', 'layout');
-    return { success: true, product: structuredClone(record) };
-  } catch (error: any) {
-    return { error: error.message || 'Failed to update product', details: error.data };
-  }
-}
-
-export async function createProductWithFilesAction(formData: FormData) {
-  try {
-    const adminEmail = process.env.POCKETBASE_ADMIN_EMAIL;
-    const adminPassword = process.env.POCKETBASE_ADMIN_PASSWORD;
-    if (!adminEmail || !adminPassword) {
-      return { error: `Missing env vars: EMAIL=${!!adminEmail} PASS=${!!adminPassword}`, details: {} };
-    }
-    const pb = await getAdminClient();
-    const record = await pb.collection('products').create(formData);
-    revalidatePath('/', 'layout');
-    return { success: true, product: structuredClone(record) };
-  } catch (error: any) {
-    const details = error?.data || error?.response?.data || {};
-    const msg = `[${error?.status || 'no-status'}] ${error?.message || 'unknown'}`;
-    console.error('CREATE PRODUCT ERROR:', msg, JSON.stringify(details));
-    return { error: msg, details };
+    return { success: false, error: error.message || 'Failed to delete products' };
   }
 }
 
@@ -100,34 +68,34 @@ export async function duplicateProductAction(id: string) {
   try {
     const pb = await getAdminClient();
     const original = await pb.collection('products').getOne(id);
-    
-    // Duplicate data
-    const newData: any = { ...original };
+    const newData: any = { ...toPlain(original) };
     delete newData.id;
     delete newData.created;
     delete newData.updated;
-    delete newData.images; // File duplication requires re-uploading
+    delete newData.images;
+    delete newData.collectionId;
+    delete newData.collectionName;
     newData.name = `${newData.name} (Copy)`;
-    
     const record = await pb.collection('products').create(newData);
-    revalidatePath('/', 'layout');
-    return { success: true, product: structuredClone(record) };
+    revalidateAll();
+    return { success: true, product: toPlain(record) };
   } catch (error: any) {
-    return { error: error.message || 'Failed to duplicate product', details: error.data };
+    return { success: false, error: error.message || 'Failed to duplicate product' };
   }
 }
 
-// Returns only the admin token so the browser can upload directly to PocketBase
-// This avoids sending large file payloads through Vercel's server action body size limit
-export async function getAdminTokenAction(): Promise<{ token?: string; error?: string }> {
+// Returns admin token so the browser can upload files DIRECTLY to PocketBase
+// (bypasses Next.js/Vercel body size limits and serialization overhead)
+export async function getAdminTokenAction(): Promise<{ token?: string; pbUrl?: string; error?: string }> {
   try {
     const pb = await getAdminClient();
-    return { token: pb.authStore.token };
+    const pbUrl = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pb.yarasl.shop';
+    return { token: pb.authStore.token, pbUrl };
   } catch (error: any) {
     return { error: error.message || 'Failed to get admin token' };
   }
 }
 
 export async function revalidateProductsAction() {
-  revalidatePath('/', 'layout');
+  revalidateAll();
 }
