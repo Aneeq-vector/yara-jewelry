@@ -25,12 +25,11 @@ import {
   getCategoriesAction,
   deleteProductAction,
   deleteProductsAction,
-  createProductWithFilesAction,
-  updateProductWithFilesAction,
   duplicateProductAction,
   revalidateProductsAction,
+  getAdminTokenAction,
 } from '@/app/actions/products';
-import { PB_URL } from '@/lib/pocketbase';
+import { PB_URL, createClient } from '@/lib/pocketbase';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -291,11 +290,27 @@ function ProductFormModal({
       (form.deletedImages as string[]).forEach(img => fd.append('images-', img));
     }
 
-    let res: any;
-    if (mode === 'add') {
-      res = await createProductWithFilesAction(fd);
-    } else {
-      res = await updateProductWithFilesAction(product!.id, fd);
+    try {
+      // Get admin token to bypass server action limits and speed up uploads
+      const tokenRes = await getAdminTokenAction();
+      if (!tokenRes.token) throw new Error(tokenRes.error || 'Failed to get auth token for upload');
+
+      const pb = createClient();
+      pb.authStore.save(tokenRes.token, null);
+
+      let record;
+      if (mode === 'add') {
+        record = await pb.collection('products').create(fd);
+      } else {
+        record = await pb.collection('products').update(product!.id, fd);
+      }
+      
+      await revalidateProductsAction();
+      res = { success: true, product: record };
+    } catch (err: any) {
+      console.error('Direct upload error:', err);
+      const msg = err.response?.message || err.message || 'Failed to save product';
+      res = { error: msg };
     }
 
     setSaving(false);
