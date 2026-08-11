@@ -17,7 +17,7 @@ export default async function ProductsPage() {
       pb.collection('products').getList(1, 10, { 
         sort: '-id', 
         expand: 'category',
-        fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,expand.category.id,expand.category.name'
+        fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,imagePositions,description,shortDescription,badge,colors,tags,material,weight,expand.category.id,expand.category.name'
       }),
       pb.collection('categories').getFullList({ sort: 'name' }),
     ]);

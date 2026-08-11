@@ -43,7 +43,7 @@ export async function getProductsAction(page = 1, perPage = 50, search = '', cat
       sort: sort,
       filter: filterString,
       expand: 'category',
-      fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,expand.category.id,expand.category.name', // Optimized fields payload
+      fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,imagePositions,description,shortDescription,badge,colors,tags,material,weight,expand.category.id,expand.category.name', // Optimized fields payload
     });
     return { success: true, products: toPlain(records.items), totalItems: records.totalItems, totalPages: records.totalPages };
   } catch (error: any) {
