@@ -12,7 +12,7 @@ export default async function ProductsPage() {
   try {
     const pb = await getAdminClient();
     const [products, categories] = await Promise.all([
-      pb.collection('products').getFullList({ sort: '-created', expand: 'category' }),
+      pb.collection('products').getFullList({ sort: '-id', expand: 'category' }),
       pb.collection('categories').getFullList({ sort: 'name' }),
     ]);
     initialProducts = JSON.parse(JSON.stringify(products));

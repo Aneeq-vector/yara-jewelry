@@ -239,7 +239,7 @@ function ProductFormModal({
   const handleImageFiles = (files: FileList | null) => {
     if (!files) return;
     const arr = Array.from(files).filter(f =>
-      ['image/jpeg', 'image/png', 'image/heic'].includes(f.type)
+      ['image/jpeg', 'image/png', 'image/heic', 'image/heif'].includes(f.type)
     );
     const total = (form.existingImages.length - form.deletedImages.length) + form.images.length + arr.length;
     if (total > 10) { addToast('Maximum 10 images allowed', 'error'); return; }
@@ -249,9 +249,14 @@ function ProductFormModal({
   const removeNewImage = (idx: number) =>
     set('images', (form.images as File[]).filter((_, i) => i !== idx));
 
+  // Use a single setForm call so both fields update atomically (avoids stale state from two separate set() calls)
   const removeExistingImage = (filename: string) => {
-    set('existingImages', (form.existingImages as string[]).filter(img => img !== filename));
-    set('deletedImages', [...(form.deletedImages as string[]), filename]);
+    setForm(prev => ({
+      ...prev,
+      existingImages: (prev.existingImages as string[]).filter(img => img !== filename),
+      deletedImages: [...(prev.deletedImages as string[]), filename],
+    }));
+    setErrors(prev => { const e = { ...prev }; delete e.existingImages; return e; });
   };
 
   const validate = (): boolean => {
@@ -516,7 +521,7 @@ function ProductFormModal({
               <Upload size={16} />
               Upload images
             </button>
-            <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/heic" multiple className="hidden" onChange={e => handleImageFiles(e.target.files)} />
+            <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/heic,image/heif" multiple className="hidden" onChange={e => handleImageFiles(e.target.files)} />
           </section>
 
           {/* Footer */}
@@ -661,10 +666,10 @@ export default function ProductsClient({
     }
   };
 
-  const handleSaved = (saved: RawProduct) => {
-    const savedProduct = saved as unknown as RawProduct;
-    if (formMode === 'add') setProducts(prev => [savedProduct, ...prev]);
-    else setProducts(prev => prev.map(p => p.id === savedProduct.id ? savedProduct : p));
+  const handleSaved = (_saved: RawProduct) => {
+    // Re-fetch the full list from PocketBase after any save so the UI is always in sync.
+    // This handles cases where the returned record is missing expanded fields (category name, etc.)
+    fetchAll();
     revalidateProductsAction();
   };
 
@@ -880,9 +885,11 @@ export default function ProductsClient({
                         <span className="text-xs text-burgundy/50 font-body">{formatDate(product.created)}</span>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {/* Always visible on mobile; fade-in on hover on desktop */}
+                        <div className="flex items-center justify-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                           <button
                             title="Edit"
+                            id={`edit-product-${product.id}`}
                             onClick={() => { setEditProduct(product); setFormMode('edit'); }}
                             className="p-2 text-burgundy/50 hover:text-burgundy hover:bg-rose-gold/10 rounded-lg transition-colors"
                           >
@@ -890,6 +897,7 @@ export default function ProductsClient({
                           </button>
                           <button
                             title="Duplicate"
+                            id={`duplicate-product-${product.id}`}
                             onClick={() => handleDuplicate(product.id)}
                             className="p-2 text-burgundy/50 hover:text-burgundy hover:bg-rose-gold/10 rounded-lg transition-colors"
                           >
@@ -897,6 +905,7 @@ export default function ProductsClient({
                           </button>
                           <button
                             title="Delete"
+                            id={`delete-product-${product.id}`}
                             onClick={() => confirmDelete(product.id, product.name)}
                             className="p-2 text-burgundy/50 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                           >

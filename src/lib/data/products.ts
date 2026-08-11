@@ -38,7 +38,6 @@ export async function getAllProducts(): Promise<Product[]> {
     const records = await pb.collection('products').getFullList({
       expand: 'category',
       $autoCancel: false,
-      timestamp: Date.now() // Cache busting
     });
     return records.map(mapRecordToProduct);
   } catch (error) {

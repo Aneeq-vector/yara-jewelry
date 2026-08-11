@@ -39,3 +39,18 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# temporary fix/refactor/test scripts (development artifacts)
+fix_*.py
+refactor_*.py
+split_*.py
+test_*.py
+test_*.ts
+test-*.mjs
+test-*.js
+update_*.py
+*.doctor_out.txt
+doctor_output.txt
+react_doctor_report.json
+img*.txt
+CLAUDE.md

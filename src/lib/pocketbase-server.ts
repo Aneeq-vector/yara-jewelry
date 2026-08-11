@@ -7,6 +7,12 @@ export async function getServerClient() {
   const cookieStore = await cookies();
   const pb = new PocketBase(PB_URL);
   
+  // Disable Next.js aggressive fetch caching
+  pb.beforeSend = function (url, options) {
+    options.cache = 'no-store';
+    return { url, options };
+  };
+  
   // Load the auth store from the cookie if it exists
   const pbAuthCookie = cookieStore.get('pb_auth');
   if (pbAuthCookie && pbAuthCookie.value) {
@@ -38,6 +44,11 @@ export async function getServerClient() {
 export async function getAdminPanelClient() {
   const cookieStore = await cookies();
   const pb = new PocketBase(PB_URL);
+  
+  pb.beforeSend = function (url, options) {
+    options.cache = 'no-store';
+    return { url, options };
+  };
   
   const pbAuthCookie = cookieStore.get('pb_admin_auth');
   if (pbAuthCookie && pbAuthCookie.value) {
@@ -99,6 +110,11 @@ export async function getAdminClient() {
   }
 
   const pb = new PocketBase(PB_URL);
+  
+  pb.beforeSend = function (url, options) {
+    options.cache = 'no-store';
+    return { url, options };
+  };
 
   const adminEmail = process.env.POCKETBASE_ADMIN_EMAIL;
   const adminPassword = process.env.POCKETBASE_ADMIN_PASSWORD;
@@ -107,8 +123,8 @@ export async function getAdminClient() {
     throw new Error('PocketBase admin credentials are not set in .env');
   }
 
-  // Authenticate as admin and cache the result
-  await pb.admins.authWithPassword(adminEmail, adminPassword);
+  // Authenticate as superuser (PocketBase v0.23+ replaced pb.admins with _superusers collection)
+  await pb.collection('_superusers').authWithPassword(adminEmail, adminPassword);
 
   _adminClientCache = { pb, expiresAt: now + CACHE_TTL_MS };
 

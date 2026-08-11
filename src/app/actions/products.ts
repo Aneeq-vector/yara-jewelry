@@ -20,7 +20,7 @@ export async function getProductsAction() {
   try {
     const pb = await getAdminClient();
     const records = await pb.collection('products').getFullList({
-      sort: '-created',
+      sort: '-id',
       expand: 'category',
     });
     return { success: true, products: toPlain(records) };
