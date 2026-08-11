@@ -83,7 +83,7 @@ export default function AdminLayout({
   };
 
   return (
-    <div className="min-h-screen bg-ivory flex">
+    <div className="flex h-[100dvh] bg-ivory overflow-hidden">
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <button 
@@ -96,9 +96,9 @@ export default function AdminLayout({
 
       {/* Sidebar */}
       <aside 
-        className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-64 bg-white border-r border-burgundy/10 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed lg:relative z-50 h-full w-64 bg-white border-r border-burgundy/10 transform transition-transform duration-300 ease-in-out ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-        } flex flex-col`}
+        } flex flex-col shrink-0`}
       >
         <div className="p-6 flex items-center justify-between">
           <Link href="/yara-admin" className="flex items-center gap-2">
@@ -143,7 +143,7 @@ export default function AdminLayout({
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0">
+      <main className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto relative">
         {/* Header */}
         <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-burgundy/10 px-4 sm:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
