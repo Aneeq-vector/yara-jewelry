@@ -241,13 +241,22 @@ export default function TrendingProducts({ products = [] }: { products?: Product
           transition={{ duration: 0.7 }}
           className="mb-12"
         >
-          <div>
-            <span className="font-ui text-xs font-semibold uppercase tracking-[0.2em] text-rose-gold mb-3 block">
-              Most Loved
-            </span>
-            <h2 className="font-heading text-4xl sm:text-5xl font-bold text-burgundy">
-              Trending Now
-            </h2>
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <div>
+              <span className="font-ui text-xs font-semibold uppercase tracking-[0.2em] text-rose-gold mb-3 block">
+                Most Loved
+              </span>
+              <h2 className="font-heading text-4xl sm:text-5xl font-bold text-burgundy">
+                Trending Now
+              </h2>
+            </div>
+            <Link 
+              href="/shop" 
+              className="hidden sm:flex items-center gap-2 text-burgundy/80 hover:text-burgundy font-ui font-semibold text-sm transition-colors group"
+            >
+              View All Collections
+              <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+            </Link>
           </div>
         </motion.div>
 
