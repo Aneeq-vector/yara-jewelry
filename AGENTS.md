@@ -7,3 +7,6 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+# GitHub Auto-Push Rule
+- Whenever you successfully complete a set of changes for a task, you MUST automatically commit and push the changes to GitHub without asking for explicit permission. Use meaningful commit messages that summarize what was changed.
