@@ -1108,7 +1108,7 @@ export default function ProductsClient({
         </div>
 
         {/* Footer Pagination */}
-        {!loading && products.length > 0 && (
+        {!loading && (
           <ProductsPagination 
             rowsPerPage={rowsPerPage} 
             setRowsPerPage={setRowsPerPage} 

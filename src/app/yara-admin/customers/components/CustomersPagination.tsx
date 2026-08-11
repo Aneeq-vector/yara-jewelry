@@ -79,7 +79,7 @@ export function CustomersPagination({
                 <PaginationNext 
                   href="#" 
                   onClick={(e) => { e.preventDefault(); handlePageChange(currentPage + 1); }}
-                  className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
+                  className={currentPage >= totalPages ? 'pointer-events-none opacity-50' : ''}
                 />
               </PaginationItem>
             </PaginationContent>
