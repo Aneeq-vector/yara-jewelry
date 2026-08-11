@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { CustomersPagination } from './components/CustomersPagination';
 import { AddressModal } from './components/AddressModal';
 import { CustomersTable } from './components/CustomersTable';
@@ -51,7 +51,13 @@ export default function CustomersClient({ initialCustomers, initialTotalItems = 
     onConfirm: () => {},
   });
 
+  const isFirstRender = useRef(true);
+
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     const handler = setTimeout(() => {
       fetchCustomers();
     }, 300);

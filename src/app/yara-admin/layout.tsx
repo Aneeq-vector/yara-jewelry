@@ -54,22 +54,28 @@ export default function AdminLayout({
     }
   }, []);
 
-  if (!ready) return null;
+  useEffect(() => {
+    if (!ready) return;
 
-  if (pathname === '/yara-admin/login') {
-    if (isAuthenticated && user?.role === 'admin') {
-      router.push('/yara-admin');
-      return null;
+    if (pathname === '/yara-admin/login') {
+      if (isAuthenticated && user?.role === 'admin') {
+        router.push('/yara-admin');
+      }
+    } else {
+      if (!isAuthenticated || user?.role !== 'admin') {
+        router.push('/yara-admin/login');
+      }
     }
+  }, [ready, pathname, isAuthenticated, user, router]);
+
+  if (!ready) return null;
+  
+  if (pathname === '/yara-admin/login') {
+    if (isAuthenticated && user?.role === 'admin') return null;
     return <>{children}</>;
   }
 
-  if (!isAuthenticated || user?.role !== 'admin') {
-    if (pathname !== '/yara-admin/login') {
-      router.push('/yara-admin/login');
-      return null;
-    }
-  }
+  if (!isAuthenticated || user?.role !== 'admin') return null;
 
   const handleLogout = async () => {
     try {

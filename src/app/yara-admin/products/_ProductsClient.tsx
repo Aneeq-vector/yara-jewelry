@@ -771,8 +771,14 @@ export default function ProductsClient({
   const [totalItems, setTotalItems] = useState(initialTotalItems);
   const [totalPages, setTotalPages] = useState(initialTotalPages);
   
+  const isFirstRender = useRef(true);
+
   // Debounced search logic
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     const handler = setTimeout(() => {
       fetchData();
     }, 300);
