@@ -75,18 +75,19 @@ export async function sendInvoiceEmail(details: InvoiceDetails) {
            meta = attrMatch[2];
          }
       }
+      
+      // Remove product code (e.g. "(YR-12345)") from the title
+      titleMain = titleMain.replace(/\s*\([^)]+\)$/, '').trim();
 
       itemsHtml += `
         <tr>
           <td style="padding: 20px 0; border-bottom: 1px solid #eee;">
             <table width="100%" border="0" cellspacing="0" cellpadding="0">
               <tr>
-                <td width="40" valign="top">
-                  <div style="background-color: #fdf9f6; border: 1px solid #e8d9d0; color: #4a1c27; font-size: 11px; font-weight: bold; width: 26px; height: 26px; border-radius: 50%; text-align: center; line-height: 26px;">${quantity}</div>
-                </td>
                 <td valign="top" style="padding-right: 15px;">
                   <p style="margin: 0; color: #4a1c27; font-size: 14px; font-weight: 600;">${titleMain}</p>
-                  ${meta ? `<p style="margin: 5px 0 0 0; color: #888888; font-size: 12px; line-height: 1.4;">${meta}</p>` : ''}
+                  <p style="margin: 5px 0 0 0; color: #4a1c27; font-size: 12px; font-weight: 500;">Qty: ${quantity}</p>
+                  ${meta ? `<p style="margin: 4px 0 0 0; color: #888888; font-size: 12px; line-height: 1.4;">${meta}</p>` : ''}
                 </td>
                 <td width="90" valign="top" align="right">
                   <p style="margin: 0; color: #4a1c27; font-size: 14px; font-weight: 600;">Rs. ${price}</p>
