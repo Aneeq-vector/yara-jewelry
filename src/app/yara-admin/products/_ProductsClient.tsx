@@ -310,13 +310,15 @@ function ProductFormModal({
         (form.deletedImages as string[]).forEach(img => fd.append('images-', img));
       }
 
-      // Step 3: Upload directly to PocketBase API (bypasses Next.js 4.5MB limit)
-      // Do NOT use PB_URL because it maps to /pb and goes through Vercel's edge, crashing on large image uploads
-      const pbBaseUrl = (process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pb.yarasl.shop').replace(/\/$/, '');
+      // Step 3: Upload via the /pb rewrite proxy (defined in next.config.ts).
+      // This keeps the request same-origin (avoids browser CORS errors when the
+      // Authorization header triggers a preflight to https://pb.yarasl.shop).
+      // Next.js rewrites stream the body server→PocketBase, so there is no
+      // serverActions bodySizeLimit applied here — large image uploads work fine.
       const url =
         mode === 'add'
-          ? `${pbBaseUrl}/api/collections/products/records`
-          : `${pbBaseUrl}/api/collections/products/records/${product!.id}`;
+          ? `/pb/api/collections/products/records`
+          : `/pb/api/collections/products/records/${product!.id}`;
       const method = mode === 'add' ? 'POST' : 'PATCH';
 
       const response = await fetch(url, {
