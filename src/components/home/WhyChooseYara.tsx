@@ -43,7 +43,7 @@ export default function WhyChooseYara() {
             >
               <div className="wy-eyebrow">
                 <span className="wy-eyebrow-dot" />
-                <span className="wy-eyebrow-label">Why Yara</span>
+                <span className="wy-eyebrow-label">Why Yara Jewellery</span>
               </div>
 
               <h2 className="wy-heading">

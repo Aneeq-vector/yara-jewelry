@@ -7,9 +7,13 @@ import MotionProvider from "@/components/layout/MotionProvider";
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
-  title: "Yara - Crafted For Elegance",
+  metadataBase: new URL("https://yarasl.shop"),
+  title: {
+    default: "Yara Jewellery Sri Lanka | Elegant Jewellery & Gifts",
+    template: "%s | Yara Jewellery",
+  },
   description:
-    "Discover Yara's collection of premium imitation jewelry. Elegant earrings, necklaces, rings, bracelets & curated sets designed to elevate every moment.",
+    "Shop elegant jewellery, necklaces, pendants and gift boxes from Yara Jewellery Sri Lanka. Discover timeless pieces with islandwide delivery.",
   keywords: [
     "imitation jewelry",
     "fashion jewelry",
@@ -19,11 +23,17 @@ export const metadata: Metadata = {
     "rings",
     "bracelets",
     "affordable luxury",
+    "sri lanka",
+    "gift boxes",
   ],
   openGraph: {
-    title: "Yara - Crafted For Elegance",
-    description: "Premium imitation jewelry designed to elevate every moment.",
+    title: "Yara Jewellery Sri Lanka | Elegant Jewellery & Gifts",
+    description:
+      "Shop elegant jewellery, necklaces, pendants and gift boxes from Yara Jewellery Sri Lanka. Discover timeless pieces with islandwide delivery.",
     type: "website",
+    url: "https://yarasl.shop",
+    siteName: "Yara Jewellery",
+    locale: "en_LK",
   },
 };
 
