@@ -57,6 +57,7 @@ export interface RawProduct {
   reviewCount?: number;
   material?: string;
   weight?: string;
+  quantity?: number;
   inStock?: boolean;
   colors?: string[];
   tags?: string[];
@@ -113,6 +114,7 @@ function emptyForm() {
     reviewCount: '',
     material: '',
     weight: '',
+    quantity: '',
     inStock: true,
     colors: [] as string[],
     tags: [] as string[],
@@ -214,6 +216,7 @@ function ProductFormModal({
         reviewCount: product.reviewCount?.toString() ?? '',
         material: product.material ?? '',
         weight: product.weight ?? '',
+        quantity: product.quantity?.toString() ?? '',
         inStock: product.inStock ?? true,
         colors: product.colors ?? [],
         tags: product.tags ?? [],
@@ -295,6 +298,7 @@ function ProductFormModal({
       if (form.reviewCount) fd.append('reviewCount', form.reviewCount.toString());
       if (form.material) fd.append('material', form.material.toString());
       if (form.weight) fd.append('weight', form.weight.toString());
+      if (form.quantity) fd.append('quantity', form.quantity.toString());
       fd.append('inStock', (form.inStock as boolean) ? 'true' : 'false');
       // Colors & tags — PocketBase accepts repeated keys for arrays
       (form.colors as string[]).forEach(c => fd.append('colors', c));
@@ -435,6 +439,10 @@ function ProductFormModal({
               <div>
                 <label className="block text-xs font-ui font-semibold text-burgundy/70 uppercase tracking-wide mb-1">Original Price (Rs.)</label>
                 <input aria-label="Original price" type="number" min={0} step="0.01" placeholder="0.00" value={form.originalPrice.toString()} onChange={e => set('originalPrice', e.target.value)} className={inp('originalPrice')} />
+              </div>
+              <div>
+                <label className="block text-xs font-ui font-semibold text-burgundy/70 uppercase tracking-wide mb-1">Quantity</label>
+                <input aria-label="Quantity" type="number" min={0} step="1" placeholder="0" value={form.quantity.toString()} onChange={e => set('quantity', e.target.value)} className={inp('quantity')} />
               </div>
             </div>
           </section>
@@ -821,7 +829,7 @@ export default function ProductsClient({
                 <th className="px-4 py-3 text-left text-xs font-ui font-semibold text-burgundy/50 uppercase tracking-wider">Price</th>
                 <th className="px-4 py-3 text-left text-xs font-ui font-semibold text-burgundy/50 uppercase tracking-wider">Rating</th>
                 <th className="px-4 py-3 text-left text-xs font-ui font-semibold text-burgundy/50 uppercase tracking-wider">Stock</th>
-                <th className="px-4 py-3 text-left text-xs font-ui font-semibold text-burgundy/50 uppercase tracking-wider">Added</th>
+                <th className="px-4 py-3 text-left text-xs font-ui font-semibold text-burgundy/50 uppercase tracking-wider">Quantity</th>
                 <th className="px-4 py-3 text-center text-xs font-ui font-semibold text-burgundy/50 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -921,7 +929,7 @@ export default function ProductsClient({
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-xs text-burgundy/50 font-body">{formatDate(product.created)}</span>
+                        <span className="text-sm font-ui font-semibold text-burgundy">{product.quantity ?? 0}</span>
                       </td>
                       <td className="px-4 py-3">
                         {/* Always visible on mobile; fade-in on hover on desktop */}

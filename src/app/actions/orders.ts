@@ -26,6 +26,33 @@ export async function createOrderAction(formData: FormData) {
     // Create the order in PocketBase
     const record = await pb.collection('orders').create(formData);
     
+    // Automatically reduce product quantity in stock
+    try {
+      const adminPb = await getAdminClient();
+      const cartDetailsStr = formData.get('cartDetails') as string;
+      if (cartDetailsStr) {
+        const cartItems = JSON.parse(cartDetailsStr);
+        for (const item of cartItems) {
+          if (item.product?.id && item.quantity) {
+            const prodId = item.product.id;
+            try {
+              const productRecord = await adminPb.collection('products').getOne(prodId);
+              const currentQty = productRecord.quantity || 0;
+              const newQty = Math.max(0, currentQty - item.quantity);
+              await adminPb.collection('products').update(prodId, {
+                quantity: newQty,
+                inStock: newQty > 0
+              });
+            } catch (err) {
+              console.error(`Failed to update quantity for product ${prodId}:`, err);
+            }
+          }
+        }
+      }
+    } catch (stockError) {
+      console.error('Failed to parse cart details for stock deduction:', stockError);
+    }
+    
     // Send Invoice Email
     try {
       const email = formData.get('email') as string;
