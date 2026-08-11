@@ -1052,8 +1052,7 @@ export default function ProductsClient({
                         <span className="text-sm font-ui font-semibold text-burgundy">{product.quantity ?? 0}</span>
                       </td>
                       <td className="px-4 py-3">
-                        {/* Always visible on mobile; fade-in on hover on desktop */}
-                        <div className="flex items-center justify-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center justify-center gap-1 transition-opacity">
                           <button
                             title="Edit"
                             id={`edit-product-${product.id}`}
