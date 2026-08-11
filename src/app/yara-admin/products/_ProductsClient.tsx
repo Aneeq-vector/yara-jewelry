@@ -90,7 +90,7 @@ type ToastType = 'success' | 'error' | 'info';
 interface Toast { id: number; message: string; type: ToastType }
 
 const BADGE_OPTIONS = ['trending', 'best-seller', 'limited', 'new'];
-const COLOR_OPTIONS = ['Gold', 'Silver', 'Rose Gold', 'Platinum', 'Black'];
+const COLOR_OPTIONS = ['Gold', 'Silver', 'Rose Gold', 'Platinum', 'Black', 'Yellow', 'Purple', 'Green', 'Pink'];
 const TAG_OPTIONS = [
   'necklace','gold','minimalist','earrings','rings','bracelets',
   'silver','diamonds','pearls','bestseller','new','sale','trendy','classic','bridal',
