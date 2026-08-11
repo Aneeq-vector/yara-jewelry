@@ -9,11 +9,11 @@ const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 export const metadata: Metadata = {
   metadataBase: new URL("https://yarasl.shop"),
   title: {
-    default: "Yara Jewellery Sri Lanka | Elegant Jewellery & Gifts",
-    template: "%s | Yara Jewellery",
+    default: "Yara Jewelry Sri Lanka | Elegant Jewelry & Gifts",
+    template: "%s | Yara Jewelry",
   },
   description:
-    "Shop elegant jewellery, necklaces, pendants and gift boxes from Yara Jewellery Sri Lanka. Discover timeless pieces with islandwide delivery.",
+    "Shop elegant jewelry, necklaces, pendants and gift boxes from Yara Jewelry Sri Lanka. Discover timeless pieces with islandwide delivery.",
   keywords: [
     "imitation jewelry",
     "fashion jewelry",
@@ -27,12 +27,12 @@ export const metadata: Metadata = {
     "gift boxes",
   ],
   openGraph: {
-    title: "Yara Jewellery Sri Lanka | Elegant Jewellery & Gifts",
+    title: "Yara Jewelry Sri Lanka | Elegant Jewelry & Gifts",
     description:
-      "Shop elegant jewellery, necklaces, pendants and gift boxes from Yara Jewellery Sri Lanka. Discover timeless pieces with islandwide delivery.",
+      "Shop elegant jewelry, necklaces, pendants and gift boxes from Yara Jewelry Sri Lanka. Discover timeless pieces with islandwide delivery.",
     type: "website",
     url: "https://yarasl.shop",
-    siteName: "Yara Jewellery",
+    siteName: "Yara Jewelry",
     locale: "en_LK",
   },
 };

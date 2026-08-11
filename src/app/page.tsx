@@ -34,7 +34,7 @@ export default async function HomePage() {
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "WebSite",
-            name: "Yara Jewellery",
+            name: "Yara Jewelry",
             alternateName: "Yara",
             url: "https://yarasl.shop/",
           }),
@@ -46,7 +46,7 @@ export default async function HomePage() {
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "Organization",
-            name: "Yara Jewellery",
+            name: "Yara Jewelry",
             url: "https://yarasl.shop/",
             logo: "https://yarasl.shop/images/yara-logo.png",
             sameAs: [
