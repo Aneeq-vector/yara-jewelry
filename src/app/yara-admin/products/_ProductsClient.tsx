@@ -304,14 +304,26 @@ function ProductFormModal({
         (form.deletedImages as string[]).forEach(img => fd.append('images-', img));
       }
 
-      // POST to our server-side proxy — admin auth added server-side, no CORS issues
+      // Step 1: Get admin token from server action
+      const tokenRes = await getAdminTokenAction();
+      if (!tokenRes?.token) {
+        throw new Error(tokenRes?.error || 'Could not get upload credentials');
+      }
+
+      // Step 2: Upload via the Next.js rewrite proxy (/pb/...).
+      // Next.js rewrites stream the request directly via http-proxy, bypassing
+      // the strict body parser limits that affect Next.js API Route Handlers.
       const proxyUrl =
         mode === 'add'
-          ? `/api/pb-proxy?mode=add`
-          : `/api/pb-proxy?mode=edit&id=${product!.id}`;
+          ? `/pb/api/collections/products/records`
+          : `/pb/api/collections/products/records/${product!.id}`;
+      const method = mode === 'add' ? 'POST' : 'PATCH';
 
       const response = await fetch(proxyUrl, {
-        method: 'POST',
+        method,
+        headers: {
+          Authorization: `Bearer ${tokenRes.token}`,
+        },
         body: fd,
       });
 
@@ -320,7 +332,7 @@ function ProductFormModal({
       try {
         data = JSON.parse(text);
       } catch (err) {
-        console.error('Non-JSON response from proxy:', text.substring(0, 500));
+        console.error('Non-JSON response from rewrite:', text.substring(0, 500));
         throw new Error(`Server returned an invalid response. Status: ${response.status}`);
       }
 
