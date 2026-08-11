@@ -153,7 +153,7 @@ export async function sendInvoiceEmail(details: InvoiceDetails) {
                         <p style="color: #4a1c27; font-size: 14px; font-weight: 600; margin: 0;">${details.orderId}</p>
                         
                         <h3 style="color: #c9856a; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; margin-top: 25px;">Order Date</h3>
-                        <p style="color: #4a1c27; font-size: 14px; font-weight: 500; margin: 0;">${new Date(details.orderDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                        <p style="color: #4a1c27; font-size: 14px; font-weight: 500; margin: 0; padding-bottom: 25px;">${new Date(details.orderDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
                       </td>
                       <td class="desktop-split mobile-margin" width="50%" style="vertical-align: top; display: inline-block;">
                         <h3 style="color: #c9856a; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; margin-top: 0;">Shipping Address</h3>
