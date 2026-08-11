@@ -39,6 +39,7 @@ import {
   GripVertical,
 } from 'lucide-react';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { ProductsPagination } from './components/ProductsPagination';
 import {
   getProductsAction,
   getCategoriesAction,
@@ -1106,28 +1107,18 @@ export default function ProductsClient({
           </table>
         </div>
 
-        {/* Footer count */}
+        {/* Footer Pagination */}
         {!loading && products.length > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 text-sm text-burgundy/60 font-body">
-            <span>Showing {(currentPage - 1) * 20 + 1}-{Math.min(currentPage * 20, totalItems)} of {totalItems} products (Page {currentPage} of {totalPages})</span>
-            <div className="flex items-center gap-2">
-              {selectedIds.size > 0 && <span className="mr-4">{selectedIds.size} selected</span>}
-              <button 
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1.5 rounded-lg border border-burgundy/10 hover:bg-burgundy/5 disabled:opacity-50 transition-colors"
-              >
-                Previous
-              </button>
-              <button 
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1.5 rounded-lg border border-burgundy/10 hover:bg-burgundy/5 disabled:opacity-50 transition-colors"
-              >
-                Next
-              </button>
-            </div>
-          </div>
+          <ProductsPagination 
+            rowsPerPage={rowsPerPage} 
+            setRowsPerPage={setRowsPerPage} 
+            setCurrentPage={setCurrentPage} 
+            currentPage={currentPage} 
+            totalPages={totalPages} 
+            handlePageChange={(p: number) => setCurrentPage(p)} 
+            totalItems={totalItems} 
+            selectedCount={selectedIds.size}
+          />
         )}
       </div>
 
