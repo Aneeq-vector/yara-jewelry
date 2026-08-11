@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import imageCompression from 'browser-image-compression';
 import Image from 'next/image';
 import {
   Plus,
@@ -299,12 +300,30 @@ function ProductFormModal({
       (form.colors as string[]).forEach(c => fd.append('colors', c));
       (form.tags as string[]).forEach(t => fd.append('tags', t));
 
+      // Compress images before upload to ensure lightning-fast saves
+      const options = {
+        maxSizeMB: 1, // Max size 1MB per image
+        maxWidthOrHeight: 1920, // Max 1920px width/height
+        useWebWorker: true,
+      };
+
+      const compressedImages = await Promise.all(
+        (form.images as File[]).map(async (file) => {
+          try {
+            return await imageCompression(file, options);
+          } catch (error) {
+            console.error('Image compression failed for', file.name, error);
+            return file; // fallback to original if compression fails
+          }
+        })
+      );
+
       if (mode === 'add') {
         // New product: append images directly
-        (form.images as File[]).forEach(f => fd.append('images', f));
+        compressedImages.forEach(f => fd.append('images', f, f.name));
       } else {
         // Update: use `images+` to ADD files, `images-` to REMOVE by filename
-        (form.images as File[]).forEach(f => fd.append('images+', f));
+        compressedImages.forEach(f => fd.append('images+', f, f.name));
         (form.deletedImages as string[]).forEach(img => fd.append('images-', img));
       }
 
