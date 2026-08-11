@@ -195,7 +195,7 @@ function ProductFormModal({
   product?: RawProduct;
   categories: RawCategory[];
   onClose: () => void;
-  onSaved: (p: RawProduct) => void;
+  onSaved: (p: RawProduct, mode: 'add' | 'edit') => void;
   addToast: (msg: string, type: ToastType) => void;
 }) {
   const [form, setForm] = useState<FormState>(() => {
@@ -348,8 +348,8 @@ function ProductFormModal({
         throw new Error(data?.message || data?.error || `HTTP ${response.status}${details ? ` (${details})` : ''}`);
       }
 
-      // Revalidate Next.js cache so shop page shows updates instantly
-      await revalidateProductsAction();
+      // Revalidate Next.js cache in the background (don't block UI)
+      revalidateProductsAction().catch(console.error);
       res = { success: true, product: data };
 
     } catch (err: any) {
@@ -360,7 +360,7 @@ function ProductFormModal({
     setSaving(false);
     if (res?.success && res.product) {
       addToast(mode === 'add' ? 'Product created!' : 'Product updated!', 'success');
-      onSaved(res.product as RawProduct);
+      onSaved(res.product as RawProduct, mode);
       onClose();
     } else {
       addToast(res?.error || 'Failed to save product', 'error');
@@ -678,11 +678,19 @@ export default function ProductsClient({
     }
   };
 
-  const handleSaved = (_saved: RawProduct) => {
-    // Re-fetch the full list from PocketBase after any save so the UI is always in sync.
-    // This handles cases where the returned record is missing expanded fields (category name, etc.)
-    fetchAll();
-    revalidateProductsAction();
+  const handleSaved = (_saved: RawProduct, mode: 'add' | 'edit') => {
+    // 1. Optimistic UI Update: instantly update the local state so the user sees no delay!
+    if (mode === 'add') {
+      setProducts(prev => [_saved, ...prev]);
+    } else {
+      setProducts(prev => prev.map(p => p.id === _saved.id ? _saved : p));
+    }
+
+    // 2. Background Sync (Silent): Fetch from DB to populate relational data (e.g., category names)
+    // We do NOT set loading=true here so the user isn't interrupted.
+    getProductsAction().then(res => {
+      if (res.success && res.products) setProducts(res.products as unknown as RawProduct[]);
+    });
   };
 
   const categoryName = (id?: string) =>
