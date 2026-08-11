@@ -185,8 +185,6 @@ function ChipPicker({
 }: {
   label: string; options: string[]; selected: string[]; onChange: (v: string[]) => void; limit?: number;
 }) {
-  const [customVal, setCustomVal] = useState('');
-
   const toggle = (opt: string) => {
     if (selected.includes(opt)) {
       onChange(selected.filter(s => s !== opt));
@@ -196,25 +194,11 @@ function ChipPicker({
     }
   };
 
-  const handleAddCustom = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && customVal.trim()) {
-      e.preventDefault();
-      const val = customVal.trim();
-      if (!selected.includes(val)) {
-        if (limit && selected.length >= limit) return;
-        onChange([...selected, val]);
-      }
-      setCustomVal('');
-    }
-  };
-
-  const allOptions = Array.from(new Set([...options, ...selected]));
-
   return (
     <div>
       <label className="block text-xs font-ui font-semibold text-burgundy/70 uppercase tracking-wide mb-2">{label}</label>
-      <div className="flex flex-wrap gap-2 items-center">
-        {allOptions.map(opt => (
+      <div className="flex flex-wrap gap-2">
+        {options.map(opt => (
           <button
             key={opt}
             type="button"
@@ -228,14 +212,6 @@ function ChipPicker({
             {opt}
           </button>
         ))}
-        <input 
-          type="text" 
-          value={customVal}
-          onChange={(e) => setCustomVal(e.target.value)}
-          onKeyDown={handleAddCustom}
-          placeholder="+ Add custom..."
-          className="px-3 py-1 rounded-full text-xs font-body border border-burgundy/20 bg-transparent text-burgundy/70 focus:outline-none focus:border-burgundy/50 w-28"
-        />
       </div>
     </div>
   );
