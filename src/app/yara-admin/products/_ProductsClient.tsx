@@ -36,6 +36,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Copy,
+  GripVertical,
 } from 'lucide-react';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import {
@@ -664,14 +665,12 @@ function SortableImageItem({
     <div
       ref={setNodeRef}
       style={style}
-      className="relative w-28 h-28 rounded-xl overflow-hidden border-2 border-burgundy/10 group cursor-grab active:cursor-grabbing bg-gray-100"
+      className="relative w-28 h-28 rounded-xl overflow-hidden border-2 border-burgundy/10 group bg-gray-100"
     >
       {/* Background Image that you can click to set focal point */}
       <div 
         className="absolute inset-0 z-10 cursor-crosshair" 
         onMouseDown={handleDragFocal}
-        {...attributes}
-        {...listeners}
       >
         <Image 
           src={item.previewUrl} 
@@ -689,10 +688,20 @@ function SortableImageItem({
         </div>
       </div>
 
+      {/* Drag Handle */}
+      <div 
+        className="absolute top-1 left-1 z-30 p-1 bg-white/90 rounded text-burgundy shadow-sm opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing hover:bg-white"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical size={14} />
+      </div>
+
+      {/* Remove Button */}
       <button 
         type="button" 
-        onMouseDown={(e) => { e.stopPropagation(); onRemove(item.id); }} 
-        className="absolute top-1 right-1 z-20 w-6 h-6 bg-red-500/90 text-white flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+        onClick={(e) => { e.stopPropagation(); onRemove(item.id); }} 
+        className="absolute top-1 right-1 z-30 bg-red-500/90 text-white p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
       >
         <X size={14} />
       </button>

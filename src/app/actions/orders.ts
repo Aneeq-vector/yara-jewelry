@@ -29,16 +29,22 @@ export async function createOrderAction(formData: FormData) {
     // Automatically reduce product quantity in stock
     try {
       const adminPb = await getAdminClient();
-      const cartDetailsStr = formData.get('cartDetails') as string;
-      if (cartDetailsStr) {
-        const cartItems = JSON.parse(cartDetailsStr);
-        for (const item of cartItems) {
-          if (item.product?.id && item.quantity) {
-            const prodId = item.product.id;
+      const stockDeductionStr = formData.get('stockDeduction') as string;
+      if (stockDeductionStr) {
+        const stockItems = JSON.parse(stockDeductionStr) as { id: string, quantity: number }[];
+        
+        // Group by ID in case the same item appears multiple times (e.g. in a custom box)
+        const deductions = stockItems.reduce((acc, item) => {
+          acc[item.id] = (acc[item.id] || 0) + item.quantity;
+          return acc;
+        }, {} as Record<string, number>);
+
+        for (const [prodId, qtyToDeduct] of Object.entries(deductions)) {
+          if (prodId && qtyToDeduct > 0) {
             try {
               const productRecord = await adminPb.collection('products').getOne(prodId);
               const currentQty = productRecord.quantity || 0;
-              const newQty = Math.max(0, currentQty - item.quantity);
+              const newQty = Math.max(0, currentQty - qtyToDeduct);
               await adminPb.collection('products').update(prodId, {
                 quantity: newQty,
                 inStock: newQty > 0
@@ -50,7 +56,7 @@ export async function createOrderAction(formData: FormData) {
         }
       }
     } catch (stockError) {
-      console.error('Failed to parse cart details for stock deduction:', stockError);
+      console.error('Failed to parse stock details for deduction:', stockError);
     }
     
     // Send Invoice Email

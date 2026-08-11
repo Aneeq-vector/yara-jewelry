@@ -171,18 +171,26 @@ export function useCheckoutLogic() {
     formData.append('phone', form.phone);
     
     const productIdsSet = new Set<string>();
+    const stockDeduction: { id: string; quantity: number }[] = [];
+
     items.forEach(item => {
       if (item.product.category !== 'gift-boxes' && !item.isCustomBox) {
         productIdsSet.add(item.product.id);
+        stockDeduction.push({ id: item.product.id, quantity: item.quantity });
       }
       if (item.isCustomBox && item.boxItems) {
         item.boxItems.forEach((b: any) => {
-          if (b.id) productIdsSet.add(b.id);
+          if (b.id) {
+            productIdsSet.add(b.id);
+            // custom box items count as 1 quantity each per box, so item.quantity * 1
+            stockDeduction.push({ id: b.id, quantity: item.quantity });
+          }
         });
       }
     });
     const productIds = Array.from(productIdsSet);
     productIds.forEach(id => formData.append('items', id));
+    formData.append('stockDeduction', JSON.stringify(stockDeduction));
     
     const formattedCartDetails = items.map(item => {
       if (item.isCustomBox) {
