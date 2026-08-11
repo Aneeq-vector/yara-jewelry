@@ -945,11 +945,11 @@ export default function ProductsClient({
                   />
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-ui font-semibold text-burgundy/50 uppercase tracking-wider">Product</th>
-                <th className="px-4 py-3 text-left text-xs font-ui font-semibold text-burgundy/50 uppercase tracking-wider">Category</th>
-                <th className="px-4 py-3 text-left text-xs font-ui font-semibold text-burgundy/50 uppercase tracking-wider">Price</th>
-                <th className="px-4 py-3 text-left text-xs font-ui font-semibold text-burgundy/50 uppercase tracking-wider">Rating</th>
-                <th className="px-4 py-3 text-left text-xs font-ui font-semibold text-burgundy/50 uppercase tracking-wider">Stock</th>
-                <th className="px-4 py-3 text-left text-xs font-ui font-semibold text-burgundy/50 uppercase tracking-wider">Quantity</th>
+                <th className="px-4 py-3 text-center text-xs font-ui font-semibold text-burgundy/50 uppercase tracking-wider">Category</th>
+                <th className="px-4 py-3 text-center text-xs font-ui font-semibold text-burgundy/50 uppercase tracking-wider">Price</th>
+                <th className="px-4 py-3 text-center text-xs font-ui font-semibold text-burgundy/50 uppercase tracking-wider">Rating</th>
+                <th className="px-4 py-3 text-center text-xs font-ui font-semibold text-burgundy/50 uppercase tracking-wider">Stock</th>
+                <th className="px-4 py-3 text-center text-xs font-ui font-semibold text-burgundy/50 uppercase tracking-wider">Quantity</th>
                 <th className="px-4 py-3 text-center text-xs font-ui font-semibold text-burgundy/50 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -1020,10 +1020,10 @@ export default function ProductsClient({
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 text-center">
                         <span className="text-sm font-body text-burgundy/70">{categoryName(product.category)}</span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 text-center">
                         <div>
                           <p className="text-sm font-body font-semibold text-burgundy">{formatPrice(product.price)}</p>
                           {product.originalPrice && product.originalPrice > product.price && (
@@ -1031,16 +1031,16 @@ export default function ProductsClient({
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 text-center">
                         {product.rating ? (
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center justify-center gap-1">
                             <Star size={12} className="text-amber-400 fill-amber-400" />
                             <span className="text-sm font-body text-burgundy/80">{product.rating.toFixed(1)}</span>
                             {product.reviewCount ? <span className="text-[11px] text-burgundy/40">({product.reviewCount})</span> : null}
                           </div>
                         ) : <span className="text-sm text-burgundy/30">—</span>}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 text-center">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-ui font-semibold ${
                           product.inStock ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'
                         }`}>
@@ -1048,7 +1048,7 @@ export default function ProductsClient({
                           {product.inStock ? 'In Stock' : 'Out of Stock'}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 text-center">
                         <span className="text-sm font-ui font-semibold text-burgundy">{product.quantity ?? 0}</span>
                       </td>
                       <td className="px-4 py-3">
