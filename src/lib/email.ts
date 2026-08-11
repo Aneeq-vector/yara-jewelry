@@ -122,7 +122,7 @@ export async function sendInvoiceEmail(details: InvoiceDetails) {
           .content-cell { padding: 30px 20px !important; }
           .footer-cell { padding: 30px 20px !important; }
           .desktop-split { display: block !important; width: 100% !important; }
-          .mobile-margin { margin-top: 25px !important; }
+          .mobile-margin { padding-top: 25px !important; margin-top: 0 !important; }
           .totals-table { width: 100% !important; }
         }
       </style>
@@ -205,6 +205,7 @@ export async function sendInvoiceEmail(details: InvoiceDetails) {
                 <td class="footer-cell" style="background-color: #4a1c27; padding: 40px; text-align: center;">
                   <p style="color: #e8d9d0; font-size: 13px; margin: 0; letter-spacing: 0.5px;">YARA</p>
                   <p style="color: #e8d9d0; font-size: 12px; margin: 10px 0 0 0; opacity: 0.7;">Sri Lanka</p>
+                  <p style="color: #e8d9d0; font-size: 12px; margin: 10px 0 0 0; opacity: 0.7;">WhatsApp / Contact: +94 70 733 7711</p>
                   <p style="color: #e8d9d0; font-size: 12px; margin: 10px 0 0 0; opacity: 0.7;">If you have any questions regarding your order, please reply directly to this email.</p>
                 </td>
               </tr>
@@ -296,6 +297,7 @@ export async function sendWelcomeEmail(customerEmail: string, customerName: stri
                 <td class="footer-cell" style="background-color: #4a1c27; padding: 40px; text-align: center;">
                   <p style="color: #e8d9d0; font-size: 13px; margin: 0; letter-spacing: 0.5px;">YARA</p>
                   <p style="color: #e8d9d0; font-size: 12px; margin: 10px 0 0 0; opacity: 0.7;">Sri Lanka</p>
+                  <p style="color: #e8d9d0; font-size: 12px; margin: 10px 0 0 0; opacity: 0.7;">WhatsApp / Contact: +94 70 733 7711</p>
                   <p style="color: #e8d9d0; font-size: 12px; margin: 10px 0 0 0; opacity: 0.7;">support@yarasl.shop</p>
                 </td>
               </tr>
