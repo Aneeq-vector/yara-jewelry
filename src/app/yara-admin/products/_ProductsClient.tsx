@@ -94,9 +94,13 @@ function formatDate(dateStr: string) {
 
 // ─── Empty Form State ─────────────────────────────────────────────────────────
 
+function generateProductCode() {
+  return 'YR-' + Math.floor(100000 + Math.random() * 900000);
+}
+
 function emptyForm() {
   return {
-    productCode: '',
+    productCode: generateProductCode(),
     name: '',
     price: '',
     originalPrice: '',
