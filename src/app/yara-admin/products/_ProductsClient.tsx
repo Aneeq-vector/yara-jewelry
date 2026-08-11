@@ -306,17 +306,18 @@ function ProductFormModal({
 
       // Step 1: Get admin token from server action
       const tokenRes = await getAdminTokenAction();
-      if (!tokenRes?.token) {
+      if (!tokenRes?.token || !tokenRes?.pbUrl) {
         throw new Error(tokenRes?.error || 'Could not get upload credentials');
       }
 
-      // Step 2: Upload via the Next.js rewrite proxy (/pb/...).
-      // Next.js rewrites stream the request directly via http-proxy, bypassing
-      // the strict body parser limits that affect Next.js API Route Handlers.
+      // Step 2: Upload DIRECTLY to the remote PocketBase server from the browser!
+      // We must bypass Next.js API Routes and Rewrites entirely because Vercel
+      // imposes a strict 4.5MB limit on all requests passing through its infrastructure.
+      // Since we fixed the Nginx 1MB limit on the remote server, this will now work seamlessly.
       const proxyUrl =
         mode === 'add'
-          ? `/pb/api/collections/products/records`
-          : `/pb/api/collections/products/records/${product!.id}`;
+          ? `${tokenRes.pbUrl}/api/collections/products/records`
+          : `${tokenRes.pbUrl}/api/collections/products/records/${product!.id}`;
       const method = mode === 'add' ? 'POST' : 'PATCH';
 
       const response = await fetch(proxyUrl, {
