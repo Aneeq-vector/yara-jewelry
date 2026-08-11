@@ -181,6 +181,7 @@ export default function ProductDetailPage() {
                       src={product.images[selectedImage]}
                       alt={product.name}
                       fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      style={{ objectPosition: product.imagePositions?.[selectedImage] || '50% 50%' }}
                       className="object-cover group-hover:scale-110 transition-transform duration-700"
                       priority
                       unoptimized
@@ -228,7 +229,7 @@ export default function ProductDetailPage() {
                         : 'opacity-60 hover:opacity-100'
                     }`}
                   >
-                    <Image src={img} alt="" fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" unoptimized />
+                    <Image src={img} alt="" fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" style={{ objectPosition: product.imagePositions?.[i] || '50% 50%' }} className="object-cover" unoptimized />
                   </button>
                 ))}
               </div>

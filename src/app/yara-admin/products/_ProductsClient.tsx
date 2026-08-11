@@ -4,6 +4,23 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import imageCompression from 'browser-image-compression';
 import Image from 'next/image';
 import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import {
   Plus,
   Search,
   RefreshCw,
@@ -52,6 +69,7 @@ export interface RawProduct {
   shortDescription: string;
   category?: string;
   images?: string[];
+  imagePositions?: string[];
   badge?: string;
   rating?: number;
   reviewCount?: number;
@@ -100,6 +118,15 @@ function generateProductCode() {
   return 'YR-' + Math.floor(100000 + Math.random() * 900000);
 }
 
+export interface FormImage {
+  id: string;
+  isExisting: boolean;
+  filename?: string;
+  file?: File;
+  previewUrl: string;
+  position: string;
+}
+
 function emptyForm() {
   return {
     productCode: generateProductCode(),
@@ -118,9 +145,7 @@ function emptyForm() {
     inStock: true,
     colors: [] as string[],
     tags: [] as string[],
-    images: [] as File[],
-    existingImages: [] as string[],
-    deletedImages: [] as string[],
+    unifiedImages: [] as FormImage[],
   };
 }
 
@@ -220,9 +245,13 @@ function ProductFormModal({
         inStock: product.inStock ?? true,
         colors: product.colors ?? [],
         tags: product.tags ?? [],
-        images: [],
-        existingImages: product.images ?? [],
-        deletedImages: [],
+        unifiedImages: (product.images ?? []).map((img, i) => ({
+          id: img,
+          isExisting: true,
+          filename: img,
+          previewUrl: buildImageUrl(product.collectionId, product.id, img),
+          position: product.imagePositions?.[i] ?? '50% 50%',
+        })),
       };
     }
     return emptyForm();
@@ -231,13 +260,22 @@ function ProductFormModal({
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
 
-  useEffect(() => {
-    const urls = form.images.map(f => URL.createObjectURL(f));
-    setPreviewUrls(urls);
-    return () => urls.forEach(u => URL.revokeObjectURL(u));
-  }, [form.images]);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setForm((prev) => {
+        const oldIndex = prev.unifiedImages.findIndex((i) => i.id === active.id);
+        const newIndex = prev.unifiedImages.findIndex((i) => i.id === over.id);
+        return { ...prev, unifiedImages: arrayMove(prev.unifiedImages, oldIndex, newIndex) };
+      });
+    }
+  };
 
   const set = (key: keyof FormState, value: unknown) => {
     setForm(prev => ({ ...prev, [key]: value }));
@@ -249,22 +287,27 @@ function ProductFormModal({
     const arr = Array.from(files).filter(f =>
       ['image/jpeg', 'image/png', 'image/heic', 'image/heif'].includes(f.type)
     );
-    const total = (form.existingImages.length - form.deletedImages.length) + form.images.length + arr.length;
-    if (total > 10) { addToast('Maximum 10 images allowed', 'error'); return; }
-    set('images', [...form.images, ...arr]);
+    if (form.unifiedImages.length + arr.length > 10) { 
+      addToast('Maximum 10 images allowed', 'error'); return; 
+    }
+    const newItems = arr.map(file => ({
+      id: Math.random().toString(36).substring(2, 9),
+      isExisting: false,
+      file,
+      previewUrl: URL.createObjectURL(file),
+      position: '50% 50%'
+    }));
+    set('unifiedImages', [...form.unifiedImages, ...newItems]);
   };
 
-  const removeNewImage = (idx: number) =>
-    set('images', (form.images as File[]).filter((_, i) => i !== idx));
+  const removeImage = (id: string) => {
+    set('unifiedImages', form.unifiedImages.filter(img => img.id !== id));
+  };
 
-  // Use a single setForm call so both fields update atomically (avoids stale state from two separate set() calls)
-  const removeExistingImage = (filename: string) => {
-    setForm(prev => ({
-      ...prev,
-      existingImages: (prev.existingImages as string[]).filter(img => img !== filename),
-      deletedImages: [...(prev.deletedImages as string[]), filename],
-    }));
-    setErrors(prev => { const e = { ...prev }; delete e.existingImages; return e; });
+  const updateImagePosition = (id: string, position: string) => {
+    set('unifiedImages', form.unifiedImages.map(img => 
+      img.id === id ? { ...img, position } : img
+    ));
   };
 
   const validate = (): boolean => {
@@ -304,6 +347,10 @@ function ProductFormModal({
       (form.colors as string[]).forEach(c => fd.append('colors', c));
       (form.tags as string[]).forEach(t => fd.append('tags', t));
 
+      // Extract positions in the EXACT order of unifiedImages
+      const positionsArray = form.unifiedImages.map(img => img.position);
+      fd.append('imagePositions', JSON.stringify(positionsArray));
+
       // Compress images before upload to ensure lightning-fast saves
       const options = {
         maxSizeMB: 1, // Max size 1MB per image
@@ -311,24 +358,22 @@ function ProductFormModal({
         useWebWorker: true,
       };
 
-      const compressedImages = await Promise.all(
-        (form.images as File[]).map(async (file) => {
+      // We append images one by one in order. 
+      // For updates, sending the entire 'images' array replaces the old one and preserves this exact order!
+      for (const item of form.unifiedImages) {
+        if (item.isExisting && item.filename) {
+          // Existing image
+          fd.append('images', item.filename);
+        } else if (item.file) {
+          // New image
           try {
-            return await imageCompression(file, options);
+            const compressed = await imageCompression(item.file, options);
+            fd.append('images', compressed, compressed.name || item.file.name);
           } catch (error) {
-            console.error('Image compression failed for', file.name, error);
-            return file; // fallback to original if compression fails
+            console.error('Image compression failed for', item.file.name, error);
+            fd.append('images', item.file, item.file.name);
           }
-        })
-      );
-
-      if (mode === 'add') {
-        // New product: append images directly
-        compressedImages.forEach(f => fd.append('images', f, f.name));
-      } else {
-        // Update: use `images+` to ADD files, `images-` to REMOVE by filename
-        compressedImages.forEach(f => fd.append('images+', f, f.name));
-        (form.deletedImages as string[]).forEach(img => fd.append('images-', img));
+        }
       }
 
       // Step 1: Get admin token from server action
@@ -523,34 +568,28 @@ function ProductFormModal({
 
           {/* Images */}
           <section>
-            <p className="text-xs font-ui font-semibold text-burgundy/40 uppercase tracking-widest mb-4">Images (max 10 · JPEG, PNG, HEIC)</p>
+            <div className="mb-4">
+              <p className="text-xs font-ui font-semibold text-burgundy/40 uppercase tracking-widest mb-1">Images (max 10 · Drag to Reorder)</p>
+              <p className="text-[10px] font-body text-burgundy/60 leading-tight">
+                Click and drag an image to reorder it. <br/>
+                Click the crosshair anywhere on the image to set the focal point (crop position) for the storefront!
+              </p>
+            </div>
 
-            {(form.existingImages as string[]).length > 0 && (
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <div className="flex flex-wrap gap-3 mb-4">
-                {(form.existingImages as string[]).map(img => (
-                  <div key={img} className="relative w-20 h-20 rounded-xl overflow-hidden border border-burgundy/10 group">
-                    <Image src={buildImageUrl(product?.collectionId ?? '', product?.id ?? '', img)} alt={img} fill className="object-cover" />
-                    <button type="button" onClick={() => removeExistingImage(img)} className="absolute inset-0 bg-red-500/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <X size={18} />
-                    </button>
-                  </div>
-                ))}
+                <SortableContext items={form.unifiedImages.map(img => img.id)} strategy={rectSortingStrategy}>
+                  {form.unifiedImages.map(img => (
+                    <SortableImageItem 
+                      key={img.id} 
+                      item={img} 
+                      onRemove={removeImage} 
+                      onPositionChange={updateImagePosition} 
+                    />
+                  ))}
+                </SortableContext>
               </div>
-            )}
-
-            {previewUrls.length > 0 && (
-              <div className="flex flex-wrap gap-3 mb-4">
-                {previewUrls.map((url, i) => (
-                  <div key={url} className="relative w-20 h-20 rounded-xl overflow-hidden border border-burgundy/10 group">
-                    <Image src={url} alt="preview" fill className="object-cover" />
-                    <button type="button" onClick={() => removeNewImage(i)} className="absolute inset-0 bg-red-500/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <X size={18} />
-                    </button>
-                    <span className="absolute bottom-0 left-0 right-0 text-[9px] bg-emerald-500 text-white text-center font-ui">NEW</span>
-                  </div>
-                ))}
-              </div>
-            )}
+            </DndContext>
 
             <button
               type="button"
@@ -580,6 +619,87 @@ function ProductFormModal({
           </div>
         </form>
       </div>
+    </div>
+  );
+}
+
+// ─── Sortable Image Item ────────────────────────────────────────────────────────
+
+function SortableImageItem({
+  item,
+  onRemove,
+  onPositionChange,
+}: {
+  item: FormImage;
+  onRemove: (id: string) => void;
+  onPositionChange: (id: string, pos: string) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : 1,
+    opacity: isDragging ? 0.8 : 1,
+  };
+
+  const handleDragFocal = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+    onPositionChange(item.id, `${Math.round(x)}% ${Math.round(y)}%`);
+  };
+
+  const [posX, posY] = item.position.split(' ');
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="relative w-28 h-28 rounded-xl overflow-hidden border-2 border-burgundy/10 group cursor-grab active:cursor-grabbing bg-gray-100"
+    >
+      {/* Background Image that you can click to set focal point */}
+      <div 
+        className="absolute inset-0 z-10 cursor-crosshair" 
+        onMouseDown={handleDragFocal}
+        {...attributes}
+        {...listeners}
+      >
+        <Image 
+          src={item.previewUrl} 
+          alt="product" 
+          fill 
+          className="object-cover pointer-events-none"
+        />
+        
+        {/* Crosshair indicator */}
+        <div 
+          className="absolute w-4 h-4 -ml-2 -mt-2 border-2 border-white rounded-full shadow-[0_0_4px_rgba(0,0,0,0.5)] pointer-events-none transition-all"
+          style={{ left: posX, top: posY }}
+        >
+          <div className="absolute top-1/2 left-1/2 w-1 h-1 -translate-x-1/2 -translate-y-1/2 bg-rose-500 rounded-full" />
+        </div>
+      </div>
+
+      <button 
+        type="button" 
+        onMouseDown={(e) => { e.stopPropagation(); onRemove(item.id); }} 
+        className="absolute top-1 right-1 z-20 w-6 h-6 bg-red-500/90 text-white flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+      >
+        <X size={14} />
+      </button>
+      
+      {!item.isExisting && (
+        <span className="absolute bottom-0 left-0 right-0 z-20 text-[10px] bg-emerald-500 text-white text-center font-ui py-0.5 pointer-events-none">NEW</span>
+      )}
     </div>
   );
 }

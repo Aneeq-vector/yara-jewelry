@@ -22,7 +22,7 @@ export function RelatedProducts({ relatedProducts }: { relatedProducts: Product[
           >
             <Link href={`/shop/${p.id}`}>
               <div className="relative aspect-square rounded-3xl overflow-hidden bg-champagne/30 mb-3">
-                <Image src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className={`object-cover group-hover:scale-105 transition duration-700 ${
+                <Image src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" style={{ objectPosition: p.imagePositions?.[0] || '50% 50%' }} className={`object-cover group-hover:scale-105 transition duration-700 ${
                   !p.inStock ? 'opacity-40 grayscale-[30%]' : ''
                 }`} />
                 {!p.inStock && (

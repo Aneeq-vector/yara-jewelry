@@ -8,6 +8,7 @@ export interface Product {
   shortDescription: string;
   category: CategoryType;
   images: string[];
+  imagePositions?: string[];
   badge?: 'trending' | 'best-seller' | 'limited' | 'new';
   rating: number;
   reviewCount: number;
