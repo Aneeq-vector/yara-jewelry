@@ -734,9 +734,13 @@ function BadgeChip({ badge }: { badge?: string }) {
 
 export default function ProductsClient({
   initialProducts,
+  initialTotalItems,
+  initialTotalPages,
   initialCategories,
 }: {
   initialProducts: RawProduct[];
+  initialTotalItems: number;
+  initialTotalPages: number;
   initialCategories: RawCategory[];
 }) {
   const [products, setProducts] = useState<RawProduct[]>(initialProducts);
@@ -762,30 +766,36 @@ export default function ProductsClient({
 
   const removeToast = (id: number) => setToasts(prev => prev.filter(t => t.id !== id));
 
-  const fetchAll = useCallback(async () => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(initialTotalItems);
+  const [totalPages, setTotalPages] = useState(initialTotalPages);
+  
+  // Debounced search logic
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      fetchData();
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery, filterBadge, filterStock, currentPage, rowsPerPage]);
+
+  const fetchData = async () => {
     setLoading(true);
-    const [pRes, cRes] = await Promise.all([getProductsAction(), getCategoriesAction()]);
-    if (pRes.success && pRes.products) setProducts(pRes.products as unknown as RawProduct[]);
-    if (cRes.success && cRes.categories) setCategories(cRes.categories as unknown as RawCategory[]);
-    setSelectedIds(new Set());
+    const res = await getProductsAction(currentPage, rowsPerPage, searchQuery, '', '-id', filterStock, filterBadge);
+    if (res.success && res.products) {
+      setProducts(res.products as unknown as RawProduct[]);
+      setTotalItems(res.totalItems || 0);
+      setTotalPages(res.totalPages || 0);
+    }
     setLoading(false);
-  }, []);
+  };
 
-  // No useEffect auto-fetch — data comes pre-loaded from server
+  const fetchAll = useCallback(async () => {
+    fetchData();
+    setSelectedIds(new Set());
+  }, [currentPage, rowsPerPage, searchQuery, filterBadge, filterStock]);
 
-  const filtered = products.filter(p => {
-    const q = searchQuery.toLowerCase();
-    const matchesSearch =
-      p.name.toLowerCase().includes(q) ||
-      (p.productCode ?? '').toLowerCase().includes(q) ||
-      (p.shortDescription ?? '').toLowerCase().includes(q);
-    const matchesBadge = filterBadge === 'All' || p.badge === filterBadge;
-    const matchesStock =
-      filterStock === 'All' ||
-      (filterStock === 'In Stock' && p.inStock) ||
-      (filterStock === 'Out of Stock' && !p.inStock);
-    return matchesSearch && matchesBadge && matchesStock;
-  });
+  const filtered = products; // Already filtered by the server
 
   const handleSelectAll = (checked: boolean) =>
     setSelectedIds(checked ? new Set(filtered.map(p => p.id)) : new Set());
@@ -841,12 +851,6 @@ export default function ProductsClient({
     } else {
       setProducts(prev => prev.map(p => p.id === _saved.id ? _saved : p));
     }
-
-    // 2. Background Sync (Silent): Fetch from DB to populate relational data (e.g., category names)
-    // We do NOT set loading=true here so the user isn't interrupted.
-    getProductsAction().then(res => {
-      if (res.success && res.products) setProducts(res.products as unknown as RawProduct[]);
-    });
   };
 
   const categoryName = (id?: string) =>
@@ -1097,10 +1101,26 @@ export default function ProductsClient({
         </div>
 
         {/* Footer count */}
-        {!loading && filtered.length > 0 && (
-          <div className="px-5 py-3 border-t border-burgundy/5 flex items-center justify-between text-xs text-burgundy/50 font-body bg-ivory/10">
-            <span>Showing {filtered.length} of {products.length} products</span>
-            {selectedIds.size > 0 && <span>{selectedIds.size} selected</span>}
+        {!loading && products.length > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 text-sm text-burgundy/60 font-body">
+            <span>Showing {(currentPage - 1) * 20 + 1}-{Math.min(currentPage * 20, totalItems)} of {totalItems} products (Page {currentPage} of {totalPages})</span>
+            <div className="flex items-center gap-2">
+              {selectedIds.size > 0 && <span className="mr-4">{selectedIds.size} selected</span>}
+              <button 
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 rounded-lg border border-burgundy/10 hover:bg-burgundy/5 disabled:opacity-50 transition-colors"
+              >
+                Previous
+              </button>
+              <button 
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 rounded-lg border border-burgundy/10 hover:bg-burgundy/5 disabled:opacity-50 transition-colors"
+              >
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>

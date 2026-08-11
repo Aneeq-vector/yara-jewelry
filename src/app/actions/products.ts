@@ -16,14 +16,36 @@ function revalidateAll() {
   revalidatePath('/', 'page'); // home page (trending products etc)
 }
 
-export async function getProductsAction() {
+export async function getProductsAction(page = 1, perPage = 50, search = '', categoryId = '', sort = '-id', inStock = 'All', badge = 'All') {
   try {
     const pb = await getAdminClient();
-    const records = await pb.collection('products').getFullList({
-      sort: '-id',
+    
+    // Build filter string
+    const filters: string[] = [];
+    if (search) {
+      filters.push(`(name ~ "${search}" || productCode ~ "${search}")`);
+    }
+    if (categoryId) {
+      filters.push(`category = "${categoryId}"`);
+    }
+    if (inStock === 'In Stock') {
+      filters.push(`inStock = true`);
+    } else if (inStock === 'Out of Stock') {
+      filters.push(`inStock = false`);
+    }
+    if (badge !== 'All') {
+      filters.push(`badge = "${badge}"`);
+    }
+    
+    const filterString = filters.length > 0 ? filters.join(' && ') : '';
+
+    const records = await pb.collection('products').getList(page, perPage, {
+      sort: sort,
+      filter: filterString,
       expand: 'category',
+      fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,expand.category.id,expand.category.name', // Optimized fields payload
     });
-    return { success: true, products: toPlain(records) };
+    return { success: true, products: toPlain(records.items), totalItems: records.totalItems, totalPages: records.totalPages };
   } catch (error: any) {
     console.error('getProductsAction error:', error.message);
     return { success: false, error: error.message || 'Failed to fetch products' };

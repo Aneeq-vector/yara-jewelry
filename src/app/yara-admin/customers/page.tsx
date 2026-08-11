@@ -7,34 +7,18 @@ export const revalidate = 0;
 
 export default async function CustomersPage() {
   let initialCustomers: Customer[] = [];
+  let totalItems = 0;
+  let totalPages = 0;
   try {
-    const pb = await getAdminClient();
-    const [records, orders, addresses] = await Promise.all([
-      pb.collection('users').getFullList({ filter: 'role = "customer"', sort: '-created' }),
-      pb.collection('orders').getFullList({ fields: 'user,totalAmount' }),
-      pb.collection('addresses').getFullList({ fields: 'id,user,name,street,city,state,zip,phone,isDefault' }),
-    ]);
-    initialCustomers = records.map((record: any) => {
-      const customerOrders = orders.filter((o: any) => o.user === record.id);
-      const orderCount = customerOrders.length;
-      const spentAmount = customerOrders.reduce((t: number, o: any) => t + (Number(o.totalAmount) || 0), 0);
-      const customerAddresses = addresses.filter((a: any) => a.user === record.id);
-      return {
-        id: record.id,
-        name: record.name || '',
-        email: record.email || '',
-        phone: record.phone || '',
-        status: record.status || 'Active',
-        orders: orderCount,
-        spent: spentAmount,
-        joined: record.created,
-        updatedAt: record.updated,
-        avatar: record.avatar || '',
-        addresses: customerAddresses,
-      } as unknown as Customer;
-    });
+    const { getCustomersAction } = await import('@/app/actions/customers');
+    const res = await getCustomersAction(1, 10);
+    if (res.success && res.customers) {
+      initialCustomers = res.customers;
+      totalItems = res.totalItems || 0;
+      totalPages = res.totalPages || 0;
+    }
   } catch (err) {
     console.error('Failed to prefetch customers:', err);
   }
-  return <CustomersClient initialCustomers={initialCustomers} />;
+  return <CustomersClient initialCustomers={initialCustomers} initialTotalItems={totalItems} initialTotalPages={totalPages} />;
 }

@@ -3,25 +3,55 @@
 import { validateSession, getAdminClient } from '@/lib/pocketbase-server';
 import { revalidatePath } from 'next/cache';
 
-export async function getCustomersAction() {
+export async function getCustomersAction(page = 1, perPage = 20, search = '', status = 'All Status') {
   try {
     const { pb } = await validateSession();
     
-    // Fetch users, orders, and addresses concurrently to drastically reduce load time
-    const [records, orders, addresses] = await Promise.all([
-      pb.collection('users').getFullList({
-        filter: 'role = "customer"',
-        sort: '-created'
-      }),
-      pb.collection('orders').getFullList({
-        fields: 'user,totalAmount'
-      }),
-      pb.collection('addresses').getFullList({
-        fields: 'id,user,name,street,city,state,zip,phone,isDefault'
-      })
-    ]);
+    // Build filter string for users
+    const filters: string[] = ['role = "customer"'];
+    if (search) {
+      filters.push(`(name ~ "${search}" || email ~ "${search}")`);
+    }
+    if (status === 'Active') {
+      filters.push(`status = "Active"`);
+    } else if (status === 'Inactive') {
+      filters.push(`status = "Inactive"`);
+    }
     
-    const customers = records.map((record) => {
+    // 1. Fetch paginated users
+    const usersRes = await pb.collection('users').getList(page, perPage, {
+      filter: filters.join(' && '),
+      sort: '-created',
+      fields: 'id,name,email,phone,status,created,updated,avatar'
+    });
+
+    const userIds = usersRes.items.map(u => `"${u.id}"`).join(',');
+
+    let orders: any[] = [];
+    let addresses: any[] = [];
+
+    // 2. Fetch orders and addresses ONLY for these specific users
+    if (usersRes.items.length > 0) {
+      // Use IN-like syntax in PocketBase (or || conditions)
+      // PocketBase filter syntax for multiple IDs: id ?= "val1" || id ?= "val2"
+      // Actually, PocketBase supports IN operator as of recent versions, but fallback to multiple ORs is safer
+      const userIdFilter = usersRes.items.map(u => `user = "${u.id}"`).join(' || ');
+      
+      const [ordersRes, addressesRes] = await Promise.all([
+        pb.collection('orders').getFullList({
+          filter: userIdFilter,
+          fields: 'user,totalAmount'
+        }),
+        pb.collection('addresses').getFullList({
+          filter: userIdFilter,
+          fields: 'id,user,name,street,city,state,zip,phone,isDefault'
+        })
+      ]);
+      orders = ordersRes;
+      addresses = addressesRes;
+    }
+    
+    const customers = usersRes.items.map((record) => {
       // Find orders for this customer
       const customerOrders = orders.filter((o: any) => o.user === record.id);
       
@@ -43,6 +73,7 @@ export async function getCustomersAction() {
         spent: `Rs. ${spentAmount.toLocaleString()}`,
         joined: joinedDate,
         status: record.status || 'Active', // Default to Active if not set
+        avatar: record.avatar || '',
         addresses: addresses.reduce((acc: any[], a: any) => {
           if (a.user === record.id) {
             acc.push({
@@ -61,9 +92,14 @@ export async function getCustomersAction() {
       };
     });
     
-    return { success: true, customers: structuredClone(customers) };
+    return { 
+      success: true, 
+      customers,
+      totalItems: usersRes.totalItems,
+      totalPages: usersRes.totalPages
+    };
   } catch (error: any) {
-    console.error('Failed to fetch customers:', error);
+    console.error('getCustomersAction error:', error.message);
     return { success: false, error: error.message || 'Failed to fetch customers' };
   }
 }

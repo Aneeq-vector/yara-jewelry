@@ -32,14 +32,16 @@ const WhatsappIcon = ({ size = 16, className = "" }) => (
 
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
-export default function CustomersClient({ initialCustomers }: { initialCustomers: Customer[] }) {
+export default function CustomersClient({ initialCustomers, initialTotalItems = 0, initialTotalPages = 0 }: { initialCustomers: Customer[], initialTotalItems?: number, initialTotalPages?: number }) {
   const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
   const [loading, setLoading] = useState(false);
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [filterSegment, setFilterSegment] = useState('All Status');
   const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(initialTotalItems);
+  const [totalPages, setTotalPages] = useState(initialTotalPages);
   const [selectedCustomerForAddress, setSelectedCustomerForAddress] = useState<Customer | null>(null);
   
   const [confirmModal, setConfirmModal] = useState({
@@ -49,13 +51,20 @@ export default function CustomersClient({ initialCustomers }: { initialCustomers
     onConfirm: () => {},
   });
 
-  // No initial useEffect — data pre-loaded from server
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      fetchCustomers();
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery, filterSegment, currentPage, rowsPerPage]);
 
   const fetchCustomers = async () => {
     setLoading(true);
-    const res = await getCustomersAction();
+    const res = await getCustomersAction(currentPage, rowsPerPage, searchQuery, filterSegment);
     if (res.success && res.customers) {
       setCustomers(res.customers);
+      setTotalItems(res.totalItems || 0);
+      setTotalPages(res.totalPages || 0);
       setSelectedCustomerIds(new Set());
     }
     setLoading(false);
@@ -146,8 +155,7 @@ export default function CustomersClient({ initialCustomers }: { initialCustomers
     return matchesSearch && customer.status === filterSegment;
   });
 
-  const totalPages = Math.ceil(filteredCustomers.length / rowsPerPage) || 1;
-  const paginatedCustomers = filteredCustomers.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+  const paginatedCustomers = filteredCustomers; // Already paginated by the server
 
   const handlePageChange = (page: number) => {
     if (page < 1 || page > totalPages) return;
