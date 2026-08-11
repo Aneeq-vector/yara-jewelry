@@ -276,13 +276,7 @@ function ProductFormModal({
 
     let res: any;
     try {
-      // Step 1: Get admin token + direct PocketBase URL from server
-      const tokenRes = await getAdminTokenAction();
-      if (!tokenRes.token || !tokenRes.pbUrl) {
-        throw new Error(tokenRes.error || 'Could not get upload credentials');
-      }
-
-      // Step 2: Build FormData
+      // Build FormData
       const fd = new FormData();
       if (form.productCode) fd.append('productCode', form.productCode.toString());
       fd.append('name', form.name.toString());
@@ -310,35 +304,34 @@ function ProductFormModal({
         (form.deletedImages as string[]).forEach(img => fd.append('images-', img));
       }
 
-      // Step 3: Upload via the /pb rewrite proxy (defined in next.config.ts).
-      // This keeps the request same-origin (avoids browser CORS errors when the
-      // Authorization header triggers a preflight to https://pb.yarasl.shop).
-      // Next.js rewrites stream the body server→PocketBase, so there is no
-      // serverActions bodySizeLimit applied here — large image uploads work fine.
-      const url =
+      // POST to our server-side proxy — admin auth added server-side, no CORS issues
+      const proxyUrl =
         mode === 'add'
-          ? `/pb/api/collections/products/records`
-          : `/pb/api/collections/products/records/${product!.id}`;
-      const method = mode === 'add' ? 'POST' : 'PATCH';
+          ? `/api/pb-proxy?mode=add`
+          : `/api/pb-proxy?mode=edit&id=${product!.id}`;
 
-      const response = await fetch(url, {
-        method,
-        headers: {
-          Authorization: `Bearer ${tokenRes.token}`,
-        },
+      const response = await fetch(proxyUrl, {
+        method: 'POST',
         body: fd,
       });
 
-      const data = await response.json();
+      let data;
+      const text = await response.text();
+      try {
+        data = JSON.parse(text);
+      } catch (err) {
+        console.error('Non-JSON response from proxy:', text.substring(0, 500));
+        throw new Error(`Server returned an invalid response. Status: ${response.status}`);
+      }
 
       if (!response.ok) {
         const details = data?.data
           ? Object.entries(data.data).map(([k, v]: any) => `${k}: ${v?.message}`).join(', ')
           : '';
-        throw new Error(data?.message || `HTTP ${response.status}${details ? ` (${details})` : ''}`);
+        throw new Error(data?.message || data?.error || `HTTP ${response.status}${details ? ` (${details})` : ''}`);
       }
 
-      // Step 4: Revalidate Next.js cache so shop page shows updates instantly
+      // Revalidate Next.js cache so shop page shows updates instantly
       await revalidateProductsAction();
       res = { success: true, product: data };
 
