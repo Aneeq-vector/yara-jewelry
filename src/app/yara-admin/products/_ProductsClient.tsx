@@ -306,12 +306,6 @@ function ProductFormModal({
     set('unifiedImages', form.unifiedImages.filter(img => img.id !== id));
   };
 
-  const updateImagePosition = (id: string, position: string) => {
-    set('unifiedImages', form.unifiedImages.map(img => 
-      img.id === id ? { ...img, position } : img
-    ));
-  };
-
   const validate = (): boolean => {
     const errs: Partial<Record<keyof FormState, string>> = {};
     if (!form.name.toString().trim()) errs.name = 'Name is required';
@@ -573,8 +567,7 @@ function ProductFormModal({
             <div className="mb-4">
               <p className="text-xs font-ui font-semibold text-burgundy/40 uppercase tracking-widest mb-1">Images (max 10 · Drag to Reorder)</p>
               <p className="text-[10px] font-body text-burgundy/60 leading-tight">
-                Click and drag an image to reorder it. <br/>
-                Click the crosshair anywhere on the image to set the focal point (crop position) for the storefront!
+                Click and drag an image to reorder it.
               </p>
             </div>
 
@@ -585,8 +578,7 @@ function ProductFormModal({
                     <SortableImageItem 
                       key={img.id} 
                       item={img} 
-                      onRemove={removeImage} 
-                      onPositionChange={updateImagePosition} 
+                      onRemove={removeImage}
                     />
                   ))}
                 </SortableContext>
@@ -630,11 +622,9 @@ function ProductFormModal({
 function SortableImageItem({
   item,
   onRemove,
-  onPositionChange,
 }: {
   item: FormImage;
   onRemove: (id: string) => void;
-  onPositionChange: (id: string, pos: string) => void;
 }) {
   const {
     attributes,
@@ -652,41 +642,20 @@ function SortableImageItem({
     opacity: isDragging ? 0.8 : 1,
   };
 
-  const handleDragFocal = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.stopPropagation();
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
-    const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
-    onPositionChange(item.id, `${Math.round(x)}% ${Math.round(y)}%`);
-  };
-
-  const [posX, posY] = item.position.split(' ');
-
   return (
     <div
       ref={setNodeRef}
       style={style}
       className="relative w-28 h-28 rounded-xl overflow-hidden border-2 border-burgundy/10 group bg-gray-100"
     >
-      {/* Background Image that you can click to set focal point */}
-      <div 
-        className="absolute inset-0 z-10 cursor-crosshair" 
-        onMouseDown={handleDragFocal}
-      >
+      {/* Background Image */}
+      <div className="absolute inset-0 z-10">
         <Image 
           src={item.previewUrl} 
           alt="product" 
           fill 
           className="object-cover pointer-events-none"
         />
-        
-        {/* Crosshair indicator */}
-        <div 
-          className="absolute w-4 h-4 -ml-2 -mt-2 border-2 border-white rounded-full shadow-[0_0_4px_rgba(0,0,0,0.5)] pointer-events-none transition-all"
-          style={{ left: posX, top: posY }}
-        >
-          <div className="absolute top-1/2 left-1/2 w-1 h-1 -translate-x-1/2 -translate-y-1/2 bg-rose-500 rounded-full" />
-        </div>
       </div>
 
       {/* Drag Handle */}
