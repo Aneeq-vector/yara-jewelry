@@ -505,7 +505,7 @@ function ProductFormModal({
               </div>
               <div>
                 <label className="block text-xs font-ui font-semibold text-burgundy/70 uppercase tracking-wide mb-1">Full Description <span className="text-red-400">*</span></label>
-                <textarea aria-label="Full description" rows={4} placeholder="Full product description (HTML supported)" value={form.description.toString()} onChange={e => set('description', e.target.value)} className={`${inp('description')} resize-none`} />
+                <textarea aria-label="Full description" rows={4} placeholder="Full product description" value={form.description.toString()} onChange={e => set('description', e.target.value)} className={`${inp('description')} resize-none`} />
                 {errors.description && <p className="text-xs text-red-500 mt-1">{errors.description}</p>}
               </div>
             </div>
