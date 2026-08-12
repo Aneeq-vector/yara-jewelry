@@ -100,9 +100,10 @@ export async function createOrderAction(formData: FormData) {
 export interface ManualOrderItem {
   productId: string;
   productName: string;
-  quantity: number;
   price: number;
-  selectedColor?: string;
+  // colorQuantities: { Yellow: 2, Green: 5 } — each color with its own count
+  // If no colors, use key '' for the single quantity
+  colorQuantities: Record<string, number>;
 }
 
 export interface ManualOrderPayload {
@@ -128,14 +129,18 @@ export async function createManualOrderAction(payload: ManualOrderPayload) {
     const generatedOrderId = `YRA-${Math.floor(100000 + Math.random() * 900000)}`;
     const orderDate = new Date().toISOString();
 
-    // Build cartDetails array (same format as website orders)
+    // Build cartDetails array — one line per color-qty combination
     const cartDetails: string[] = [];
     if (payload.source) {
       cartDetails.push(`Source: ${payload.source}`);
     }
     for (const item of payload.items) {
-      const colorStr = item.selectedColor ? ` [Color: ${item.selectedColor}]` : '';
-      cartDetails.push(`${item.quantity}x ${item.productName}${colorStr} - Rs. ${item.price}`);
+      const entries = Object.entries(item.colorQuantities).filter(([, qty]) => qty > 0);
+      if (entries.length === 0) continue;
+      for (const [color, qty] of entries) {
+        const colorStr = color ? ` [Color: ${color}]` : '';
+        cartDetails.push(`${qty}x ${item.productName}${colorStr} - Rs. ${item.price}`);
+      }
     }
     if (payload.notes) {
       cartDetails.push(`Notes: ${payload.notes}`);
@@ -163,12 +168,13 @@ export async function createManualOrderAction(payload: ManualOrderPayload) {
 
     const record = await adminPb.collection('orders').create(orderData);
 
-    // Deduct stock if requested
+    // Deduct stock if requested — sum all color quantities per product
     if (payload.deductStock) {
       const deductions: Record<string, number> = {};
       for (const item of payload.items) {
         if (item.productId) {
-          deductions[item.productId] = (deductions[item.productId] || 0) + item.quantity;
+          const totalQty = Object.values(item.colorQuantities).reduce((s, q) => s + q, 0);
+          deductions[item.productId] = (deductions[item.productId] || 0) + totalQty;
         }
       }
       for (const [prodId, qty] of Object.entries(deductions)) {

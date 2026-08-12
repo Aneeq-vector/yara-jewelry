@@ -36,6 +36,7 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [productSearch, setProductSearch] = useState('');
   const [productsLoading, setProductsLoading] = useState(false);
+  // orderItems uses colorQuantities: { Yellow: 2, Green: 5 } or { '': 3 } for no-color products
   const [orderItems, setOrderItems] = useState<ManualOrderItem[]>([]);
 
   // UI state
@@ -75,31 +76,36 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
   const addProduct = (product: Product) => {
     const existing = orderItems.findIndex(i => i.productId === product.id);
     if (existing !== -1) {
-      const updated = [...orderItems];
-      updated[existing].quantity += 1;
-      setOrderItems(updated);
-    } else {
-      setOrderItems(prev => [...prev, {
-        productId: product.id,
-        productName: product.name,
-        quantity: 1,
-        price: product.price,
-        selectedColor: product.colors?.[0] || '',
-      }]);
+      // Already added — just open the picker view again (do nothing, it's visible in the list)
+      setShowProductPicker(false);
+      setProductSearch('');
+      return;
     }
+    // Build initial colorQuantities:
+    // If product has colors, start all at 0 so admin sets counts explicitly
+    // If no colors, use '' key with qty 1
+    const colors = product.colors ?? [];
+    const colorQuantities: Record<string, number> = colors.length > 0
+      ? Object.fromEntries(colors.map(c => [c, 0]))
+      : { '': 1 };
+
+    setOrderItems(prev => [...prev, {
+      productId: product.id,
+      productName: product.name,
+      price: product.price,
+      colorQuantities,
+    }]);
     setShowProductPicker(false);
     setProductSearch('');
   };
 
-  const updateQty = (index: number, delta: number) => {
+  const updateColorQty = (itemIndex: number, color: string, delta: number) => {
     const updated = [...orderItems];
-    updated[index].quantity = Math.max(1, updated[index].quantity + delta);
-    setOrderItems(updated);
-  };
-
-  const updateColor = (index: number, color: string) => {
-    const updated = [...orderItems];
-    updated[index].selectedColor = color;
+    const current = updated[itemIndex].colorQuantities[color] ?? 0;
+    updated[itemIndex].colorQuantities = {
+      ...updated[itemIndex].colorQuantities,
+      [color]: Math.max(0, current + delta),
+    };
     setOrderItems(updated);
   };
 
@@ -107,7 +113,11 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
     setOrderItems(prev => prev.filter((_, i) => i !== index));
   };
 
-  const subtotal = orderItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  // Total quantity for a single item across all colors
+  const itemTotalQty = (item: ManualOrderItem) =>
+    Object.values(item.colorQuantities).reduce((s, q) => s + q, 0);
+
+  const subtotal = orderItems.reduce((sum, i) => sum + i.price * itemTotalQty(i), 0);
   const total = subtotal + (includeDelivery ? DELIVERY_FEE : 0);
 
   const handleSubmit = async () => {
@@ -115,6 +125,8 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
     if (!phone.trim()) { setError('Phone number is required.'); return; }
     if (!city.trim()) { setError('City is required.'); return; }
     if (orderItems.length === 0) { setError('Please add at least one product.'); return; }
+    const hasQty = orderItems.some(i => itemTotalQty(i) > 0);
+    if (!hasQty) { setError('Please set a quantity for at least one product/color.'); return; }
 
     setError('');
     setSubmitting(true);
@@ -127,7 +139,7 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
       shippingCity: city.trim(),
       shippingCountry: country || 'Sri Lanka',
       source,
-      items: orderItems,
+      items: orderItems.filter(i => itemTotalQty(i) > 0),
       totalAmount: total,
       paymentMethod,
       paymentStatus,
@@ -140,9 +152,7 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
     if (result.success) {
       setSuccess(true);
       onOrderCreated(result.record);
-      setTimeout(() => {
-        handleClose();
-      }, 1800);
+      setTimeout(() => handleClose(), 1800);
     } else {
       setError(result.error || 'Failed to create order.');
     }
@@ -154,14 +164,9 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
   const labelClass = 'block text-[11px] font-ui font-bold uppercase tracking-wider text-burgundy/50 mb-1.5';
 
   return (
-    <div
-      className="fixed inset-0 bg-burgundy/40 backdrop-blur-sm z-50 flex items-start justify-end"
-      onClick={handleClose}
-    >
-      <div
-        className="relative bg-white h-full w-full max-w-xl shadow-2xl overflow-y-auto flex flex-col"
-        onClick={e => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 bg-burgundy/40 backdrop-blur-sm z-50 flex items-start justify-end" onClick={handleClose}>
+      <div className="relative bg-white h-full w-full max-w-xl shadow-2xl overflow-y-auto flex flex-col" onClick={e => e.stopPropagation()}>
+
         {/* Header */}
         <div className="sticky top-0 bg-white z-10 border-b border-burgundy/8 px-6 py-4 flex items-center justify-between">
           <div>
@@ -189,15 +194,8 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
               <label className={labelClass}>Order Source</label>
               <div className="flex flex-wrap gap-2">
                 {SOURCES.map(s => (
-                  <button
-                    key={s}
-                    onClick={() => setSource(s)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-ui font-semibold transition-all border ${
-                      source === s
-                        ? 'bg-burgundy text-white border-burgundy shadow-sm'
-                        : 'bg-ivory/60 text-burgundy/60 border-burgundy/15 hover:border-burgundy/30 hover:text-burgundy'
-                    }`}
-                  >
+                  <button key={s} onClick={() => setSource(s)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-ui font-semibold transition-all border ${source === s ? 'bg-burgundy text-white border-burgundy shadow-sm' : 'bg-ivory/60 text-burgundy/60 border-burgundy/15 hover:border-burgundy/30 hover:text-burgundy'}`}>
                     {s}
                   </button>
                 ))}
@@ -239,27 +237,22 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
             <div>
               <div className="flex items-center justify-between mb-3">
                 <p className={labelClass + ' mb-0'}>Products</p>
-                <button
-                  onClick={() => setShowProductPicker(prev => !prev)}
-                  className="flex items-center gap-1.5 text-xs font-ui font-semibold text-burgundy hover:text-wine transition-colors"
-                >
-                  <Plus size={14} />
-                  Add Product
+                <button onClick={() => setShowProductPicker(prev => !prev)}
+                  className="flex items-center gap-1.5 text-xs font-ui font-semibold text-burgundy hover:text-wine transition-colors">
+                  <Plus size={14} /> Add Product
                 </button>
               </div>
 
-              {/* Product Picker */}
+              {/* Product Picker Dropdown */}
               {showProductPicker && (
                 <div className="mb-3 border border-burgundy/15 rounded-xl overflow-hidden bg-white shadow-lg">
                   <div className="flex items-center gap-2 p-3 border-b border-burgundy/8">
                     <Search size={14} className="text-burgundy/40" />
-                    <input
-                      autoFocus
+                    <input autoFocus
                       className="flex-1 text-sm text-burgundy bg-transparent outline-none placeholder:text-burgundy/40 font-body"
                       placeholder="Search products..."
                       value={productSearch}
-                      onChange={e => setProductSearch(e.target.value)}
-                    />
+                      onChange={e => setProductSearch(e.target.value)} />
                   </div>
                   <div className="max-h-52 overflow-y-auto">
                     {productsLoading ? (
@@ -270,11 +263,8 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
                       <p className="text-center text-sm text-burgundy/40 p-6 font-body">No products found</p>
                     ) : (
                       filteredProducts.map(product => (
-                        <button
-                          key={product.id}
-                          onClick={() => addProduct(product)}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-ivory/60 transition-colors text-left border-b border-burgundy/5 last:border-0"
-                        >
+                        <button key={product.id} onClick={() => addProduct(product)}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-ivory/60 transition-colors text-left border-b border-burgundy/5 last:border-0">
                           {product.images?.[0] && (
                             <img src={product.images[0]} alt={product.name} className="w-9 h-9 rounded-lg object-cover flex-shrink-0 bg-ivory" />
                           )}
@@ -292,56 +282,75 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
                 </div>
               )}
 
-              {/* Selected items */}
+              {/* Order Items */}
               {orderItems.length === 0 ? (
                 <div className="border-2 border-dashed border-burgundy/10 rounded-xl p-6 text-center">
                   <Package size={24} className="mx-auto text-burgundy/20 mb-2" />
                   <p className="text-sm text-burgundy/40 font-body">No products added yet</p>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {orderItems.map((item, idx) => {
                     const productData = allProducts.find(p => p.id === item.productId);
+                    const hasColors = Object.keys(item.colorQuantities).some(k => k !== '');
+                    const totalQty = itemTotalQty(item);
+
                     return (
-                      <div key={idx} className="flex items-start gap-3 bg-ivory/40 border border-burgundy/8 rounded-xl p-3">
-                        {productData?.images?.[0] && (
-                          <img src={productData.images[0]} alt={item.productName} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-body font-medium text-burgundy truncate">{item.productName}</p>
-                          <p className="text-xs text-burgundy/50 mb-1.5">Rs. {item.price.toLocaleString()} each</p>
-                          {productData?.colors && productData.colors.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mb-1.5">
-                              {productData.colors.map(c => (
-                                <button
-                                  key={c}
-                                  onClick={() => updateColor(idx, c)}
-                                  className={`text-[10px] px-2 py-0.5 rounded-full border font-ui transition-all ${
-                                    item.selectedColor === c
-                                      ? 'bg-burgundy text-white border-burgundy'
-                                      : 'text-burgundy/60 border-burgundy/20 hover:border-burgundy/40'
-                                  }`}
-                                >
-                                  {c}
-                                </button>
-                              ))}
-                            </div>
+                      <div key={idx} className="bg-ivory/40 border border-burgundy/8 rounded-xl p-3">
+                        {/* Product header */}
+                        <div className="flex items-start gap-3 mb-3">
+                          {productData?.images?.[0] && (
+                            <img src={productData.images[0]} alt={item.productName} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
                           )}
-                          <div className="flex items-center gap-2">
-                            <button onClick={() => updateQty(idx, -1)} className="w-6 h-6 rounded-full bg-white border border-burgundy/15 text-burgundy hover:bg-burgundy hover:text-white transition-colors flex items-center justify-center">
-                              <Minus size={11} />
-                            </button>
-                            <span className="text-sm font-ui font-bold text-burgundy w-5 text-center">{item.quantity}</span>
-                            <button onClick={() => updateQty(idx, 1)} className="w-6 h-6 rounded-full bg-white border border-burgundy/15 text-burgundy hover:bg-burgundy hover:text-white transition-colors flex items-center justify-center">
-                              <Plus size={11} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-body font-medium text-burgundy truncate">{item.productName}</p>
+                            <p className="text-xs text-burgundy/50">Rs. {item.price.toLocaleString()} each</p>
+                          </div>
+                          <div className="flex items-center gap-2 ml-2">
+                            {totalQty > 0 && (
+                              <span className="text-sm font-ui font-bold text-burgundy">
+                                Rs. {(item.price * totalQty).toLocaleString()}
+                              </span>
+                            )}
+                            <button onClick={() => removeItem(idx)} className="text-red-400 hover:text-red-600 transition-colors p-1">
+                              <Trash2 size={14} />
                             </button>
                           </div>
                         </div>
-                        <div className="flex flex-col items-end gap-2">
-                          <span className="text-sm font-ui font-bold text-burgundy">Rs. {(item.price * item.quantity).toLocaleString()}</span>
-                          <button onClick={() => removeItem(idx)} className="text-red-400 hover:text-red-600 transition-colors">
-                            <Trash2 size={14} />
-                          </button>
+
+                        {/* Per-color quantity rows */}
+                        <div className="space-y-2">
+                          {Object.entries(item.colorQuantities).map(([color, qty]) => (
+                            <div key={color} className="flex items-center justify-between">
+                              {hasColors ? (
+                                <span className={`text-xs font-ui font-semibold px-2.5 py-1 rounded-full border ${qty > 0 ? 'bg-burgundy text-white border-burgundy' : 'text-burgundy/50 border-burgundy/20 bg-white'}`}>
+                                  {color}
+                                </span>
+                              ) : (
+                                <span className="text-xs font-body text-burgundy/50">Quantity</span>
+                              )}
+                              <div className="flex items-center gap-2.5">
+                                <button
+                                  onClick={() => updateColorQty(idx, color, -1)}
+                                  className="w-6 h-6 rounded-full bg-white border border-burgundy/15 text-burgundy hover:bg-burgundy hover:text-white transition-colors flex items-center justify-center"
+                                >
+                                  <Minus size={11} />
+                                </button>
+                                <span className="text-sm font-ui font-bold text-burgundy w-6 text-center">{qty}</span>
+                                <button
+                                  onClick={() => updateColorQty(idx, color, 1)}
+                                  className="w-6 h-6 rounded-full bg-white border border-burgundy/15 text-burgundy hover:bg-burgundy hover:text-white transition-colors flex items-center justify-center"
+                                >
+                                  <Plus size={11} />
+                                </button>
+                                {hasColors && qty > 0 && (
+                                  <span className="text-xs text-burgundy/40 font-body w-16 text-right">
+                                    Rs. {(item.price * qty).toLocaleString()}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     );
@@ -351,7 +360,7 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
             </div>
 
             {/* Order Summary */}
-            {orderItems.length > 0 && (
+            {orderItems.some(i => itemTotalQty(i) > 0) && (
               <div className="bg-ivory/50 border border-burgundy/8 rounded-xl p-4 space-y-2">
                 <div className="flex justify-between text-sm font-body text-burgundy/70">
                   <span>Subtotal</span><span>Rs. {subtotal.toLocaleString()}</span>
@@ -400,12 +409,7 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
 
             {/* Stock toggle */}
             <label className="flex items-start gap-3 cursor-pointer bg-amber-50 border border-amber-200/60 rounded-xl p-3.5">
-              <input
-                type="checkbox"
-                checked={deductStock}
-                onChange={e => setDeductStock(e.target.checked)}
-                className="mt-0.5 accent-burgundy"
-              />
+              <input type="checkbox" checked={deductStock} onChange={e => setDeductStock(e.target.checked)} className="mt-0.5 accent-burgundy" />
               <div>
                 <p className="text-sm font-ui font-semibold text-burgundy">Deduct from stock</p>
                 <p className="text-xs text-burgundy/50 font-body mt-0.5">Automatically reduce product quantities in inventory after placing this order.</p>
@@ -414,9 +418,7 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
 
             {/* Error */}
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-4 py-3 text-sm font-body">
-                {error}
-              </div>
+              <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-4 py-3 text-sm font-body">{error}</div>
             )}
           </div>
         )}
@@ -424,17 +426,12 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
         {/* Footer */}
         {!success && (
           <div className="sticky bottom-0 bg-white border-t border-burgundy/8 p-4 flex gap-3">
-            <button
-              onClick={handleClose}
-              className="flex-1 py-2.5 rounded-xl border border-burgundy/20 text-burgundy text-sm font-ui font-semibold hover:bg-ivory transition-colors"
-            >
+            <button onClick={handleClose}
+              className="flex-1 py-2.5 rounded-xl border border-burgundy/20 text-burgundy text-sm font-ui font-semibold hover:bg-ivory transition-colors">
               Cancel
             </button>
-            <button
-              onClick={handleSubmit}
-              disabled={submitting}
-              className="flex-1 py-2.5 rounded-xl bg-burgundy text-white text-sm font-ui font-semibold hover:bg-wine transition-colors shadow-md shadow-burgundy/20 disabled:opacity-60 flex items-center justify-center gap-2"
-            >
+            <button onClick={handleSubmit} disabled={submitting}
+              className="flex-1 py-2.5 rounded-xl bg-burgundy text-white text-sm font-ui font-semibold hover:bg-wine transition-colors shadow-md shadow-burgundy/20 disabled:opacity-60 flex items-center justify-center gap-2">
               {submitting ? <><Loader2 size={15} className="animate-spin" /> Creating...</> : 'Create Order'}
             </button>
           </div>
