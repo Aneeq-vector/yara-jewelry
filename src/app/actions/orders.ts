@@ -97,6 +97,103 @@ export async function createOrderAction(formData: FormData) {
   }
 }
 
+export interface ManualOrderItem {
+  productId: string;
+  productName: string;
+  quantity: number;
+  price: number;
+  selectedColor?: string;
+}
+
+export interface ManualOrderPayload {
+  shippingName: string;
+  shippingPhone: string;
+  shippingEmail?: string;
+  shippingStreet?: string;
+  shippingCity: string;
+  shippingZip?: string;
+  shippingCountry?: string;
+  source: string;
+  items: ManualOrderItem[];
+  totalAmount: number;
+  paymentMethod: 'cod' | 'bank_transfer';
+  paymentStatus: 'pending' | 'paid';
+  notes?: string;
+  deductStock: boolean;
+}
+
+export async function createManualOrderAction(payload: ManualOrderPayload) {
+  try {
+    const adminPb = await getAdminClient();
+    const generatedOrderId = `YRA-${Math.floor(100000 + Math.random() * 900000)}`;
+    const orderDate = new Date().toISOString();
+
+    // Build cartDetails array (same format as website orders)
+    const cartDetails: string[] = [];
+    if (payload.source) {
+      cartDetails.push(`Source: ${payload.source}`);
+    }
+    for (const item of payload.items) {
+      const colorStr = item.selectedColor ? ` [Color: ${item.selectedColor}]` : '';
+      cartDetails.push(`${item.quantity}x ${item.productName}${colorStr} - Rs. ${item.price}`);
+    }
+    if (payload.notes) {
+      cartDetails.push(`Notes: ${payload.notes}`);
+    }
+
+    const productIds = [...new Set(payload.items.map(i => i.productId).filter(Boolean))];
+
+    const orderData = {
+      orderId: generatedOrderId,
+      orderDate,
+      shippingName: payload.shippingName,
+      shippingPhone: payload.shippingPhone,
+      shippingEmail: payload.shippingEmail || '',
+      shippingStreet: payload.shippingStreet || '',
+      shippingCity: payload.shippingCity,
+      shippingZip: payload.shippingZip || '00000',
+      shippingCountry: payload.shippingCountry || 'Sri Lanka',
+      totalAmount: payload.totalAmount,
+      paymentMethod: payload.paymentMethod,
+      paymentStatus: payload.paymentStatus,
+      status: 'pending',
+      items: productIds,
+      cartDetails: JSON.stringify(cartDetails),
+    };
+
+    const record = await adminPb.collection('orders').create(orderData);
+
+    // Deduct stock if requested
+    if (payload.deductStock) {
+      const deductions: Record<string, number> = {};
+      for (const item of payload.items) {
+        if (item.productId) {
+          deductions[item.productId] = (deductions[item.productId] || 0) + item.quantity;
+        }
+      }
+      for (const [prodId, qty] of Object.entries(deductions)) {
+        try {
+          const productRecord = await adminPb.collection('products').getOne(prodId);
+          const currentQty = Number(productRecord.quantity) || 0;
+          const newQty = Math.max(0, currentQty - qty);
+          await adminPb.collection('products').update(prodId, {
+            quantity: newQty,
+            inStock: newQty > 0,
+          });
+        } catch (err) {
+          console.error(`Failed to deduct stock for product ${prodId}:`, err);
+        }
+      }
+    }
+
+    revalidatePath('/yara-admin/orders');
+    return { success: true, orderId: record.orderId || record.id, record: structuredClone(record) };
+  } catch (error: any) {
+    console.error('Failed to create manual order:', error);
+    return { success: false, error: error?.message || 'Failed to create manual order' };
+  }
+}
+
 export async function getAllOrdersAction(page: number = 1, perPage: number = 50) {
   try {
     const { pb } = await validateSession();

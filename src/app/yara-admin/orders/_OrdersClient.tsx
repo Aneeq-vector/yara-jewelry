@@ -5,7 +5,8 @@ import { OrdersTable } from './components/OrdersTable';
 import { OrdersPagination } from './components/OrdersPagination';
 import { ViewOrderModal } from './components/ViewOrderModal';
 import { TableSkeleton } from '@/components/admin/TableSkeleton';
-import { Search, Filter, Eye, Download, X, Loader2, ChevronDown, FileText, Trash2, RefreshCw } from 'lucide-react';
+import { Search, Filter, Eye, Download, X, Loader2, ChevronDown, FileText, Trash2, RefreshCw, Plus } from 'lucide-react';
+import { AddOrderModal } from './components/AddOrderModal';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Pagination,
@@ -54,6 +55,8 @@ export default function OrdersClient({ initialOrders, initialTotal, initialPages
     message: '',
     onConfirm: () => {}
   });
+
+  const [isAddOrderOpen, setIsAddOrderOpen] = useState(false);
 
   const fetchOrders = (page = currentPage) => {
     setLoading(true);
@@ -244,13 +247,22 @@ export default function OrdersClient({ initialOrders, initialTotal, initialPages
           <h1 className="text-2xl font-heading font-bold text-burgundy">Orders History</h1>
           <p className="text-burgundy/60 font-body text-sm mt-1">View and manage all customer orders.</p>
         </div>
-        <button 
-          onClick={handleExport}
-          className="flex items-center gap-2 bg-white border border-burgundy/10 text-burgundy px-4 py-2 rounded-xl font-ui text-sm font-semibold hover:bg-rose-gold/10 transition-colors shadow-sm self-start sm:self-auto"
-        >
-          <Download size={16} />
-          Export CSV
-        </button>
+        <div className="flex items-center gap-3 self-start sm:self-auto">
+          <button 
+            onClick={handleExport}
+            className="flex items-center gap-2 bg-white border border-burgundy/10 text-burgundy px-4 py-2 rounded-xl font-ui text-sm font-semibold hover:bg-rose-gold/10 transition-colors shadow-sm"
+          >
+            <Download size={16} />
+            Export CSV
+          </button>
+          <button
+            onClick={() => setIsAddOrderOpen(true)}
+            className="flex items-center gap-2 bg-burgundy text-white px-4 py-2 rounded-xl font-ui text-sm font-semibold hover:bg-wine transition-colors shadow-md shadow-burgundy/20"
+          >
+            <Plus size={16} />
+            Add Order
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl border border-burgundy/5 shadow-sm overflow-hidden">
@@ -360,6 +372,17 @@ export default function OrdersClient({ initialOrders, initialTotal, initialPages
         onConfirm={confirmModal.onConfirm}
         onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
         variant="danger"
+      />
+
+      <AddOrderModal
+        isOpen={isAddOrderOpen}
+        onClose={() => setIsAddOrderOpen(false)}
+        onOrderCreated={(newOrder) => {
+          // Prepend the new order to the list so it's immediately visible
+          if (newOrder) {
+            setOrders(prev => [newOrder, ...prev]);
+          }
+        }}
       />
     </div>
   );
