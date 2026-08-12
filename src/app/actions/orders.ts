@@ -121,6 +121,7 @@ export interface ManualOrderPayload {
   paymentStatus: 'pending' | 'paid';
   notes?: string;
   deductStock: boolean;
+  receiptFile?: File | null;
 }
 
 export async function createManualOrderAction(payload: ManualOrderPayload) {
@@ -148,25 +149,28 @@ export async function createManualOrderAction(payload: ManualOrderPayload) {
 
     const productIds = [...new Set(payload.items.map(i => i.productId).filter(Boolean))];
 
-    const orderData = {
-      orderId: generatedOrderId,
-      orderDate,
-      shippingName: payload.shippingName,
-      shippingPhone: payload.shippingPhone,
-      shippingEmail: payload.shippingEmail || '',
-      shippingStreet: payload.shippingStreet || '',
-      shippingCity: payload.shippingCity,
-      shippingZip: payload.shippingZip || '00000',
-      shippingCountry: payload.shippingCountry || 'Sri Lanka',
-      totalAmount: payload.totalAmount,
-      paymentMethod: payload.paymentMethod,
-      paymentStatus: payload.paymentStatus,
-      status: 'pending',
-      items: productIds,
-      cartDetails: JSON.stringify(cartDetails),
-    };
+    // Use FormData so we can attach the receipt file if provided
+    const formData = new FormData();
+    formData.append('orderId', generatedOrderId);
+    formData.append('orderDate', orderDate);
+    formData.append('shippingName', payload.shippingName);
+    formData.append('shippingPhone', payload.shippingPhone);
+    formData.append('shippingEmail', payload.shippingEmail || '');
+    formData.append('shippingStreet', payload.shippingStreet || '');
+    formData.append('shippingCity', payload.shippingCity);
+    formData.append('shippingZip', payload.shippingZip || '00000');
+    formData.append('shippingCountry', payload.shippingCountry || 'Sri Lanka');
+    formData.append('totalAmount', String(payload.totalAmount));
+    formData.append('paymentMethod', payload.paymentMethod);
+    formData.append('paymentStatus', payload.paymentStatus);
+    formData.append('status', 'pending');
+    formData.append('cartDetails', JSON.stringify(cartDetails));
+    productIds.forEach(id => formData.append('items', id));
+    if (payload.receiptFile) {
+      formData.append('receipt', payload.receiptFile);
+    }
 
-    const record = await adminPb.collection('orders').create(orderData);
+    const record = await adminPb.collection('orders').create(formData);
 
     // Deduct stock if requested — sum all color quantities per product
     if (payload.deductStock) {

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { X, Search, Plus, Minus, Trash2, Package, Loader2, CheckCircle } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { X, Search, Plus, Minus, Trash2, Package, Loader2, CheckCircle, Upload } from 'lucide-react';
 import { createManualOrderAction, ManualOrderItem } from '@/app/actions/orders';
 import { getAllProducts } from '@/lib/data/products';
 import { Product } from '@/types';
@@ -44,6 +44,8 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [showProductPicker, setShowProductPicker] = useState(false);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const receiptInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isOpen && allProducts.length === 0) {
@@ -61,6 +63,7 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
     setNotes(''); setDeductStock(true); setIncludeDelivery(true);
     setOrderItems([]); setProductSearch('');
     setError(''); setSuccess(false); setShowProductPicker(false);
+    setReceiptFile(null);
   };
 
   const handleClose = () => {
@@ -145,6 +148,7 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
       paymentStatus,
       notes: notes.trim() || undefined,
       deductStock,
+      receiptFile: receiptFile || undefined,
     });
 
     setSubmitting(false);
@@ -395,6 +399,46 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
                 </select>
               </div>
             </div>
+
+            {/* Receipt Upload — shown only for bank transfer */}
+            {paymentMethod === 'bank_transfer' && (
+              <div>
+                <label className={labelClass}>Payment Receipt <span className="text-burgundy/30">(optional)</span></label>
+                <div
+                  onClick={() => receiptInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors ${
+                    receiptFile ? 'border-emerald-300 bg-emerald-50' : 'border-burgundy/15 hover:border-burgundy/30 bg-ivory/30'
+                  }`}
+                >
+                  <input
+                    ref={receiptInputRef}
+                    type="file"
+                    accept="image/*,application/pdf"
+                    className="hidden"
+                    onChange={e => setReceiptFile(e.target.files?.[0] || null)}
+                  />
+                  {receiptFile ? (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle size={16} className="text-emerald-500 flex-shrink-0" />
+                        <span className="text-sm text-emerald-700 font-body truncate max-w-[220px]">{receiptFile.name}</span>
+                      </div>
+                      <button
+                        onClick={e => { e.stopPropagation(); setReceiptFile(null); if (receiptInputRef.current) receiptInputRef.current.value = ''; }}
+                        className="text-burgundy/40 hover:text-red-500 transition-colors ml-2"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-1">
+                      <Upload size={18} className="text-burgundy/30" />
+                      <p className="text-xs text-burgundy/50 font-body">Click to upload receipt (image or PDF)</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Notes */}
             <div>
