@@ -43,7 +43,7 @@ export async function createOrderAction(formData: FormData) {
           if (prodId && qtyToDeduct > 0) {
             try {
               const productRecord = await adminPb.collection('products').getOne(prodId);
-              const currentQty = productRecord.quantity || 0;
+              const currentQty = Number(productRecord.quantity) || 0;
               const newQty = Math.max(0, currentQty - qtyToDeduct);
               await adminPb.collection('products').update(prodId, {
                 quantity: newQty,
@@ -190,7 +190,7 @@ export async function deleteOrdersAction(orderIds: string[]) {
           }
           
           if (quantityToRestore > 0) {
-            const currentQty = product.quantity || 0;
+            const currentQty = Number(product.quantity) || 0;
             const newQty = currentQty + quantityToRestore;
             await adminPb.collection('products').update(product.id, {
               quantity: newQty,
