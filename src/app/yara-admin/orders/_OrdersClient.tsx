@@ -25,6 +25,7 @@ import {
 import { getAllOrdersAction, updateOrderStatusAction, updateOrderPaymentStatusAction, deleteOrdersAction } from '@/app/actions/orders';
 import { PB_URL } from '@/lib/pocketbase';
 import * as XLSX from 'xlsx';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
 export default function OrdersClient({ initialOrders, initialTotal, initialPages }: {
   initialOrders: any[];
@@ -46,6 +47,13 @@ export default function OrdersClient({ initialOrders, initialTotal, initialPages
   
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
+  
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  });
 
   const fetchOrders = (page = currentPage) => {
     setLoading(true);
@@ -100,18 +108,25 @@ export default function OrdersClient({ initialOrders, initialTotal, initialPages
     }
   };
 
-  const handleDeleteSelected = async () => {
+  const handleDeleteSelected = () => {
     if (selectedOrders.length === 0) return;
-    if (!confirm(`Are you sure you want to delete ${selectedOrders.length} order(s)? This cannot be undone.`)) return;
-
-    const res = await deleteOrdersAction(selectedOrders);
-    if (res?.success) {
-      const selectedSet = new Set(selectedOrders);
-      setOrders(prev => prev.filter(o => !selectedSet.has(o.id)));
-      setSelectedOrders([]);
-    } else {
-      alert("Failed to delete orders: " + (res?.error || "Unknown error"));
-    }
+    
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Orders',
+      message: `Are you sure you want to delete ${selectedOrders.length} order(s)? This cannot be undone.`,
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        const res = await deleteOrdersAction(selectedOrders);
+        if (res?.success) {
+          const selectedSet = new Set(selectedOrders);
+          setOrders(prev => prev.filter(o => !selectedSet.has(o.id)));
+          setSelectedOrders([]);
+        } else {
+          alert("Failed to delete orders: " + (res?.error || "Unknown error"));
+        }
+      }
+    });
   };
 
   const handleExport = () => {
@@ -329,7 +344,23 @@ export default function OrdersClient({ initialOrders, initialTotal, initialPages
       </div>
 
       {/* View Order Modal */}
-      {selectedOrder && <ViewOrderModal selectedOrder={selectedOrder} setSelectedOrder={setSelectedOrder} handleStatusChange={handleStatusChange} handlePaymentStatusChange={handlePaymentStatusChange} />}
+      {selectedOrder && (
+        <ViewOrderModal
+          selectedOrder={selectedOrder}
+          setSelectedOrder={setSelectedOrder}
+          handleStatusChange={handleStatusChange}
+          handlePaymentStatusChange={handlePaymentStatusChange}
+        />
+      )}
+      
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        description={confirmModal.message}
+        onConfirm={confirmModal.onConfirm}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        variant="danger"
+      />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { AnnouncementSection } from './components/AnnouncementSection';
 import { HeroSection } from './components/HeroSection';
 import { Upload, Plus, Trash2, Save, Eye, Image as ImageIcon, GripVertical, Settings2, Link as LinkIcon, Type, Layout, ImagePlus, ChevronDown, ChevronUp } from 'lucide-react';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
 export default function HomeCMS() {
   const [isSaving, setIsSaving] = useState(false);
@@ -14,6 +15,11 @@ export default function HomeCMS() {
     products: false,
     story: false,
     newsletter: false,
+  });
+  
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    categoryId: null as number | null
   });
 
   const [categories, setCategories] = useState([
@@ -119,9 +125,10 @@ export default function HomeCMS() {
                       </div>
                       <button aria-label="Action" 
                         onClick={() => {
-                          if (window.confirm('Remove this category?')) {
-                            setCategories(categories.filter(c => c.id !== category.id));
-                          }
+                          setConfirmModal({
+                            isOpen: true,
+                            categoryId: category.id
+                          });
                         }}
                         className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                       >
@@ -182,6 +189,19 @@ export default function HomeCMS() {
           )}
         </div>
 
+        <ConfirmModal
+          isOpen={confirmModal.isOpen}
+          title="Remove Category"
+          description="Are you sure you want to remove this category? This cannot be undone."
+          onConfirm={() => {
+            if (confirmModal.categoryId !== null) {
+              setCategories(categories.filter(c => c.id !== confirmModal.categoryId));
+              setConfirmModal({ isOpen: false, categoryId: null });
+            }
+          }}
+          onClose={() => setConfirmModal({ isOpen: false, categoryId: null })}
+          variant="danger"
+        />
       </div>
     </div>
   );

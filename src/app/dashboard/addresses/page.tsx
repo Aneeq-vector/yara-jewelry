@@ -9,6 +9,7 @@ import { COUNTRIES } from '@/lib/countries';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
 export default function AddressesPage() {
   const [addresses, setAddresses] = useState<Address[]>([]);
@@ -19,6 +20,11 @@ export default function AddressesPage() {
   
   const [isAdding, setIsAdding] = useState(false);
   const [newForm, setNewForm] = useState({ name: '', street: '', city: '', state: '', zipCode: '', phone: '', country: 'Sri Lanka', isDefault: false });
+  
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    addressId: null as string | null
+  });
 
   const inputClass = "w-full px-3 py-2 rounded-xl bg-transparent border border-burgundy/20 font-body text-sm text-burgundy placeholder:text-burgundy/50 focus:outline-none focus:border-burgundy transition-colors";
 
@@ -35,10 +41,18 @@ export default function AddressesPage() {
     setLoading(false);
   };
 
-  const deleteAddress = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this address?')) return;
+  const deleteAddress = (id: string) => {
+    setConfirmModal({
+      isOpen: true,
+      addressId: id
+    });
+  };
+
+  const confirmDeleteAddress = async () => {
+    if (!confirmModal.addressId) return;
+    setConfirmModal({ isOpen: false, addressId: null });
     setSaving(true);
-    await deleteAddressAction(id);
+    await deleteAddressAction(confirmModal.addressId);
     await fetchAddresses();
     setSaving(false);
   };
@@ -234,6 +248,15 @@ export default function AddressesPage() {
           </motion.div>
         ))}
       </div>
+      
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title="Delete Address"
+        description="Are you sure you want to delete this address? This cannot be undone."
+        onConfirm={confirmDeleteAddress}
+        onClose={() => setConfirmModal({ isOpen: false, addressId: null })}
+        variant="danger"
+      />
     </>
   );
 }
