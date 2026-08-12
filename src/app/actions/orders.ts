@@ -157,6 +157,51 @@ export async function updateOrderPaymentStatusAction(orderId: string, paymentSta
 export async function deleteOrdersAction(orderIds: string[]) {
   try {
     const { pb } = await validateSession();
+    const adminPb = await getAdminClient();
+    
+    // Restore stock for all products in the deleted orders
+    for (const orderId of orderIds) {
+      try {
+        const order = await adminPb.collection('orders').getOne(orderId, { expand: 'items' });
+        const items = order.expand?.items || [];
+        
+        let cartDetails: string[] = [];
+        try {
+          if (Array.isArray(order.cartDetails)) {
+            cartDetails = order.cartDetails;
+          } else if (typeof order.cartDetails === 'string') {
+            cartDetails = JSON.parse(order.cartDetails || '[]');
+          }
+        } catch(e) {}
+        
+        for (const product of items) {
+          let quantityToRestore = 0;
+          
+          for (const detail of cartDetails) {
+            if (typeof detail !== 'string') continue;
+            if (detail.includes(product.name)) {
+              const match = detail.match(/^(\d+)x/);
+              if (match) {
+                quantityToRestore += parseInt(match[1], 10);
+              } else {
+                quantityToRestore += 1;
+              }
+            }
+          }
+          
+          if (quantityToRestore > 0) {
+            const currentQty = product.quantity || 0;
+            const newQty = currentQty + quantityToRestore;
+            await adminPb.collection('products').update(product.id, {
+              quantity: newQty,
+              inStock: newQty > 0
+            });
+          }
+        }
+      } catch (err) {
+        console.error(`Failed to restore stock for order ${orderId}:`, err);
+      }
+    }
     
     // Delete all selected orders
     await Promise.all(
