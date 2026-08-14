@@ -39,11 +39,11 @@ async function handleProductEvent(
       );
     }
 
-    // Patch product options cache if cached
+    // Patch product options cache if cached (requires raw record, not mapped Product)
     const optionsKey = queryKeys.products.options();
     if (queryClient.getQueryData(optionsKey)) {
       queryClient.setQueryData(optionsKey, (old: any[]) =>
-        old.map((p) => (p.id === updated.id ? { ...p, ...updated } : p))
+        old.map((p) => (p.id === e.record.id ? { ...p, ...e.record } : p))
       );
     }
 
