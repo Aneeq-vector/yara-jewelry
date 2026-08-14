@@ -23,6 +23,7 @@ import { getAllCategories } from '@/lib/data/categories';
 import { getAllGiftBoxes } from '@/lib/data/gift-boxes';
 import { updateGiftBoxAction } from '@/app/actions/update-gift-box';
 import { Product, Category, GiftBox } from '@/types';
+import { useProductOptions } from '@/lib/hooks/use-products';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface RawBox {
@@ -427,14 +428,15 @@ export default function GiftBoxesAdminPage() {
   const { editorCategory, selectedItems, productSearch, isActive, pendingImage, previewUrl, saveStatus } = editorState;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const { data: rawProducts = [] } = useProductOptions();
+
   const fetchData = () => {
     setLoading(true);
     const pb = createClient();
     Promise.all([
       pb.collection('gift_boxes').getFullList({ expand: 'fixed_items' }),
       getAllCategories(),
-      pb.collection('products').getFullList(),
-    ]).then(([rawBoxes, cats, rawProducts]) => {
+    ]).then(([rawBoxes, cats]) => {
       const mapped: RawBox[] = rawBoxes.map((r) => ({
         id: r.id,
         name: r.name,
@@ -450,29 +452,6 @@ export default function GiftBoxesAdminPage() {
         collectionId: r.collectionId,
       }));
       setBoxes(mapped);
-
-      const products: Product[] = rawProducts.map((r) => ({
-        id: r.id,
-        name: r.name,
-        slug: r.slug,
-        price: r.price,
-        originalPrice: r.originalPrice,
-        description: r.description,
-        shortDescription: r.shortDescription,
-        category: r.category as any,
-        images: (r.images || []).map((fn: string) =>
-          fn.startsWith('http') ? fn : `${PB_URL}/api/files/${r.collectionId}/${r.id}/${fn}`
-        ),
-        badge: r.badge || undefined,
-        rating: r.rating || 0,
-        reviewCount: r.reviewCount || 0,
-        material: r.material || '',
-        weight: r.weight || '',
-        inStock: r.inStock ?? true,
-        colors: r.colors || [],
-        tags: r.tags || [],
-      }));
-      setAllProducts(products);
       setCategories(cats);
       setLoading(false);
     });
@@ -481,6 +460,32 @@ export default function GiftBoxesAdminPage() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (!rawProducts.length) return;
+    const products: Product[] = rawProducts.map((r) => ({
+      id: r.id,
+      name: r.name,
+      slug: r.slug,
+      price: r.price,
+      originalPrice: r.originalPrice,
+      description: r.description,
+      shortDescription: r.shortDescription,
+      category: r.category as any,
+      images: (r.images || []).map((fn: string) =>
+        fn.startsWith('http') ? fn : `${PB_URL}/api/files/${r.collectionId}/${r.id}/${fn}`
+      ),
+      badge: r.badge || undefined,
+      rating: r.rating || 0,
+      reviewCount: r.reviewCount || 0,
+      material: r.material || '',
+      weight: r.weight || '',
+      inStock: r.inStock ?? true,
+      colors: r.colors || [],
+      tags: r.tags || [],
+    }));
+    setAllProducts(products);
+  }, [rawProducts]);
 
   const selectedBox = boxes.find((b) => b.id === selectedBoxId) || null;
 

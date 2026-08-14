@@ -8,6 +8,7 @@ import PageWrapper from '@/components/layout/PageWrapper';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { useEffect, useState } from 'react';
 import { logoutAction } from '@/app/actions/auth';
+import { useQueryClient } from '@tanstack/react-query';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Overview', href: '/dashboard' },
@@ -28,6 +29,7 @@ export default function DashboardLayout({
   const { user, isAuthenticated, logout } = useAuthStore();
   const [isClient, setIsClient] = useState(false);
   const [hasHydrated, setHasHydrated] = useState(false);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     setIsClient(true);
@@ -60,6 +62,7 @@ export default function DashboardLayout({
     // Clear the session sync flag so the next login re-syncs properly
     if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('yara_synced');
     logout();
+    queryClient.removeQueries();
     router.refresh();
     router.push('/');
   };

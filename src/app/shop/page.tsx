@@ -23,8 +23,8 @@ import { ShopToolbar } from './components/ShopToolbar';
 import { ShopSidebarFilters } from './components/ShopSidebarFilters';
 import { ShopMobileFilters } from './components/ShopMobileFilters';
 import { ProductCard } from './components/ProductCard';
-import { getAllProducts } from '@/lib/data/products';
-import { getAllCategories } from '@/lib/data/categories';
+import { useProducts } from '@/lib/hooks/use-products';
+import { useCategories } from '@/lib/hooks/use-categories';
 import { useCartStore } from '@/lib/store/cart-store';
 import { useWishlistStore } from '@/lib/store/wishlist-store';
 import { formatPrice, calculateDiscount, cn } from '@/lib/utils';
@@ -75,21 +75,18 @@ function ShopContent() {
   const [search, setSearch] = useState(searchQuery);
   const [showFilters, setShowFilters] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: products = [], isPending: productsLoading } = useProducts();
+  const { data: rawCategories = [], isPending: categoriesLoading } = useCategories();
+  
+  const loading = productsLoading || categoriesLoading;
 
-  useEffect(() => {
-    Promise.all([getAllProducts(), getAllCategories()]).then(([prods, cats]) => {
-      setProducts(prods);
-      setCategories(cats.sort((a, b) => {
-        if (a.slug === 'new-arrivals') return -1;
-        if (b.slug === 'new-arrivals') return 1;
-        return 0;
-      }));
-      setLoading(false);
+  const categories = useMemo(() => {
+    return [...rawCategories].sort((a, b) => {
+      if (a.slug === 'new-arrivals') return -1;
+      if (b.slug === 'new-arrivals') return 1;
+      return 0;
     });
-  }, []);
+  }, [rawCategories]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect

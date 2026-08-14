@@ -21,7 +21,8 @@ import {
 import Image from 'next/image';
 import { useAdminAuthStore } from '@/lib/store/admin-auth-store';
 import { adminLogoutAction } from '@/app/actions/auth';
-
+import { useAdminProductRealtime } from '@/lib/hooks/use-product-realtime';
+import { useQueryClient } from '@tanstack/react-query';
 const SIDEBAR_ITEMS = [
   { name: 'Dashboard', href: '/yara-admin', icon: LayoutDashboard },
   { name: 'Orders', href: '/yara-admin/orders', icon: ShoppingCart },
@@ -41,6 +42,9 @@ export default function AdminLayout({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { user, isAuthenticated, logout } = useAdminAuthStore();
   const [ready, setReady] = useState(false);
+  const queryClient = useQueryClient();
+
+  useAdminProductRealtime();
 
   useLayoutEffect(() => {
     // Check hydration immediately — useLayoutEffect runs synchronously after DOM paint
@@ -84,6 +88,7 @@ export default function AdminLayout({
       console.error('Logout action failed:', err);
     }
     logout();
+    queryClient.removeQueries();
     router.refresh();
     router.push('/auth/login');
   };

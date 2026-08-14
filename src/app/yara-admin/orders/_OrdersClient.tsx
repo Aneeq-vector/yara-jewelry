@@ -24,6 +24,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getAllOrdersAction, updateOrderStatusAction, updateOrderPaymentStatusAction, deleteOrdersAction } from '@/app/actions/orders';
+import { useAdminOrders } from '@/lib/hooks/use-orders';
+import { queryKeys } from '@/lib/query-keys';
+import { useQueryClient } from '@tanstack/react-query';
 import { PB_URL } from '@/lib/pocketbase';
 import * as XLSX from 'xlsx';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
@@ -33,18 +36,19 @@ export default function OrdersClient({ initialOrders, initialTotal, initialPages
   initialTotal: number;
   initialPages: number;
 }) {
-  const [orders, setOrders] = useState<any[]>(initialOrders);
-  const [loading, setLoading] = useState(false);
-  const [totalItems, setTotalItems] = useState(initialTotal);
-  const [totalPages, setTotalPages] = useState(initialPages);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(50);
+  
+  const { data, isFetching: loading, refetch } = useAdminOrders(currentPage, rowsPerPage);
+  const orders = data?.orders || initialOrders;
+  const totalItems = data?.totalItems ?? initialTotal;
+  const totalPages = data?.totalPages ?? initialPages;
+  const queryClient = useQueryClient();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All Statuses');
   const [dateFilter, setDateFilter] = useState('all');
   const [customDate, setCustomDate] = useState('');
-  
-  const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(50);
   
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
@@ -58,56 +62,37 @@ export default function OrdersClient({ initialOrders, initialTotal, initialPages
 
   const [isAddOrderOpen, setIsAddOrderOpen] = useState(false);
 
-  const fetchOrders = (page = currentPage) => {
-    setLoading(true);
-    getAllOrdersAction(page, rowsPerPage).then(res => {
-      if (res.success && res.orders) {
-        setOrders(res.orders);
-        setTotalItems(res.totalItems ?? 0);
-        setTotalPages(res.totalPages ?? 1);
-      } else if (res.error) {
-        console.error('Orders fetch error:', res.error);
-      }
-      setLoading(false);
-    }).catch(err => {
-      console.error('Network Error:', err);
-      setLoading(false);
-    });
+  const fetchOrders = () => {
+    refetch();
   };
 
-  // First page is pre-loaded; subsequent page changes fetch client-side
-  useEffect(() => {
-    if (currentPage !== 1) fetchOrders(currentPage);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, rowsPerPage]);
-
   const handleStatusChange = async (id: string, newStatus: string) => {
-    setOrders((prev: any[]) => prev.map(o => o.id === id ? { ...o, status: newStatus } : o));
+    const qKey = queryKeys.admin.orders(currentPage, rowsPerPage);
+    queryClient.setQueryData(qKey, (old: any) => {
+      if (!old) return old;
+      return { ...old, orders: old.orders.map((o: any) => o.id === id ? { ...o, status: newStatus } : o) };
+    });
     setSelectedOrder((prev: any) => prev && prev.id === id ? { ...prev, status: newStatus } : prev);
+    
     const res = await updateOrderStatusAction(id, newStatus);
     if (!res?.success) {
       alert("Failed to update status: " + (res?.error || "Unknown error"));
-      // Revert if failed
-      getAllOrdersAction().then(res => {
-        if (res.success && res.orders) {
-          setOrders(res.orders);
-        }
-      });
+      queryClient.invalidateQueries({ queryKey: qKey });
     }
   };
 
   const handlePaymentStatusChange = async (id: string, newPaymentStatus: string) => {
-    setOrders((prev: any[]) => prev.map(o => o.id === id ? { ...o, paymentStatus: newPaymentStatus } : o));
+    const qKey = queryKeys.admin.orders(currentPage, rowsPerPage);
+    queryClient.setQueryData(qKey, (old: any) => {
+      if (!old) return old;
+      return { ...old, orders: old.orders.map((o: any) => o.id === id ? { ...o, paymentStatus: newPaymentStatus } : o) };
+    });
     setSelectedOrder((prev: any) => prev && prev.id === id ? { ...prev, paymentStatus: newPaymentStatus } : prev);
+    
     const res = await updateOrderPaymentStatusAction(id, newPaymentStatus);
     if (!res?.success) {
       alert("Failed to update payment status: " + (res?.error || "Unknown error"));
-      // Revert if failed
-      getAllOrdersAction().then(res => {
-        if (res.success && res.orders) {
-          setOrders(res.orders);
-        }
-      });
+      queryClient.invalidateQueries({ queryKey: qKey });
     }
   };
 
@@ -122,8 +107,8 @@ export default function OrdersClient({ initialOrders, initialTotal, initialPages
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
         const res = await deleteOrdersAction(selectedOrders);
         if (res?.success) {
-          const selectedSet = new Set(selectedOrders);
-          setOrders(prev => prev.filter(o => !selectedSet.has(o.id)));
+          const qKey = queryKeys.admin.orders(currentPage, rowsPerPage);
+          queryClient.invalidateQueries({ queryKey: qKey });
           setSelectedOrders([]);
         } else {
           alert("Failed to delete orders: " + (res?.error || "Unknown error"));
@@ -377,11 +362,9 @@ export default function OrdersClient({ initialOrders, initialTotal, initialPages
       <AddOrderModal
         isOpen={isAddOrderOpen}
         onClose={() => setIsAddOrderOpen(false)}
-        onOrderCreated={(newOrder) => {
-          // Prepend the new order to the list so it's immediately visible
-          if (newOrder) {
-            setOrders(prev => [newOrder, ...prev]);
-          }
+        onOrderCreated={() => {
+          // Invalidate the current page so the new order appears
+          queryClient.invalidateQueries({ queryKey: queryKeys.admin.orders(currentPage, rowsPerPage) });
         }}
       />
     </div>

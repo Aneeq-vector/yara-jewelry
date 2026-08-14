@@ -7,6 +7,9 @@ import { CustomersTable } from './components/CustomersTable';
 import { Search, Download, MoreVertical, Mail, Trash2, RefreshCw, ChevronDown } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { getCustomersAction, deleteCustomerAction, updateCustomerStatusAction, deleteCustomersAction } from '@/app/actions/customers';
+import { useAdminCustomers } from '@/lib/hooks/use-customers';
+import { queryKeys } from '@/lib/query-keys';
+import { useQueryClient } from '@tanstack/react-query';
 import { Customer } from '@/lib/store/customers-store';
 import {
   Pagination,
@@ -33,15 +36,31 @@ const WhatsappIcon = ({ size = 16, className = "" }) => (
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
 export default function CustomersClient({ initialCustomers, initialTotalItems = 0, initialTotalPages = 0 }: { initialCustomers: Customer[], initialTotalItems?: number, initialTotalPages?: number }) {
-  const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
-  const [loading, setLoading] = useState(false);
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
   const [filterSegment, setFilterSegment] = useState('All Status');
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [totalItems, setTotalItems] = useState(initialTotalItems);
-  const [totalPages, setTotalPages] = useState(initialTotalPages);
+
+  const { data, isFetching: loading } = useAdminCustomers({
+    page: currentPage,
+    perPage: rowsPerPage,
+    search: debouncedSearch,
+    status: filterSegment,
+  });
+
+  const customers = (data?.customers as unknown as Customer[]) || initialCustomers;
+  const totalItems = data?.totalItems ?? initialTotalItems;
+  const totalPages = data?.totalPages ?? initialTotalPages;
+  const queryClient = useQueryClient();
+
   const [selectedCustomerForAddress, setSelectedCustomerForAddress] = useState<Customer | null>(null);
   
   const [confirmModal, setConfirmModal] = useState({
@@ -51,40 +70,24 @@ export default function CustomersClient({ initialCustomers, initialTotalItems = 
     onConfirm: () => {},
   });
 
-  const isFirstRender = useRef(true);
-
+  // Reset page to 1 when filters change
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-    const handler = setTimeout(() => {
-      fetchCustomers();
-    }, 300);
-    return () => clearTimeout(handler);
-  }, [searchQuery, filterSegment, currentPage, rowsPerPage]);
-
-  const fetchCustomers = async () => {
-    setLoading(true);
-    const res = await getCustomersAction(currentPage, rowsPerPage, searchQuery, filterSegment);
-    if (res.success && res.customers) {
-      setCustomers(res.customers);
-      setTotalItems(res.totalItems || 0);
-      setTotalPages(res.totalPages || 0);
-      setSelectedCustomerIds(new Set());
-    }
-    setLoading(false);
-  };
+    setCurrentPage(1);
+  }, [debouncedSearch, filterSegment, rowsPerPage]);
 
   const handleStatusChange = async (id: string, newStatus: Customer['status']) => {
+    const qKey = queryKeys.admin.customers({ page: currentPage, perPage: rowsPerPage, search: debouncedSearch, status: filterSegment });
     // Optimistic update
-    setCustomers(customers.map(c => c.id === id ? { ...c, status: newStatus } : c));
+    queryClient.setQueryData(qKey, (old: any) => {
+      if (!old) return old;
+      return { ...old, customers: old.customers.map((c: Customer) => c.id === id ? { ...c, status: newStatus } : c) };
+    });
     
     // Server update
     const res = await updateCustomerStatusAction(id, newStatus);
     if (!res.success) {
       // Revert on failure
-      fetchCustomers();
+      queryClient.invalidateQueries({ queryKey: qKey });
       alert('Failed to update status');
     }
   };
@@ -95,15 +98,23 @@ export default function CustomersClient({ initialCustomers, initialTotalItems = 
       title: 'Delete Customer',
       description: 'Are you sure you want to delete this customer?',
       onConfirm: async () => {
+        const qKey = queryKeys.admin.customers({ page: currentPage, perPage: rowsPerPage, search: debouncedSearch, status: filterSegment });
+        
         // Optimistic update
-        setCustomers(prev => prev.filter(c => c.id !== id));
+        queryClient.setQueryData(qKey, (old: any) => {
+          if (!old) return old;
+          return { ...old, customers: old.customers.filter((c: Customer) => c.id !== id) };
+        });
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
         
         // Server update
         const res = await deleteCustomerAction(id);
         if (!res.success) {
           // Revert on failure
-          fetchCustomers();
+          queryClient.invalidateQueries({ queryKey: qKey });
           alert('Failed to delete customer');
+        } else {
+          queryClient.invalidateQueries({ queryKey: qKey });
         }
       }
     });
@@ -136,17 +147,24 @@ export default function CustomersClient({ initialCustomers, initialTotalItems = 
       description: `Are you sure you want to delete ${selectedCustomerIds.size} customers?`,
       onConfirm: async () => {
         const idsToDelete = Array.from(selectedCustomerIds);
+        const qKey = queryKeys.admin.customers({ page: currentPage, perPage: rowsPerPage, search: debouncedSearch, status: filterSegment });
         
         // Optimistic update
-        setCustomers(prev => prev.filter(c => !selectedCustomerIds.has(c.id)));
+        queryClient.setQueryData(qKey, (old: any) => {
+          if (!old) return old;
+          return { ...old, customers: old.customers.filter((c: Customer) => !selectedCustomerIds.has(c.id)) };
+        });
         setSelectedCustomerIds(new Set());
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
 
         // Server update
         const res = await deleteCustomersAction(idsToDelete);
         if (!res.success) {
           // Revert on failure
-          fetchCustomers();
+          queryClient.invalidateQueries({ queryKey: qKey });
           alert('Failed to delete some customers');
+        } else {
+          queryClient.invalidateQueries({ queryKey: qKey });
         }
       }
     });
@@ -205,7 +223,7 @@ export default function CustomersClient({ initialCustomers, initialTotalItems = 
           </div>
           <div className="flex items-center gap-3">
             <button 
-              onClick={fetchCustomers}
+              onClick={() => queryClient.invalidateQueries({ queryKey: queryKeys.admin.customers({ page: currentPage, perPage: rowsPerPage, search: debouncedSearch, status: filterSegment }) })}
               className="px-3 py-2 text-burgundy/60 hover:text-burgundy hover:bg-burgundy/5 rounded-full transition-colors flex items-center gap-2 text-sm font-medium disabled:opacity-50"
               title="Refresh Customers"
               disabled={loading}

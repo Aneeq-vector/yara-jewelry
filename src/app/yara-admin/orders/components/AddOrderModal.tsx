@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Search, Plus, Minus, Trash2, Package, Loader2, CheckCircle, Upload } from 'lucide-react';
 import { createManualOrderAction, ManualOrderItem } from '@/app/actions/orders';
-import { getAllProducts } from '@/lib/data/products';
+import { useProductOptions } from '@/lib/hooks/use-products';
 import { Product } from '@/types';
 
 const SOURCES = ['Instagram', 'Facebook', 'WhatsApp', 'Walk-in', 'Phone Call', 'Other'];
@@ -12,7 +12,7 @@ const DELIVERY_FEE = 350;
 interface AddOrderModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onOrderCreated: (order: any) => void;
+  onOrderCreated: (order?: any) => void;
 }
 
 export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModalProps) {
@@ -33,9 +33,9 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
   const [includeDelivery, setIncludeDelivery] = useState(true);
 
   // Products
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const { data: rawProducts, isLoading: productsLoading } = useProductOptions();
+  const allProducts = (rawProducts || []).filter(p => p.inStock !== false) as unknown as Product[];
   const [productSearch, setProductSearch] = useState('');
-  const [productsLoading, setProductsLoading] = useState(false);
   // orderItems uses colorQuantities: { Yellow: 2, Green: 5 } or { '': 3 } for no-color products
   const [orderItems, setOrderItems] = useState<ManualOrderItem[]>([]);
 
@@ -47,15 +47,7 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const receiptInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (isOpen && allProducts.length === 0) {
-      setProductsLoading(true);
-      getAllProducts().then(products => {
-        setAllProducts(products.filter(p => p.isActive !== false));
-        setProductsLoading(false);
-      });
-    }
-  }, [isOpen]);
+  // Fetched by useProductOptions hook
 
   const resetForm = () => {
     setName(''); setPhone(''); setEmail(''); setCity(''); setAddress(''); setCountry('Sri Lanka');

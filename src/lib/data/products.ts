@@ -19,7 +19,12 @@ export function mapRecordToProduct(record: RecordModel): Product {
     description: record.description,
     shortDescription: record.shortDescription,
     category: record.expand?.category?.name || record.category as any,
+    // Raw PocketBase relation ID — used for server-side relation filter queries.
+    // record.category holds the ID string (e.g. "uyqn8vbdom0cym6") even when
+    // the relation is expanded; record.expand.category.id is the canonical form.
+    categoryId: record.expand?.category?.id || (typeof record.category === 'string' ? record.category : undefined),
     images: images.length > 0 ? images : ['/placeholder.png'],
+    imagePositions: record.imagePositions || [],
     badge: record.badge || undefined,
     rating: record.rating || 0,
     reviewCount: record.reviewCount || 0,
@@ -37,6 +42,7 @@ export async function getAllProducts(): Promise<Product[]> {
     const pb = createClient();
     const records = await pb.collection('products').getFullList({
       expand: 'category',
+      fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,imagePositions,shortDescription,description,badge,colors,tags,material,weight,expand.category.id,expand.category.name',
       $autoCancel: false,
     });
     return records.map(mapRecordToProduct);
@@ -59,14 +65,15 @@ export async function getProductById(id: string): Promise<Product | undefined> {
   }
 }
 
-async function getProductsByCategory(category: string): Promise<Product[]> {
+export async function getProductsByCategory(category: string, limit = 500): Promise<Product[]> {
   try {
     const pb = createClient();
-    const records = await pb.collection('products').getFullList({
+    const records = await pb.collection('products').getList(1, limit, {
       filter: `category="${category}"`,
-      expand: 'category'
+      expand: 'category',
+      fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,imagePositions,shortDescription,description,badge,colors,tags,material,weight,expand.category.id,expand.category.name',
     });
-    return records.map(mapRecordToProduct);
+    return records.items.map(mapRecordToProduct);
   } catch (error) {
     
     return [];

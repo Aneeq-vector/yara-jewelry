@@ -121,3 +121,16 @@ export async function getAdminTokenAction(): Promise<{ token?: string; pbUrl?: s
 export async function revalidateProductsAction() {
   revalidateAll();
 }
+
+export async function getProductOptionsAction() {
+  try {
+    const pb = await getAdminClient();
+    const records = await pb.collection('products').getFullList({
+      sort: 'name',
+      fields: 'id,collectionId,name,price,inStock,images,productCode,category', // Minimal fields
+    });
+    return { success: true, products: toPlain(records) };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to fetch product options' };
+  }
+}

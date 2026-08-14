@@ -84,22 +84,18 @@ export async function syncWishlistAction(localProductIds: string[]): Promise<{ s
     const remoteProductIds = new Set(remoteRecords.map(r => r.product));
     
     // Add missing local products to remote
-    await Promise.all(localProductIds.map(async (pid) => {
-      if (!remoteProductIds.has(pid)) {
-        await pb.collection('wishlist').create({
+    const newRecords = await Promise.all(
+      localProductIds
+        .filter(pid => !remoteProductIds.has(pid))
+        .map(pid => pb.collection('wishlist').create({
           user: userId,
           product: pid
-        });
-      }
-    }));
+        }, { expand: 'product' }))
+    );
 
-    // Refetch the complete list
-    const finalRecords = await pb.collection('wishlist').getFullList({
-      filter: `user="${userId}"`,
-      expand: 'product'
-    });
+    const allRecords = [...remoteRecords, ...newRecords];
 
-    const items = finalRecords.map((record) => {
+    const items = allRecords.map((record) => {
       const product = record.expand?.product;
       if (!product) return null;
       return mapRecordToProduct(product as any);

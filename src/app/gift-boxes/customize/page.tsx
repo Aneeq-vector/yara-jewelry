@@ -5,8 +5,9 @@ import { m as motion } from 'framer-motion';
 import PageWrapper from '@/components/layout/PageWrapper';
 import CustomBoxBuilder from '@/components/shop/CustomBoxBuilder';
 import { getGiftBoxByType } from '@/lib/data/gift-boxes';
-import { getAllProducts } from '@/lib/data/products';
-import { getAllCategories } from '@/lib/data/categories';
+import { useProducts } from '@/lib/hooks/use-products';
+import { useCategories } from '@/lib/hooks/use-categories';
+import { usePublicProductRealtime } from '@/lib/hooks/use-product-realtime';
 import { GiftBox, Product, Category } from '@/types';
 
 const fallbackBox: Product = {
@@ -28,20 +29,21 @@ const fallbackBox: Product = {
 };
 
 export default function CustomizeGiftBoxPage() {
+  usePublicProductRealtime();
+  
   const [box, setBox] = useState<GiftBox | null>(null);
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [boxLoading, setBoxLoading] = useState(true);
+
+  const { data: allProducts = [], isPending: productsLoading } = useProducts();
+  const { data: categories = [], isPending: categoriesLoading } = useCategories();
+
+  const loading = boxLoading || productsLoading || categoriesLoading;
 
   useEffect(() => {
-    Promise.all([getGiftBoxByType('custom'), getAllProducts(), getAllCategories()]).then(
-      ([giftBox, products, cats]) => {
-        setBox(giftBox || null);
-        setAllProducts(products);
-        setCategories(cats);
-        setLoading(false);
-      }
-    );
+    getGiftBoxByType('custom').then(giftBox => {
+      setBox(giftBox || null);
+      setBoxLoading(false);
+    });
   }, []);
 
   if (loading) {

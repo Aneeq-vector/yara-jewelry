@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { m as motion } from 'framer-motion';
 import { MapPin, Plus, Check, Loader2 } from 'lucide-react';
-import { getAddressesAction, addAddressAction, updateAddressAction, deleteAddressAction } from '@/app/actions/addresses';
+import { useAddresses, useAddAddress, useUpdateAddress, useDeleteAddress } from '@/lib/hooks/use-addresses';
 import { Address } from '@/types';
 import { COUNTRIES } from '@/lib/countries';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -12,8 +12,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
 export default function AddressesPage() {
-  const [addresses, setAddresses] = useState<Address[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: addressesList, isLoading: loading } = useAddresses();
+  const addresses = addressesList || [];
+  
+  const { mutateAsync: addAddress } = useAddAddress();
+  const { mutateAsync: updateAddress } = useUpdateAddress();
+  const { mutateAsync: deleteAddressMutation } = useDeleteAddress();
+
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<any>({});
@@ -28,19 +33,6 @@ export default function AddressesPage() {
 
   const inputClass = "w-full px-3 py-2 rounded-xl bg-transparent border border-burgundy/20 font-body text-sm text-burgundy placeholder:text-burgundy/50 focus:outline-none focus:border-burgundy transition-colors";
 
-  useEffect(() => {
-    fetchAddresses();
-  }, []);
-
-  const fetchAddresses = async () => {
-    setLoading(true);
-    const result = await getAddressesAction();
-    if (result.success && result.addresses) {
-      setAddresses(result.addresses);
-    }
-    setLoading(false);
-  };
-
   const deleteAddress = (id: string) => {
     setConfirmModal({
       isOpen: true,
@@ -50,11 +42,16 @@ export default function AddressesPage() {
 
   const confirmDeleteAddress = async () => {
     if (!confirmModal.addressId) return;
+    const id = confirmModal.addressId;
     setConfirmModal({ isOpen: false, addressId: null });
     setSaving(true);
-    await deleteAddressAction(confirmModal.addressId);
-    await fetchAddresses();
-    setSaving(false);
+    try {
+      await deleteAddressMutation(id);
+    } catch (e: any) {
+      alert(e.message || "Failed to delete address");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const startEdit = (addr: any) => {
@@ -68,15 +65,14 @@ export default function AddressesPage() {
       return;
     }
     setSaving(true);
-    const res = await updateAddressAction(editingId!, editForm);
-    if (!res.success) {
-      alert(res.error);
+    try {
+      await updateAddress({ id: editingId!, data: editForm });
+      setEditingId(null);
+    } catch (e: any) {
+      alert(e.message || "Failed to update address");
+    } finally {
       setSaving(false);
-      return;
     }
-    await fetchAddresses();
-    setEditingId(null);
-    setSaving(false);
   };
 
   const saveNew = async () => {
@@ -85,16 +81,15 @@ export default function AddressesPage() {
       return;
     }
     setSaving(true);
-    const res = await addAddressAction(newForm);
-    if (!res.success) {
-      alert(res.error);
+    try {
+      await addAddress(newForm);
+      setIsAdding(false);
+      setNewForm({ name: '', street: '', city: '', state: '', zipCode: '', phone: '', country: 'Sri Lanka', isDefault: false });
+    } catch (e: any) {
+      alert(e.message || "Failed to add address");
+    } finally {
       setSaving(false);
-      return;
     }
-    await fetchAddresses();
-    setIsAdding(false);
-    setNewForm({ name: '', street: '', city: '', state: '', zipCode: '', phone: '', country: 'Sri Lanka', isDefault: false });
-    setSaving(false);
   };
 
   return (

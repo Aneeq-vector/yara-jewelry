@@ -30,8 +30,8 @@ import { SizeGuideModal } from './components/SizeGuideModal';
 import { RelatedProducts } from './components/RelatedProducts';
 import CustomBoxBuilder from '@/components/shop/CustomBoxBuilder';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { getProductById, getAllProducts } from '@/lib/data/products';
-import { getAllCategories } from '@/lib/data/categories';
+import { useProductDetail, useProducts, useRelatedProducts } from '@/lib/hooks/use-products';
+import { useCategories } from '@/lib/hooks/use-categories';
 import { Product, Category } from '@/types';
 import { useCartStore } from '@/lib/store/cart-store';
 import { useWishlistStore } from '@/lib/store/wishlist-store';
@@ -41,19 +41,19 @@ import { BADGE_CONFIG, BRAND } from '@/lib/constants';
 export default function ProductDetailPage() {
   const params = useParams();
   const id = params.id as string;
-  const [product, setProduct] = useState<Product | null>(null);
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: product, isPending: productLoading } = useProductDetail(id);
+  
+  // Only fetch full catalog if this is a custom box
+  const isCustomBox = product?.name.toLowerCase() === 'build your own gift box';
+  const { data: allProducts = [] } = useProducts(isCustomBox || false);
+  
+  const { data: categories = [], isPending: categoriesLoading } = useCategories();
+  const { data: relatedProducts = [] } = useRelatedProducts(
+    product?.categoryId || '',
+    product?.id || ''
+  );
 
-  useEffect(() => {
-    Promise.all([getProductById(id), getAllProducts(), getAllCategories()]).then(([prod, prods, cats]) => {
-      setProduct(prod || null);
-      setAllProducts(prods);
-      setCategories(cats);
-      setLoading(false);
-    });
-  }, [id]);
+  const loading = productLoading || categoriesLoading;
 
   const [selectedImage, setSelectedImage] = useState(0);
   const thumbnailRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -129,9 +129,7 @@ export default function ProductDetailPage() {
   }
 
   const wishlisted = isInWishlist(product.id);
-  const relatedProducts = allProducts
-    .filter((p) => p.category === product.category && p.id !== product.id)
-    .slice(0, 4);
+
 
   return (
     <PageWrapper>

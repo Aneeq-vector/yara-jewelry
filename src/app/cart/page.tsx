@@ -8,18 +8,16 @@ import { Minus, Plus, X, ShoppingBag, ArrowRight, Tag } from 'lucide-react';
 import PageWrapper from '@/components/layout/PageWrapper';
 import { useCartStore } from '@/lib/store/cart-store';
 import { formatPrice } from '@/lib/utils';
-import { getAllCategories } from '@/lib/data/categories';
-
+import { useCategories } from '@/lib/hooks/use-categories';
 export default function CartPage() {
   const { items, removeItem, updateQuantity, getTotal } = useCartStore();
   const [coupon, setCoupon] = useState('');
   const [discount, setDiscount] = useState(0);
-  const [categories, setCategories] = useState<any[]>([]);
+  const { data: categories = [] } = useCategories();
 
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    getAllCategories().then(setCategories);
     setMounted(true);
   }, []);
 

@@ -6,7 +6,8 @@ export interface Product {
   originalPrice?: number;
   description: string;
   shortDescription: string;
-  category: CategoryType;
+  category: CategoryType;     // display name, e.g. "Necklaces" — for UI use
+  categoryId?: string;        // raw PocketBase relation ID — for filter queries
   images: string[];
   imagePositions?: string[];
   badge?: 'trending' | 'best-seller' | 'limited' | 'new';

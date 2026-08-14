@@ -5,19 +5,20 @@ import { m as motion } from 'framer-motion';
 import PageWrapper from '@/components/layout/PageWrapper';
 import FixedBoxViewer from '@/components/gift-boxes/FixedBoxViewer';
 import { getGiftBoxByType } from '@/lib/data/gift-boxes';
-import { getAllCategories } from '@/lib/data/categories';
+import { useCategories } from '@/lib/hooks/use-categories';
 import { GiftBox, Category } from '@/types';
 
 export default function AnniversaryGiftBoxPage() {
   const [box, setBox] = useState<GiftBox | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [boxLoading, setBoxLoading] = useState(true);
+  const { data: categories = [], isPending: categoriesLoading } = useCategories();
+
+  const loading = boxLoading || categoriesLoading;
 
   useEffect(() => {
-    Promise.all([getGiftBoxByType('anniversary'), getAllCategories()]).then(([data, cats]) => {
+    getGiftBoxByType('anniversary').then((data) => {
       setBox(data || null);
-      setCategories(cats);
-      setLoading(false);
+      setBoxLoading(false);
     });
   }, []);
 

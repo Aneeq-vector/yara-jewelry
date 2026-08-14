@@ -3,6 +3,7 @@ import "./globals.css";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 import MotionProvider from "@/components/layout/MotionProvider";
+import { QueryProvider } from "@/components/layout/QueryProvider";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -45,7 +46,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={cn("h-full antialiased", "font-sans", geist.variable)}>
       <body className="min-h-full flex flex-col bg-ivory text-burgundy overflow-x-hidden">
-        <MotionProvider>{children}</MotionProvider>
+        <QueryProvider>
+          <MotionProvider>{children}</MotionProvider>
+        </QueryProvider>
       </body>
     </html>
   );

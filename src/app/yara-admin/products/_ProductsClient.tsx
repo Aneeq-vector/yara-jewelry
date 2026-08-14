@@ -41,15 +41,13 @@ import {
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { ProductsPagination } from './components/ProductsPagination';
 import {
-  getProductsAction,
-  getCategoriesAction,
-  deleteProductAction,
-  deleteProductsAction,
-  duplicateProductAction,
   revalidateProductsAction,
   getAdminTokenAction,
 } from '@/app/actions/products';
+import { useAdminProducts, useAdminCategories } from '@/lib/hooks/use-admin-products';
+import { useDeleteProduct, useDeleteProducts, useDuplicateProduct } from '@/lib/hooks/use-products';
 import { PB_URL } from '@/lib/pocketbase';
+import { useQueryClient } from '@tanstack/react-query';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -714,12 +712,18 @@ export default function ProductsClient({
   initialTotalPages: number;
   initialCategories: RawCategory[];
 }) {
-  const [products, setProducts] = useState<RawProduct[]>(initialProducts);
-  const [categories, setCategories] = useState<RawCategory[]>(initialCategories);
-  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
   const [filterBadge, setFilterBadge] = useState('All');
   const [filterStock, setFilterStock] = useState('All');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [formMode, setFormMode] = useState<'add' | 'edit' | null>(null);
   const [editProduct, setEditProduct] = useState<RawProduct | undefined>();
@@ -736,43 +740,40 @@ export default function ProductsClient({
   }, []);
 
   const removeToast = (id: number) => setToasts(prev => prev.filter(t => t.id !== id));
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [totalItems, setTotalItems] = useState(initialTotalItems);
-  const [totalPages, setTotalPages] = useState(initialTotalPages);
   
-  const isFirstRender = useRef(true);
+  const queryClient = useQueryClient();
 
-  // Debounced search logic
+  // Reset page to 1 when filters change
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-    const handler = setTimeout(() => {
-      fetchData();
-    }, 300);
-    return () => clearTimeout(handler);
-  }, [searchQuery, filterBadge, filterStock, currentPage, rowsPerPage]);
+    setCurrentPage(1);
+  }, [debouncedSearch, filterBadge, filterStock, rowsPerPage]);
 
-  const fetchData = async () => {
-    setLoading(true);
-    const res = await getProductsAction(currentPage, rowsPerPage, searchQuery, '', '-id', filterStock, filterBadge);
-    if (res.success && res.products) {
-      setProducts(res.products as unknown as RawProduct[]);
-      setTotalItems(res.totalItems || 0);
-      setTotalPages(res.totalPages || 0);
-    }
-    setLoading(false);
-  };
+  const { data, isFetching: loading } = useAdminProducts({
+    page: currentPage,
+    perPage: rowsPerPage,
+    search: debouncedSearch,
+    categoryId: '',
+    sort: '-id',
+    inStock: filterStock,
+    badge: filterBadge
+  });
 
-  const fetchAll = useCallback(async () => {
-    fetchData();
+  const products = (data?.products as unknown as RawProduct[]) || initialProducts;
+  const totalItems = data?.totalItems ?? initialTotalItems;
+  const totalPages = data?.totalPages ?? initialTotalPages;
+
+  const { data: categoriesData } = useAdminCategories();
+  const categories = (categoriesData?.categories as unknown as RawCategory[]) || initialCategories;
+
+  const { mutateAsync: deleteProduct } = useDeleteProduct();
+  const { mutateAsync: deleteProducts } = useDeleteProducts();
+  const { mutateAsync: duplicateProduct } = useDuplicateProduct();
+
+  const fetchAll = useCallback(() => {
     setSelectedIds(new Set());
-  }, [currentPage, rowsPerPage, searchQuery, filterBadge, filterStock]);
+  }, []);
 
-  const filtered = products; // Already filtered by the server
+  const filtered = products;
 
   const handleSelectAll = (checked: boolean) =>
     setSelectedIds(checked ? new Set(filtered.map(p => p.id)) : new Set());
@@ -786,10 +787,13 @@ export default function ProductsClient({
       title: 'Delete Product',
       description: `Delete "${name}"? This cannot be undone.`,
       onConfirm: async () => {
-        setProducts(prev => prev.filter(p => p.id !== id));
-        const res = await deleteProductAction(id);
-        if (!res.success) { fetchAll(); addToast('Failed to delete product', 'error'); }
-        else addToast('Product deleted', 'success');
+        try {
+          await deleteProduct(id);
+          fetchAll();
+          addToast('Product deleted', 'success');
+        } catch {
+          addToast('Failed to delete product', 'error');
+        }
       },
     });
   };
@@ -801,33 +805,34 @@ export default function ProductsClient({
       title: 'Delete Products',
       description: `Delete ${selectedIds.size} selected product(s)? This cannot be undone.`,
       onConfirm: async () => {
-        const ids = Array.from(selectedIds);
-        setProducts(prev => prev.filter(p => !selectedIds.has(p.id)));
-        setSelectedIds(new Set());
-        const res = await deleteProductsAction(ids);
-        if (!res.success) { fetchAll(); addToast('Failed to delete some products', 'error'); }
-        else addToast(`${ids.length} product(s) deleted`, 'success');
+        try {
+          await deleteProducts(Array.from(selectedIds));
+          fetchAll();
+          addToast('Products deleted', 'success');
+        } catch {
+          addToast('Failed to delete products', 'error');
+        }
       },
     });
   };
 
   const handleDuplicate = async (id: string) => {
-    const res = await duplicateProductAction(id);
-    if (res.success && res.product) {
-      setProducts(prev => [res.product as unknown as RawProduct, ...prev]);
+    try {
+      await duplicateProduct(id);
       addToast('Product duplicated', 'success');
-    } else {
-      addToast(res.error || 'Failed to duplicate', 'error');
+    } catch {
+      addToast('Failed to duplicate product', 'error');
     }
   };
 
   const handleSaved = (_saved: RawProduct, mode: 'add' | 'edit') => {
-    // 1. Optimistic UI Update: instantly update the local state so the user sees no delay!
-    if (mode === 'add') {
-      setProducts(prev => [_saved, ...prev]);
-    } else {
-      setProducts(prev => prev.map(p => p.id === _saved.id ? _saved : p));
-    }
+    // Actively refetch the admin list immediately upon success
+    queryClient.invalidateQueries({
+      queryKey: ['admin', 'products'],
+      refetchType: 'active',
+    });
+    setFormMode(null);
+    setEditProduct(undefined);
   };
 
   const categoryName = (id?: string) =>
