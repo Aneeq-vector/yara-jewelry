@@ -2,6 +2,7 @@
 
 import { validateSession } from '@/lib/pocketbase-server';
 import { revalidatePath } from 'next/cache';
+import { mapRecordToProduct } from '@/lib/data/products';
 
 // Safe serializer: converts PocketBase RecordModel → plain JSON
 function toPlain<T>(data: T): T {
@@ -122,6 +123,8 @@ export async function revalidateProductsAction() {
   revalidateAll();
 }
 
+
+
 export async function getProductOptionsAction() {
   try {
     const { pb } = await validateSession();
@@ -129,7 +132,7 @@ export async function getProductOptionsAction() {
       sort: 'name',
       fields: 'id,collectionId,name,price,inStock,quantity,images,productCode,category,colors', // Minimal fields including quantity and colors
     });
-    return { success: true, products: toPlain(records) };
+    return { success: true, products: toPlain(records.map(mapRecordToProduct)) };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to fetch product options' };
   }
