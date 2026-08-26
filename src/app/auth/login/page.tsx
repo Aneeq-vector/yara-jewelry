@@ -66,8 +66,13 @@ export default function LoginPage() {
       // Sync client auth state immediately
       useAuthStore.setState({ user: result.user as any, isAuthenticated: true });
       
-      // Navigate immediately — don't wait for wishlist sync
-      router.push('/dashboard');
+      // Stop the loading spinner immediately
+      setLoading(false);
+      
+      // Navigate in the next tick so React renders the non-loading state first
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 0);
 
       // Fire wishlist sync in background after navigation starts
       import('@/app/actions/wishlist').then(({ syncWishlistAction }) => {
@@ -80,8 +85,9 @@ export default function LoginPage() {
           }).catch(() => {});
         });
       });
-    } finally {
+    } catch (err) {
       setLoading(false);
+      setError('An unexpected error occurred. Please try again.');
     }
   };
 

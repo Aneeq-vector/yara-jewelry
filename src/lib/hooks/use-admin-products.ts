@@ -107,6 +107,7 @@ export function useCategoryProducts(categoryId: string, page = 1, perPage = 50) 
     queryFn: () => getCategoryProductsAction(categoryId, page, perPage),
     enabled: !!categoryId,
     staleTime: 0,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -116,6 +117,7 @@ export function useAssignableCategoryProducts(categoryId: string, page = 1, perP
     queryFn: () => getAssignableProductsAction(categoryId, page, perPage, search),
     enabled: !!categoryId,
     staleTime: 0,
+    placeholderData: keepPreviousData,
   });
 }
 

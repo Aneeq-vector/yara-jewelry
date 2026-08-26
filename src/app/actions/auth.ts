@@ -21,7 +21,7 @@ export async function loginAction(formData: FormData) {
     
     if (authData.record.status === 'Inactive') {
       pb.authStore.clear();
-      return { error: 'cannot login kindly contact customer support' };
+      return { error: 'Cannot login. Kindly contact customer support.' };
     }
     
     const expectedRole = data.expectedRole || 'customer';

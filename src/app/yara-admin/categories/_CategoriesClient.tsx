@@ -20,7 +20,8 @@ export default function CategoriesClient({ initialCategories }: { initialCategor
   const [editingCategory, setEditingCategory] = useState<RawCategory | null>(null);
   const [categoryToDelete, setCategoryToDelete] = useState<RawCategory | null>(null);
 
-  const { data, isLoading } = useAdminCategories({ success: true, categories: initialCategories });
+  const { data, isPending } = useAdminCategories({ success: true, categories: initialCategories });
+  const loading = isPending && !data;
   const categories = (data?.categories as RawCategory[]) || initialCategories;
 
   const filteredCategories = categories.filter(c => 
@@ -252,7 +253,9 @@ function CategoryProductsManager({
   const perPage = 10;
   
   // NOTE: We don't invalidate this query on local adds/removes, so it remains the server truth
-  const { data, isLoading } = useCategoryProducts(category.id, page, perPage);
+  const { data, isPending, isFetching } = useCategoryProducts(category.id, page, perPage);
+  const loadingProducts = isPending && !data;
+  const isRefreshing = isFetching;
   const rawProducts = (data?.products as unknown as RawProduct[]) || [];
   
   // Deduplicate server products
@@ -288,7 +291,7 @@ function CategoryProductsManager({
             Products in this Category
           </h3>
           <p className="text-xs font-body text-burgundy/50 mt-0.5">
-            {isLoading ? 'Loading...' : fetchError ? 'Unable to load category products.' : `${totalItems} Products`}
+            {isRefreshing ? 'Loading...' : fetchError ? 'Unable to load category products.' : `${totalItems} Products`}
           </p>
         </div>
         <button
@@ -308,7 +311,7 @@ function CategoryProductsManager({
       )}
 
       <div className="border border-burgundy/10 rounded-xl overflow-hidden bg-white max-h-[250px] overflow-y-auto">
-        {isLoading ? (
+        {loadingProducts ? (
           <div className="p-8 flex justify-center text-burgundy/40">
             <Loader2 className="animate-spin" size={24} />
           </div>
@@ -399,7 +402,7 @@ function CategoryProductsManager({
           <button
             type="button"
             onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={page === 1 || isLoading}
+            disabled={page === 1 || isRefreshing}
             className="px-3 py-1 text-xs font-body font-medium text-burgundy/70 hover:bg-burgundy/10 rounded-md transition-colors disabled:opacity-50"
           >
             Previous
@@ -408,7 +411,7 @@ function CategoryProductsManager({
           <button
             type="button"
             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages || isLoading}
+            disabled={page === totalPages || isRefreshing}
             className="px-3 py-1 text-xs font-body font-medium text-burgundy/70 hover:bg-burgundy/10 rounded-md transition-colors disabled:opacity-50"
           >
             Next
@@ -464,7 +467,9 @@ function AddCategoryProductsModal({
   // Reset page when search changes
   useEffect(() => { setPage(1); }, [debouncedSearch]);
   
-  const { data, isLoading } = useAssignableCategoryProducts(category.id, page, perPage, debouncedSearch);
+  const { data, isPending, isFetching } = useAssignableCategoryProducts(category.id, page, perPage, debouncedSearch);
+  const loadingAssignable = isPending && !data;
+  const isRefreshingAssignable = isFetching;
   
   const catalogProducts = (data?.products as unknown as RawProduct[]) || [];
   const totalPages = data?.totalPages || 1;
@@ -538,7 +543,7 @@ function AddCategoryProductsModal({
         </div>
 
         <div className="flex-1 overflow-y-auto bg-white p-5">
-          {isLoading ? (
+          {loadingAssignable ? (
             <div className="flex justify-center p-12 text-burgundy/40">
               <Loader2 className="animate-spin" size={28} />
             </div>
@@ -608,7 +613,7 @@ function AddCategoryProductsModal({
               <button
                 type="button"
                 onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1 || isLoading}
+                disabled={page === 1 || isRefreshingAssignable}
                 className="px-3 py-1.5 text-xs font-body font-medium text-burgundy/70 hover:bg-burgundy/10 rounded-md transition-colors disabled:opacity-50"
               >
                 Previous
@@ -617,7 +622,7 @@ function AddCategoryProductsModal({
               <button
                 type="button"
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages || isLoading}
+                disabled={page === totalPages || isRefreshingAssignable}
                 className="px-3 py-1.5 text-xs font-body font-medium text-burgundy/70 hover:bg-burgundy/10 rounded-md transition-colors disabled:opacity-50"
               >
                 Next

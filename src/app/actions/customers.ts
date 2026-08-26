@@ -112,7 +112,7 @@ export async function deleteCustomerAction(id: string) {
     const adminPb = await getAdminClient();
     await adminPb.collection('users').delete(id);
     
-    revalidatePath('/yara-admin/customers');
+    // Realtime invalidation covers Admin UI
     return { success: true };
   } catch (error: any) {
     console.error('Failed to delete customer:', error);
@@ -130,7 +130,7 @@ export async function deleteCustomersAction(ids: string[]) {
       ids.map(id => adminPb.collection('users').delete(id))
     );
 
-    revalidatePath('/yara-admin/customers');
+    // Realtime invalidation covers Admin UI
     return { success: true };
   } catch (error: any) {
     console.error('Failed to delete customers:', error);
@@ -146,7 +146,7 @@ export async function updateCustomerStatusAction(id: string, status: string) {
     // Note: This requires a 'status' field to exist in the 'users' collection in PocketBase.
     await adminPb.collection('users').update(id, { status });
     
-    revalidatePath('/yara-admin/customers');
+    // Realtime invalidation covers Admin UI
     return { success: true };
   } catch (error: any) {
     console.error('Failed to update customer status:', error);

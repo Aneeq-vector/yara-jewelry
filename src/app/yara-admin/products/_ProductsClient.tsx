@@ -770,12 +770,11 @@ export default function ProductsClient({
   useEffect(() => {
     setCurrentPage(1);
   }, [debouncedSearch, filterBadge, filterStock, filterCategory, rowsPerPage]);
-
-  const initialAdminData = (currentPage === 1 && !debouncedSearch && filterStock === 'All' && filterBadge === 'All' && filterCategory === '')
+          const initialAdminData = (currentPage === 1 && !debouncedSearch && filterStock === 'All' && filterBadge === 'All' && filterCategory === '')
     ? { products: initialProducts, totalItems: initialTotalItems, totalPages: initialTotalPages }
     : undefined;
 
-  const { data, isFetching: loading } = useAdminProducts({
+  const { data, isPending, isFetching } = useAdminProducts({
     page: currentPage,
     perPage: rowsPerPage,
     search: debouncedSearch,
@@ -784,6 +783,9 @@ export default function ProductsClient({
     inStock: filterStock,
     badge: filterBadge
   }, initialAdminData);
+
+  const loading = isPending && !data;
+  const isRefreshing = isFetching;
 
   const products = (data?.products as unknown as RawProduct[]) || initialProducts;
   const totalItems = data?.totalItems ?? initialTotalItems;
@@ -913,10 +915,10 @@ export default function ProductsClient({
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={fetchAll}
-              disabled={loading}
+              disabled={isRefreshing}
               className="px-3 py-2 text-burgundy/60 hover:text-burgundy hover:bg-burgundy/5 rounded-full transition-colors flex items-center gap-2 text-sm font-body disabled:opacity-50"
             >
-              <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+              <RefreshCw size={15} className={isRefreshing ? 'animate-spin' : ''} />
               Refresh
             </button>
 

@@ -642,7 +642,7 @@ export async function deleteOrdersAction(orderIds: string[]) {
       });
     }
 
-    revalidatePath('/yara-admin/orders');
+    // Realtime invalidation covers Admin UI
     return { success: true };
   } catch (error: any) {
     console.error('Failed to delete orders:', error?.message || error);
