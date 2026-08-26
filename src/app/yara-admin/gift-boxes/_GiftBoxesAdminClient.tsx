@@ -294,8 +294,8 @@ function GiftBoxEditor({
                         >
                           <div className="relative aspect-square bg-champagne/30">
                             <Image
-                              src={p.images[0]}
-                              alt={p.name}
+                              src={p.images[0] || '/placeholder.png'}
+                              alt={p.name || 'Product Image'}
                               fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                               className="object-cover"
                               unoptimized
@@ -313,7 +313,7 @@ function GiftBoxEditor({
                               {p.name}
                             </p>
                             <p className="font-body text-[10px] text-burgundy/50">
-                              Rs. {p.price.toLocaleString()}
+                              Rs. {(p.price || 0).toLocaleString()}
                             </p>
                           </div>
                         </button>
