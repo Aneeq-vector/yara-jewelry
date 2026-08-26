@@ -40,7 +40,7 @@ export default function LoginPage() {
     if (result.success) {
       setForgotSuccess(true);
     } else {
-      setForgotError({ message: result.error, notFound: result.notFound });
+      setForgotError({ message: result.error || 'An error occurred', notFound: false });
     }
   };
 
@@ -267,7 +267,7 @@ export default function LoginPage() {
                       </div>
                       <h3 className="font-heading text-xl font-bold text-burgundy mb-2">Check Your Email</h3>
                       <p className="font-body text-burgundy/70 mb-6">
-                        We've sent a password reset link to <strong>{forgotEmail}</strong>. Please check your inbox.
+                        If an account exists with <strong>{forgotEmail}</strong>, we've sent a password reset link. Please check your inbox.
                       </p>
                       <button
                         onClick={() => {

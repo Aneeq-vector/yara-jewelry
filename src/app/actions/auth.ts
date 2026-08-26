@@ -159,18 +159,24 @@ export async function verifyOtpAndRegisterAction(email: string, otp: string) {
 
 export async function requestPasswordResetAction(email: string) {
   try {
-    const adminPb = await getAdminClient();
-    try {
-      await adminPb.collection('users').getFirstListItem(`email="${email}"`);
-    } catch (e) {
-      return { error: 'The email is not registered. Kindly create an account.', notFound: true };
-    }
+    const pb = new PocketBase(process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pb.yarasl.shop');
+    
+    // Normalize email
+    const normalizedEmail = email.trim().toLowerCase();
 
-    const pb = await getServerClient();
-    await pb.collection('users').requestPasswordReset(email);
-    return { success: true };
+    // Call the public API directly without admin client
+    await pb.collection('users').requestPasswordReset(normalizedEmail);
+    
+    return { success: true, message: "If an account exists with this email, we've sent a password reset link." };
   } catch (error: any) {
-    return { error: error.message || 'Failed to request password reset' };
+    // PocketBase might return 400 or 404 for non-existent users or SMTP failure.
+    // If it's specifically an SMTP failure (e.g. 400 with 'Failed to send email'), expose a service error.
+    if (error.status === 400 && error.message && error.message.toLowerCase().includes('failed')) {
+        return { error: 'Our mail service is temporarily unavailable. Please try again later.' };
+    }
+    
+    // For all other errors (like 404 not found), we fake success to prevent enumeration.
+    return { success: true, message: "If an account exists with this email, we've sent a password reset link." };
   }
 }
 
