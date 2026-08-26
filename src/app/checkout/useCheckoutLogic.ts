@@ -209,7 +209,14 @@ export function useCheckoutLogic() {
     formData.append('orderDate', new Date().toISOString());
     
     if (form.paymentMethod === 'bank_transfer' && receiptFile) {
-      formData.append('receipt', receiptFile);
+      try {
+        const { compressImage } = await import('@/lib/image-compression');
+        const compressedReceipt = await compressImage(receiptFile);
+        formData.append('receipt', compressedReceipt);
+      } catch (err) {
+        // Fallback to original file if compression fails
+        formData.append('receipt', receiptFile);
+      }
     }
 
     try {

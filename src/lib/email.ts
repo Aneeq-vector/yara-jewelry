@@ -22,6 +22,19 @@ interface InvoiceDetails {
   cartDetails: string;
 }
 
+function escapeHtml(unsafe: string) {
+  return String(unsafe || '').replace(/[&<"'>]/g, function (match) {
+    switch (match) {
+      case '&': return '&amp;';
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      case '"': return '&quot;';
+      case "'": return '&#039;';
+      default: return match;
+    }
+  });
+}
+
 export async function sendInvoiceEmail(details: InvoiceDetails) {
   if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
     console.warn('Email skipped: SMTP credentials not configured.');
@@ -34,72 +47,104 @@ export async function sendInvoiceEmail(details: InvoiceDetails) {
   
   try {
     const items = JSON.parse(details.cartDetails);
-    items.forEach((itemStr: string) => {
-      let quantity = '1';
-      let title = itemStr;
-      let price = '';
-      
-      // Parse quantity: "1x ..."
-      const qtyMatch = itemStr.match(/^(\d+)x\s+(.*)/);
-      if (qtyMatch) {
-        quantity = qtyMatch[1];
-        title = qtyMatch[2];
-      }
-      
-      // Parse price: "... - Rs. 1200"
-      const priceMatch = title.match(/(.*)\s+-\s+Rs\.\s+([\d,.]+)/);
-      if (priceMatch) {
-        title = priceMatch[1];
-        price = priceMatch[2];
+    
+    if (Array.isArray(items)) {
+      items.forEach((item: any) => {
+        let quantity = 1;
+        let titleMain = '';
+        let price = 0;
+        let meta = '';
         
-        // Add to computed subtotal
-        const numericPrice = parseFloat(price.replace(/,/g, ''));
-        if (!isNaN(numericPrice)) {
-          computedSubtotal += numericPrice * parseInt(quantity, 10);
+        // Handle metadata-only items (e.g. notes, source)
+        if (item.type === 'metadata') {
+          return; // Skip displaying internal metadata rows like "Source: admin" as line items
         }
-      }
-      
-      // Parse attributes
-      let titleMain = title;
-      let meta = '';
-      if (title.includes('Custom Box')) {
-         const boxMatch = title.match(/(Custom Box.*?)\s+-\s+Items:\s+(.*)/);
-         if (boxMatch) {
-           titleMain = boxMatch[1];
-           meta = boxMatch[2];
-         }
-      } else {
-         const attrMatch = title.match(/(.*?)\s+\[(.*?)\]$/);
-         if (attrMatch) {
-           titleMain = attrMatch[1];
-           meta = attrMatch[2];
-         }
-      }
-      
-      // Remove product code (e.g. "(YR-12345)") from the title
-      titleMain = titleMain.replace(/\s*\([^)]+\)$/, '').trim();
 
-      itemsHtml += `
-        <tr>
-          <td style="padding: 20px 0; border-bottom: 1px solid #eee;">
-            <table width="100%" border="0" cellspacing="0" cellpadding="0">
-              <tr>
-                <td valign="top" style="padding-right: 15px;">
-                  <p style="margin: 0; color: #4a1c27; font-size: 14px; font-weight: 600;">${titleMain}</p>
-                  <p style="margin: 5px 0 0 0; color: #4a1c27; font-size: 12px; font-weight: 500;">Qty: ${quantity}</p>
-                  ${meta ? `<p style="margin: 4px 0 0 0; color: #888888; font-size: 12px; line-height: 1.4;">${meta}</p>` : ''}
-                </td>
-                <td width="90" valign="top" align="right">
-                  <p style="margin: 0; color: #4a1c27; font-size: 14px; font-weight: 600;">Rs. ${price}</p>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      `;
-    });
+        if (typeof item === 'string') {
+          // Legacy string format
+          quantity = 1;
+          titleMain = item;
+          
+          const qtyMatch = item.match(/^(\d+)x\s+(.*)/);
+          if (qtyMatch) {
+            quantity = parseInt(qtyMatch[1], 10) || 1;
+            titleMain = qtyMatch[2];
+          }
+          
+          const priceMatch = titleMain.match(/(.*)\s+-\s+Rs\.\s+([\d,.]+)/);
+          if (priceMatch) {
+            titleMain = priceMatch[1];
+            price = parseFloat(priceMatch[2].replace(/,/g, '')) || 0;
+          }
+          
+          if (titleMain.includes('Custom Box')) {
+             const boxMatch = titleMain.match(/(Custom Box.*?)\s+-\s+Items:\s+(.*)/);
+             if (boxMatch) {
+               titleMain = boxMatch[1];
+               meta = boxMatch[2];
+             }
+          } else {
+             const attrMatch = titleMain.match(/(.*?)\s+\[(.*?)\]$/);
+             if (attrMatch) {
+               titleMain = attrMatch[1];
+               meta = attrMatch[2];
+             }
+          }
+          
+          // Legacy titles might contain the product code, we strip it out if it matches exactly at the end
+          titleMain = titleMain.replace(/\s*\([^)]+\)$/, '').trim();
+          
+        } else if (typeof item === 'object' && item !== null) {
+          // New structured format
+          quantity = Number(item.quantity) || 1;
+          titleMain = item.productName || 'Unknown Product';
+          
+          // Strip out the ID/code if it was appended (e.g. "(YR-362528)")
+          titleMain = titleMain.replace(/\s*\([^)]+\)$/, '').trim();
+          
+          price = Number(item.unitPrice) || 0;
+          
+          if (item.type === 'fixed_box' || item.type === 'custom_box') {
+             if (Array.isArray(item.boxItems) && item.boxItems.length > 0) {
+               meta = item.boxItems.join('<br/>');
+             }
+          } else if (item.extras) {
+             meta = item.extras;
+          }
+        }
+        
+        const lineTotal = price * quantity;
+        computedSubtotal += lineTotal;
+        
+        // Escape HTML for safety
+        const safeTitle = escapeHtml(titleMain);
+        // Do not escape meta if it contains <br/> from our own logic, but we must escape the raw content
+        const safeMeta = typeof item === 'object' && Array.isArray(item.boxItems) 
+          ? item.boxItems.map((b: string) => escapeHtml(b)).join('<br/>')
+          : escapeHtml(meta);
+
+        itemsHtml += `
+          <tr>
+            <td style="padding: 20px 0; border-bottom: 1px solid #eee;">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td valign="top" style="padding-right: 15px;">
+                    <p style="margin: 0; color: #4a1c27; font-size: 14px; font-weight: 600;">${safeTitle}</p>
+                    <p style="margin: 5px 0 0 0; color: #4a1c27; font-size: 12px; font-weight: 500;">Qty: ${quantity}</p>
+                    ${safeMeta ? `<p style="margin: 4px 0 0 0; color: #888888; font-size: 12px; line-height: 1.4;">${safeMeta}</p>` : ''}
+                  </td>
+                  <td width="90" valign="top" align="right">
+                    <p style="margin: 0; color: #4a1c27; font-size: 14px; font-weight: 600;">Rs. ${price.toLocaleString()}</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        `;
+      });
+    }
   } catch (e) {
-    itemsHtml = `<tr><td style="padding: 12px 0; color: #4a1c27; font-family: sans-serif;">${details.cartDetails}</td></tr>`;
+    itemsHtml = `<tr><td style="padding: 12px 0; color: #4a1c27; font-family: sans-serif;">Failed to parse order items.</td></tr>`;
   }
   
   // Calculate Shipping
