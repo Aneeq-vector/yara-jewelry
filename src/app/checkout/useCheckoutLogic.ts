@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Address } from '@/types';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { getAddressesAction } from '@/app/actions/addresses';
@@ -7,20 +8,27 @@ import { useWishlistStore } from '@/lib/store/wishlist-store';
 import { createOrderAction } from '@/app/actions/orders';
 
 export function useCheckoutLogic() {
+  const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderId, setOrderId] = useState('');
+  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [uploadState, setUploadState] = useState<'idle' | 'uploading' | 'processing' | 'error' | 'done'>('idle');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasHydrated, setHasHydrated] = useState(false);
+
+  useEffect(() => {
+    setHasHydrated(true);
+  }, []);
   
   const { user } = useAuthStore();
   const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const { items, getTotal, clearCart } = useCartStore();
+  const { items, getTotal, clearCart, removeItem } = useCartStore();
   const wishlistItems = useWishlistStore(s => s.items);
   const removeFromWishlist = useWishlistStore(s => s.removeItem);
   const subtotal = getTotal();
@@ -103,6 +111,7 @@ export function useCheckoutLogic() {
   const FREE_DELIVERY_THRESHOLD = 10000;
 
   const getShippingFee = (method: string) => {
+    if (items.length === 0) return 0;
     if (subtotal >= FREE_DELIVERY_THRESHOLD && method === 'standard') return 0;
     switch (method) {
       case 'standard': return 450;
@@ -127,6 +136,7 @@ export function useCheckoutLogic() {
   };
 
   const nextStep = () => {
+    if (items.length === 0) return;
     const newErrors: Record<string, string> = {};
     if (currentStep === 1) {
       if (!form.name) newErrors.name = 'Required';
@@ -157,10 +167,10 @@ export function useCheckoutLogic() {
   };
 
   const placeOrder = async () => {
+    if (isSubmitting || items.length === 0) return;
     setIsSubmitting(true);
     
     const formData = new FormData();
-    formData.append('totalAmount', total.toString());
     formData.append('shippingName', form.name);
     formData.append('shippingStreet', form.street);
     formData.append('shippingCity', form.city);
@@ -171,54 +181,28 @@ export function useCheckoutLogic() {
     formData.append('phone', form.phone);
     
     const productIdsSet = new Set<string>();
-    const stockDeduction: { id: string; quantity: number }[] = [];
 
     items.forEach(item => {
       if (item.product.category !== 'gift-boxes' && !item.isCustomBox) {
         productIdsSet.add(item.product.id);
-        stockDeduction.push({ id: item.product.id, quantity: item.quantity });
       }
       if (item.isCustomBox && item.boxItems) {
         item.boxItems.forEach((b: any) => {
           if (b.id) {
             productIdsSet.add(b.id);
-            // custom box items count as 1 quantity each per box, so item.quantity * 1
-            stockDeduction.push({ id: b.id, quantity: item.quantity });
           }
         });
       }
     });
+    
+    // We pass the raw items to the server for authoritative calculation
+    formData.append('cartItems', JSON.stringify(items));
+    formData.append('idempotencyKey', idempotencyKey);
+    // Also pass deliveryMethod so server knows which shipping fee to apply
+    formData.append('deliveryMethod', form.deliveryMethod);
+
     const productIds = Array.from(productIdsSet);
     productIds.forEach(id => formData.append('items', id));
-    formData.append('stockDeduction', JSON.stringify(stockDeduction));
-    
-    const formattedCartDetails = items.map(item => {
-      if (item.isCustomBox) {
-        const boxItemsStr = item.boxItems?.map((b: any) => {
-          const itemExtras = [
-            b.selectedColor ? `Color: ${b.selectedColor}` : '',
-            b.material ? `Material: ${b.material}` : '',
-            b.weight ? `Weight: ${b.weight}` : ''
-          ].filter(Boolean).join(', ');
-          
-          const extraStr = itemExtras ? ` [${itemExtras}]` : '';
-          return `${b.name}${extraStr}`;
-        }).join(' | ');
-        return `${item.quantity}x Custom Box (Rs. ${item.customPrice ?? item.product.price}) - Items: ${boxItemsStr}`;
-      }
-      
-      const extras = [
-        item.selectedColor ? `Color: ${item.selectedColor}` : '',
-        item.product.material ? `Material: ${item.product.material}` : '',
-        item.product.weight ? `Weight: ${item.product.weight}` : ''
-      ].filter(Boolean).join(', ');
-      
-      const extraDetails = extras ? ` [${extras}]` : '';
-      const codeStr = item.product.productCode ? ` (${item.product.productCode})` : '';
-      return `${item.quantity}x ${item.product.name}${codeStr}${extraDetails} - Rs. ${item.customPrice ?? item.product.price}`;
-    });
-    
-    formData.append('cartDetails', JSON.stringify(formattedCartDetails));
 
     const generatedOrderId = `YRA-${Math.floor(100000 + Math.random() * 900000)}`;
     formData.append('orderId', generatedOrderId);
@@ -241,9 +225,26 @@ export function useCheckoutLogic() {
         setOrderId(res.orderId || '');
         setOrderPlaced(true);
         clearCart();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        // Clear transient state
+        setCurrentStep(1);
+        setReceiptFile(null);
+        setUploadState('idle');
+        setUploadProgress(0);
+        setIdempotencyKey(crypto.randomUUID());
+        setForm(prev => ({
+          ...prev,
+          deliveryMethod: 'standard',
+          paymentMethod: '',
+        }));
       } else {
         alert(res.error || "Failed to place order.");
+        if (res.removeStaleCartItemId) {
+          removeItem(res.removeStaleCartItemId);
+          if (items.length <= 1) {
+            router.push('/cart');
+          }
+        }
       }
     } catch (e: any) {
       alert("Error: " + e.message);
@@ -257,7 +258,7 @@ export function useCheckoutLogic() {
   return {
     currentStep, setCurrentStep, orderPlaced, setOrderPlaced, orderId,
     receiptFile, setReceiptFile, uploadState, setUploadState, uploadProgress,
-    isSubmitting, user, savedAddresses, selectedAddressId, errors, items,
+    isSubmitting, hasHydrated, user, savedAddresses, selectedAddressId, errors, items,
     subtotal, form, FREE_DELIVERY_THRESHOLD, shipping, total,
     handleSelectAddress, handleFileChange, retryUpload, updateForm,
     nextStep, prevStep, placeOrder, getInputClass

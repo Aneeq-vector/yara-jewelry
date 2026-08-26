@@ -1,4 +1,4 @@
-import { getAdminClient } from '@/lib/pocketbase-server';
+import { validateSession } from '@/lib/pocketbase-server';
 import OrdersClient from './_OrdersClient';
 
 export const dynamic = 'force-dynamic';
@@ -9,10 +9,11 @@ export default async function OrdersPage() {
   let initialTotal = 0;
   let initialPages = 1;
   try {
-    const pb = await getAdminClient();
+    const { pb } = await validateSession();
     const res = await pb.collection('orders').getList(1, 50, {
       sort: '-orderDate',
       expand: 'user',
+      $autoCancel: false,
     });
     initialOrders = JSON.parse(JSON.stringify(res.items));
     initialTotal = res.totalItems;

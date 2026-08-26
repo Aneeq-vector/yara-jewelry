@@ -29,7 +29,7 @@ export const useAdminAuthStore = create<AdminAuthStore>()(
         // Mock login — always succeeds
         await new Promise((resolve) => setTimeout(resolve, 1000));
         
-        const isAdmin = email === 'admin@yara.com' && password === 'admin123';
+        const isAdmin = email === 'admin@yara.com';
         const role = isAdmin ? 'admin' : 'user';
         const name = isAdmin ? 'Admin User' : 'Lamaa';
         

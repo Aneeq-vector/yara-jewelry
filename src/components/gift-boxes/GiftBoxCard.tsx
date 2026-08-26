@@ -41,8 +41,6 @@ const TYPE_CONFIG = {
 } as const;
 
 const TYPE_HREF: Record<string, string> = {
-  birthday: '/gift-boxes/birthday',
-  anniversary: '/gift-boxes/anniversary',
   custom: '/gift-boxes/customize',
 };
 
@@ -53,7 +51,7 @@ interface GiftBoxCardProps {
 
 export default function GiftBoxCard({ box, index }: GiftBoxCardProps) {
   const config = TYPE_CONFIG[box.type];
-  const href = TYPE_HREF[box.type] || '/gift-boxes';
+  const href = TYPE_HREF[box.type] || `/gift-boxes/${box.id}`;
 
   return (
     <motion.div

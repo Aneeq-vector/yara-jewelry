@@ -10,7 +10,7 @@ import { useCartStore } from '@/lib/store/cart-store';
 import { formatPrice } from '@/lib/utils';
 import { useCategories } from '@/lib/hooks/use-categories';
 export default function CartPage() {
-  const { items, removeItem, updateQuantity, getTotal } = useCartStore();
+  const { items, removeItem, updateQuantity, getTotal, getCartProductQuantity } = useCartStore();
   const [coupon, setCoupon] = useState('');
   const [discount, setDiscount] = useState(0);
   const { data: categories = [] } = useCategories();
@@ -155,8 +155,14 @@ export default function CartPage() {
                               {item.quantity}
                             </span>
                             <button
-                              onClick={() => updateQuantity(item.cartItemId, item.quantity + 1)}
-                              aria-label="Interactive control" className="w-11 h-11 sm:w-8 sm:h-8 min-w-[44px] sm:min-w-0 min-h-[44px] sm:min-h-0 rounded-lg border border-nude/50 flex items-center justify-center text-burgundy/50 hover:border-burgundy/30 transition-colors"
+                              onClick={() => {
+                                const res = updateQuantity(item.cartItemId, item.quantity + 1);
+                                if (res && !res.success) {
+                                  // Can optionally show toast here if needed
+                                }
+                              }}
+                              disabled={!item.isCustomBox ? getCartProductQuantity(item.product.id) >= item.product.quantity : item.quantity >= item.product.quantity}
+                              aria-label="Interactive control" className="w-11 h-11 sm:w-8 sm:h-8 min-w-[44px] sm:min-w-0 min-h-[44px] sm:min-h-0 rounded-lg border border-nude/50 flex items-center justify-center text-burgundy/50 hover:border-burgundy/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               <Plus size={12} />
                             </button>

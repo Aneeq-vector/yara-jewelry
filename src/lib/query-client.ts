@@ -4,11 +4,12 @@ export function makeQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        // Conservative defaults for a unified cache
-        staleTime: 0,
-        gcTime: 5 * 60 * 1000,
+        // Sensible defaults for performance
+        staleTime: 60 * 1000, // 1 minute
+        gcTime: 5 * 60 * 1000, // 5 minutes
         retry: 1,
-        refetchOnWindowFocus: false, // We'll opt-in on specific hooks
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: true,
       },
     },
   });

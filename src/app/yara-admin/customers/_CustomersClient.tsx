@@ -49,12 +49,19 @@ export default function CustomersClient({ initialCustomers, initialTotalItems = 
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
+  const isDefaultFetch = currentPage === 1 && rowsPerPage === 10 && debouncedSearch === '' && filterSegment === 'All Status';
+
   const { data, isFetching: loading } = useAdminCustomers({
     page: currentPage,
     perPage: rowsPerPage,
     search: debouncedSearch,
     status: filterSegment,
-  });
+  }, isDefaultFetch ? {
+    success: true,
+    customers: initialCustomers,
+    totalItems: initialTotalItems,
+    totalPages: initialTotalPages
+  } : undefined);
 
   const customers = (data?.customers as unknown as Customer[]) || initialCustomers;
   const totalItems = data?.totalItems ?? initialTotalItems;
@@ -76,7 +83,7 @@ export default function CustomersClient({ initialCustomers, initialTotalItems = 
   }, [debouncedSearch, filterSegment, rowsPerPage]);
 
   const handleStatusChange = async (id: string, newStatus: Customer['status']) => {
-    const qKey = queryKeys.admin.customers({ page: currentPage, perPage: rowsPerPage, search: debouncedSearch, status: filterSegment });
+    const qKey = queryKeys.admin.customers.list({ page: currentPage, perPage: rowsPerPage, search: debouncedSearch, status: filterSegment });
     // Optimistic update
     queryClient.setQueryData(qKey, (old: any) => {
       if (!old) return old;
@@ -98,7 +105,7 @@ export default function CustomersClient({ initialCustomers, initialTotalItems = 
       title: 'Delete Customer',
       description: 'Are you sure you want to delete this customer?',
       onConfirm: async () => {
-        const qKey = queryKeys.admin.customers({ page: currentPage, perPage: rowsPerPage, search: debouncedSearch, status: filterSegment });
+        const qKey = queryKeys.admin.customers.list({ page: currentPage, perPage: rowsPerPage, search: debouncedSearch, status: filterSegment });
         
         // Optimistic update
         queryClient.setQueryData(qKey, (old: any) => {
@@ -147,7 +154,7 @@ export default function CustomersClient({ initialCustomers, initialTotalItems = 
       description: `Are you sure you want to delete ${selectedCustomerIds.size} customers?`,
       onConfirm: async () => {
         const idsToDelete = Array.from(selectedCustomerIds);
-        const qKey = queryKeys.admin.customers({ page: currentPage, perPage: rowsPerPage, search: debouncedSearch, status: filterSegment });
+        const qKey = queryKeys.admin.customers.list({ page: currentPage, perPage: rowsPerPage, search: debouncedSearch, status: filterSegment });
         
         // Optimistic update
         queryClient.setQueryData(qKey, (old: any) => {
@@ -223,7 +230,7 @@ export default function CustomersClient({ initialCustomers, initialTotalItems = 
           </div>
           <div className="flex items-center gap-3">
             <button 
-              onClick={() => queryClient.invalidateQueries({ queryKey: queryKeys.admin.customers({ page: currentPage, perPage: rowsPerPage, search: debouncedSearch, status: filterSegment }) })}
+              onClick={() => queryClient.invalidateQueries({ queryKey: queryKeys.admin.customers.list({ page: currentPage, perPage: rowsPerPage, search: debouncedSearch, status: filterSegment }) })}
               className="px-3 py-2 text-burgundy/60 hover:text-burgundy hover:bg-burgundy/5 rounded-full transition-colors flex items-center gap-2 text-sm font-medium disabled:opacity-50"
               title="Refresh Customers"
               disabled={loading}

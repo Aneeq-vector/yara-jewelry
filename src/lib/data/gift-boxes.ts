@@ -2,33 +2,7 @@ import { GiftBox, Product } from '@/types';
 import { createClient, PB_URL } from '@/lib/pocketbase';
 import { RecordModel } from 'pocketbase';
 
-// Helper to map PocketBase product record to Product type
-function mapProductRecord(record: RecordModel): Product {
-  const images = (record.images || []).map(
-    (filename: string) =>
-      filename.startsWith('http')
-        ? filename
-        : `${PB_URL}/api/files/${record.collectionId}/${record.id}/${encodeURIComponent(filename)}`
-  );
-  return {
-    id: record.id,
-    name: record.name,
-    price: record.price,
-    originalPrice: record.originalPrice,
-    description: record.description,
-    shortDescription: record.shortDescription,
-    category: record.category as any,
-    images: images.length > 0 ? images : ['/placeholder.png'],
-    badge: record.badge || undefined,
-    rating: record.rating || 0,
-    reviewCount: record.reviewCount || 0,
-    material: record.material || '',
-    weight: record.weight || '',
-    inStock: record.inStock ?? true,
-    colors: record.colors || [],
-    tags: record.tags || [],
-  };
-}
+import { mapRecordToProduct } from './products';
 
 function mapRecordToGiftBox(record: RecordModel): GiftBox {
   // Build image URLs from PocketBase file fields
@@ -42,7 +16,7 @@ function mapRecordToGiftBox(record: RecordModel): GiftBox {
 
   // expand.fixed_items contains expanded product records
   const fixedItems: Product[] = (record.expand?.fixed_items || []).map(
-    (r: RecordModel) => mapProductRecord(r)
+    (r: RecordModel) => mapRecordToProduct(r)
   );
 
   return {
@@ -66,8 +40,10 @@ export async function getAllGiftBoxes(): Promise<GiftBox[]> {
   try {
     const pb = createClient();
     const records = await pb.collection('gift_boxes').getFullList({
+      $autoCancel: false,
       filter: 'is_active=true',
       expand: 'fixed_items',
+      fields: 'id,collectionId,name,slug,type,description,short_description,box_price,images,category,is_active,expand.fixed_items.id,expand.fixed_items.collectionId,expand.fixed_items.collectionName,expand.fixed_items.name,expand.fixed_items.price,expand.fixed_items.originalPrice,expand.fixed_items.description,expand.fixed_items.shortDescription,expand.fixed_items.category,expand.fixed_items.images,expand.fixed_items.badge,expand.fixed_items.rating,expand.fixed_items.reviewCount,expand.fixed_items.material,expand.fixed_items.weight,expand.fixed_items.inStock,expand.fixed_items.quantity,expand.fixed_items.colors,expand.fixed_items.tags'
     });
     return records.map(mapRecordToGiftBox);
   } catch (error) {
@@ -84,6 +60,7 @@ async function getGiftBoxBySlug(slug: string): Promise<GiftBox | undefined> {
       .collection('gift_boxes')
       .getFirstListItem(`slug="${slug}"`, {
         expand: 'fixed_items',
+        fields: 'id,collectionId,name,slug,type,description,short_description,box_price,images,category,is_active,expand.fixed_items.id,expand.fixed_items.collectionId,expand.fixed_items.collectionName,expand.fixed_items.name,expand.fixed_items.price,expand.fixed_items.originalPrice,expand.fixed_items.description,expand.fixed_items.shortDescription,expand.fixed_items.category,expand.fixed_items.images,expand.fixed_items.badge,expand.fixed_items.rating,expand.fixed_items.reviewCount,expand.fixed_items.material,expand.fixed_items.weight,expand.fixed_items.inStock,expand.fixed_items.quantity,expand.fixed_items.colors,expand.fixed_items.tags'
       });
     return mapRecordToGiftBox(record);
   } catch (error) {
@@ -102,10 +79,27 @@ export async function getGiftBoxByType(
       .collection('gift_boxes')
       .getFirstListItem(`type="${type}"`, {
         expand: 'fixed_items',
+        fields: 'id,collectionId,name,slug,type,description,short_description,box_price,images,category,is_active,expand.fixed_items.id,expand.fixed_items.collectionId,expand.fixed_items.collectionName,expand.fixed_items.name,expand.fixed_items.price,expand.fixed_items.originalPrice,expand.fixed_items.description,expand.fixed_items.shortDescription,expand.fixed_items.category,expand.fixed_items.images,expand.fixed_items.badge,expand.fixed_items.rating,expand.fixed_items.reviewCount,expand.fixed_items.material,expand.fixed_items.weight,expand.fixed_items.inStock,expand.fixed_items.quantity,expand.fixed_items.colors,expand.fixed_items.tags'
       });
     return mapRecordToGiftBox(record);
   } catch (error) {
     console.error('getGiftBoxByType Error:', error);
+    return undefined;
+  }
+}
+
+export async function getGiftBoxById(id: string): Promise<GiftBox | undefined> {
+  try {
+    const pb = createClient();
+    const record = await pb
+      .collection('gift_boxes')
+      .getOne(id, {
+        expand: 'fixed_items',
+        fields: 'id,collectionId,name,slug,type,description,short_description,box_price,images,category,is_active,expand.fixed_items.id,expand.fixed_items.collectionId,expand.fixed_items.collectionName,expand.fixed_items.name,expand.fixed_items.price,expand.fixed_items.originalPrice,expand.fixed_items.description,expand.fixed_items.shortDescription,expand.fixed_items.category,expand.fixed_items.images,expand.fixed_items.badge,expand.fixed_items.rating,expand.fixed_items.reviewCount,expand.fixed_items.material,expand.fixed_items.weight,expand.fixed_items.inStock,expand.fixed_items.quantity,expand.fixed_items.colors,expand.fixed_items.tags'
+      });
+    return mapRecordToGiftBox(record);
+  } catch (error) {
+    console.error('getGiftBoxById Error:', error);
     return undefined;
   }
 }

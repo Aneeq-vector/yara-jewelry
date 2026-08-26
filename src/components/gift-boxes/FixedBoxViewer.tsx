@@ -85,7 +85,7 @@ export default function FixedBoxViewer({ box, categories = [] }: FixedBoxViewerP
         reviewCount: 0,
         material: 'Curated Set',
         weight: '',
-        inStock: true,
+        inStock: true, quantity: 1,
         colors: [],
         tags: ['gift-box'],
       } satisfies Product,
@@ -93,7 +93,9 @@ export default function FixedBoxViewer({ box, categories = [] }: FixedBoxViewerP
       undefined,
       true,
       box.fixedItems,
-      totalPrice
+      totalPrice,
+      'fixed',
+      box.id
     );
     setAdded(true);
     setTimeout(() => router.push('/cart'), 800);

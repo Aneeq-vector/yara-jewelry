@@ -39,7 +39,11 @@ export default function OrdersClient({ initialOrders, initialTotal, initialPages
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(50);
   
-  const { data, isFetching: loading, refetch } = useAdminOrders(currentPage, rowsPerPage);
+  const initialAdminData = currentPage === 1 
+    ? { success: true, orders: initialOrders, totalItems: initialTotal, totalPages: initialPages, page: 1 } 
+    : undefined;
+
+  const { data, isFetching: loading, refetch } = useAdminOrders(currentPage, rowsPerPage, initialAdminData);
   const orders = data?.orders || initialOrders;
   const totalItems = data?.totalItems ?? initialTotal;
   const totalPages = data?.totalPages ?? initialPages;
@@ -67,7 +71,7 @@ export default function OrdersClient({ initialOrders, initialTotal, initialPages
   };
 
   const handleStatusChange = async (id: string, newStatus: string) => {
-    const qKey = queryKeys.admin.orders(currentPage, rowsPerPage);
+    const qKey = queryKeys.admin.orders.list(currentPage, rowsPerPage);
     queryClient.setQueryData(qKey, (old: any) => {
       if (!old) return old;
       return { ...old, orders: old.orders.map((o: any) => o.id === id ? { ...o, status: newStatus } : o) };
@@ -75,14 +79,16 @@ export default function OrdersClient({ initialOrders, initialTotal, initialPages
     setSelectedOrder((prev: any) => prev && prev.id === id ? { ...prev, status: newStatus } : prev);
     
     const res = await updateOrderStatusAction(id, newStatus);
-    if (!res?.success) {
+    if (res?.success) {
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.orders.all() });
+    } else {
       alert("Failed to update status: " + (res?.error || "Unknown error"));
       queryClient.invalidateQueries({ queryKey: qKey });
     }
   };
 
   const handlePaymentStatusChange = async (id: string, newPaymentStatus: string) => {
-    const qKey = queryKeys.admin.orders(currentPage, rowsPerPage);
+    const qKey = queryKeys.admin.orders.list(currentPage, rowsPerPage);
     queryClient.setQueryData(qKey, (old: any) => {
       if (!old) return old;
       return { ...old, orders: old.orders.map((o: any) => o.id === id ? { ...o, paymentStatus: newPaymentStatus } : o) };
@@ -90,7 +96,9 @@ export default function OrdersClient({ initialOrders, initialTotal, initialPages
     setSelectedOrder((prev: any) => prev && prev.id === id ? { ...prev, paymentStatus: newPaymentStatus } : prev);
     
     const res = await updateOrderPaymentStatusAction(id, newPaymentStatus);
-    if (!res?.success) {
+    if (res?.success) {
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.orders.all() });
+    } else {
       alert("Failed to update payment status: " + (res?.error || "Unknown error"));
       queryClient.invalidateQueries({ queryKey: qKey });
     }
@@ -107,7 +115,7 @@ export default function OrdersClient({ initialOrders, initialTotal, initialPages
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
         const res = await deleteOrdersAction(selectedOrders);
         if (res?.success) {
-          const qKey = queryKeys.admin.orders(currentPage, rowsPerPage);
+          const qKey = queryKeys.admin.orders.list(currentPage, rowsPerPage);
           queryClient.invalidateQueries({ queryKey: qKey });
           setSelectedOrders([]);
         } else {
@@ -123,9 +131,9 @@ export default function OrdersClient({ initialOrders, initialTotal, initialPages
       return;
     }
 
-    const exportData = filteredOrders.map(order => {
+    const exportData = filteredOrders.map((order: any) => {
       const date = new Date(order.orderDate || order.created).toLocaleDateString('en-GB');
-      const items = Array.isArray(order.cartDetails) ? order.cartDetails.join(" | ") : "";
+      const items = Array.isArray(order.cartDetails) ? order.cartDetails.map((d: any) => typeof d === 'string' ? d : (d.text || d.productName)).join(" | ") : "";
       const address = [order.shippingStreet, order.shippingCity, order.shippingZip, order.shippingCountry].filter(Boolean).join(", ");
       
       return {
@@ -151,7 +159,7 @@ export default function OrdersClient({ initialOrders, initialTotal, initialPages
 
   // Client-side filtering is applied on the current page of results
   const filteredOrders = useMemo(() => {
-    return orders.filter(order => {
+    return orders.filter((order: any) => {
       const matchesSearch = 
         (order.orderId || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         (order.shippingName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -205,7 +213,7 @@ export default function OrdersClient({ initialOrders, initialTotal, initialPages
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedOrders(paginatedOrders.map(o => o.id));
+      setSelectedOrders(paginatedOrders.map((o: any) => o.id));
     } else {
       setSelectedOrders([]);
     }
@@ -320,7 +328,7 @@ export default function OrdersClient({ initialOrders, initialTotal, initialPages
                 {statusFilter === 'All Statuses' ? 'All Statuses' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)} <ChevronDown size={16} className="text-burgundy/50" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-40 bg-white border border-burgundy/10 rounded-xl shadow-lg p-1">
-                {['All Statuses', 'pending', 'processing', 'shipped', 'delivered', 'cancelled'].map((status) => (
+                {['All Statuses', 'pending', 'processing', 'shipped', 'delivered', 'cancelled', 'returned'].map((status) => (
                   <DropdownMenuItem 
                     key={status}
                     onClick={() => { setStatusFilter(status); setCurrentPage(1); }}
@@ -364,7 +372,7 @@ export default function OrdersClient({ initialOrders, initialTotal, initialPages
         onClose={() => setIsAddOrderOpen(false)}
         onOrderCreated={() => {
           // Invalidate the current page so the new order appears
-          queryClient.invalidateQueries({ queryKey: queryKeys.admin.orders(currentPage, rowsPerPage) });
+          queryClient.invalidateQueries({ queryKey: queryKeys.admin.orders.list(currentPage, rowsPerPage) });
         }}
       />
     </div>

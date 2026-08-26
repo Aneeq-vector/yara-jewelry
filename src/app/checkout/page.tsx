@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { m, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
-import { MapPin, Truck, CreditCard, ClipboardCheck, Check, ChevronRight, Info, Upload, FileTextIcon, XIcon, Loader2, RefreshCwIcon, FileWarningIcon, CheckIcon } from 'lucide-react';
+import { MapPin, Truck, CreditCard, ClipboardCheck, Check, ChevronRight, Info, Upload, FileTextIcon, XIcon, Loader2, RefreshCwIcon, FileWarningIcon, CheckIcon, ShoppingBag } from 'lucide-react';
 import { useCheckoutLogic } from './useCheckoutLogic';
 import PageWrapper from '@/components/layout/PageWrapper';
 import { CheckoutShippingStep } from './components/CheckoutShippingStep';
@@ -50,7 +50,7 @@ const steps = [
 export default function CheckoutPage() {
   const {
     currentStep, orderPlaced, orderId, receiptFile, setReceiptFile, uploadState, setUploadState, uploadProgress,
-    isSubmitting, savedAddresses, selectedAddressId, errors, items,
+    isSubmitting, hasHydrated, savedAddresses, selectedAddressId, errors, items,
     subtotal, form, FREE_DELIVERY_THRESHOLD, shipping, total,
     handleSelectAddress, handleFileChange, retryUpload, updateForm,
     nextStep, prevStep, placeOrder, getInputClass
@@ -58,6 +58,40 @@ export default function CheckoutPage() {
 
   if (orderPlaced && orderId) {
     return <CheckoutSuccess orderId={orderId} />;
+  }
+
+  if (!hasHydrated) {
+    return (
+      <PageWrapper>
+        <div className="pt-28 pb-20 min-h-[60vh] flex items-center justify-center">
+          <Loader2 size={32} className="animate-spin text-burgundy/30" />
+        </div>
+      </PageWrapper>
+    );
+  }
+
+  if (hasHydrated && items.length === 0) {
+    return (
+      <PageWrapper>
+        <div className="pt-28 pb-20 min-h-[60vh] flex flex-col items-center justify-center text-center px-4">
+          <div className="w-20 h-20 bg-champagne/30 rounded-full flex items-center justify-center mb-6">
+            <ShoppingBag size={32} className="text-burgundy/50" />
+          </div>
+          <h1 className="font-heading text-3xl font-bold text-burgundy mb-4">Your cart is empty</h1>
+          <p className="text-burgundy/60 font-body mb-8 max-w-md">
+            Add some beautiful pieces before proceeding to checkout.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Link href="/shop" className="btn-primary">
+              Continue Shopping
+            </Link>
+            <Link href="/cart" className="btn-secondary">
+              View Cart
+            </Link>
+          </div>
+        </div>
+      </PageWrapper>
+    );
   }
 
   return (

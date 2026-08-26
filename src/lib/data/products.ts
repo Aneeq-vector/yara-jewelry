@@ -31,6 +31,7 @@ export function mapRecordToProduct(record: RecordModel): Product {
     material: record.material || '',
     weight: record.weight || '',
     inStock: record.inStock ?? true,
+    quantity: record.quantity ?? 0,
     isActive: record.is_active ?? true,
     colors: record.colors || [],
     tags: record.tags || [],
@@ -56,6 +57,7 @@ export async function getProductById(id: string): Promise<Product | undefined> {
   try {
     const pb = createClient();
     const record = await pb.collection('products').getOne(id, {
+      $autoCancel: false,
       expand: 'category'
     });
     return mapRecordToProduct(record);
@@ -70,6 +72,7 @@ export async function getProductsByCategory(category: string, limit = 500): Prom
     const pb = createClient();
     const records = await pb.collection('products').getList(1, limit, {
       filter: `category="${category}"`,
+      $autoCancel: false,
       expand: 'category',
       fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,imagePositions,shortDescription,description,badge,colors,tags,material,weight,expand.category.id,expand.category.name',
     });
@@ -89,6 +92,7 @@ export async function getTrendingProducts(): Promise<Product[]> {
     // Fetch trending in-stock products
     const trendingRecords = await pb.collection('products').getList(1, TRENDING_SLOTS, {
       filter: 'badge="trending" && inStock=true',
+      $autoCancel: false,
       expand: 'category'
     });
     return trendingRecords.items.map(mapRecordToProduct);
@@ -102,6 +106,7 @@ async function getNewArrivals(): Promise<Product[]> {
     const pb = createClient();
     const records = await pb.collection('products').getList(1, 8, {
       filter: '(badge="new" || category="new-arrivals") && inStock=true',
+      $autoCancel: false,
       expand: 'category'
     });
     return records.items.map(mapRecordToProduct);
@@ -124,6 +129,7 @@ export async function searchProducts(query: string): Promise<Product[]> {
 
     const records = await pb.collection('products').getFullList({
       filter,
+      $autoCancel: false,
       expand: 'category'
     });
     return records.map(mapRecordToProduct);

@@ -43,7 +43,7 @@ export function ProductTabs({ product, activeTab, setActiveTab }: { product: Pro
                     </div>
                     <div className="flex justify-between py-2">
                       <span className="font-ui text-sm text-burgundy/50">Availability</span>
-                      {product.inStock ? (
+                      {product.quantity > 0 ? (
                         <span className="font-ui text-sm font-semibold text-emerald-600 flex items-center gap-1">
                           <Check size={14} /> In Stock
                         </span>

@@ -39,3 +39,9 @@ export function createRealtimeClient() {
 }
 
 // Client for Server Components and Server Actions has been moved to pocketbase-server.ts
+
+export function getReceiptUrl(order: any): string | null {
+  if (!order || !order.receipt) return null;
+  const collectionIdOrName = order.collectionId || order.collectionName || 'orders';
+  return `${PB_URL}/api/files/${collectionIdOrName}/${order.id}/${order.receipt}`;
+}

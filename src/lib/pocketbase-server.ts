@@ -14,8 +14,15 @@ export async function getServerClient() {
   };
   
   // Load the auth store from the cookie if it exists
+  let isRemembered = false;
   const pbAuthCookie = cookieStore.get('pb_auth');
   if (pbAuthCookie && pbAuthCookie.value) {
+    try {
+      let val = pbAuthCookie.value;
+      if (val.includes('%7B')) val = decodeURIComponent(val);
+      const parsed = JSON.parse(val);
+      if (parsed.remember) isRemembered = true;
+    } catch (e) {}
     pb.authStore.loadFromCookie(`pb_auth=${pbAuthCookie.value}`);
   }
 
@@ -25,12 +32,13 @@ export async function getServerClient() {
   // if the auth store hasn't actually changed.
   pb.authStore.onChange(() => {
     try {
-      const authPayload = JSON.stringify({ token: pb.authStore.token, model: pb.authStore.record });
+      const authPayload = JSON.stringify({ token: pb.authStore.token, model: pb.authStore.record, remember: isRemembered });
       cookieStore.set('pb_auth', authPayload, {
         path: '/',
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
+        ...(isRemembered && { maxAge: 60 * 60 * 24 * 14 }),
       });
     } catch (e) {
       // Ignoring error if we are in a server component rendering phase
@@ -50,19 +58,27 @@ export async function getAdminPanelClient() {
     return { url, options };
   };
   
+  let isRemembered = false;
   const pbAuthCookie = cookieStore.get('pb_admin_auth');
   if (pbAuthCookie && pbAuthCookie.value) {
+    try {
+      let val = pbAuthCookie.value;
+      if (val.includes('%7B')) val = decodeURIComponent(val);
+      const parsed = JSON.parse(val);
+      if (parsed.remember) isRemembered = true;
+    } catch (e) {}
     pb.authStore.loadFromCookie(`pb_admin_auth=${pbAuthCookie.value}`, 'pb_admin_auth');
   }
 
   pb.authStore.onChange(() => {
     try {
-      const authPayload = JSON.stringify({ token: pb.authStore.token, model: pb.authStore.record });
+      const authPayload = JSON.stringify({ token: pb.authStore.token, model: pb.authStore.record, remember: isRemembered });
       cookieStore.set('pb_admin_auth', authPayload, {
         path: '/',
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
+        ...(isRemembered && { maxAge: 60 * 60 * 24 * 14 }),
       });
     } catch (e) {
       // Ignoring error if we are in a server component rendering phase
@@ -79,20 +95,6 @@ export async function requireAuth() {
   }
   return { pb, user: pb.authStore.record };
 }
-
-export async function getServerSession() {
-  const pb = await getServerClient();
-  return { pb, user: pb.authStore.isValid ? pb.authStore.record : null };
-}
-
-export async function validateSession() {
-  const pb = await getAdminPanelClient();
-  if (!pb.authStore.isValid || !pb.authStore.record || pb.authStore.record.role !== 'admin') {
-    throw new Error('Unauthorized Admin');
-  }
-  return { pb, user: pb.authStore.record };
-}
-
 
 // ─── Admin Client Cache ──────────────────────────────────────────────────────
 // Caches the admin auth token in memory to avoid a full HTTP login on every
@@ -129,4 +131,54 @@ export async function getAdminClient() {
   _adminClientCache = { pb, expiresAt: now + CACHE_TTL_MS };
 
   return pb;
+}
+
+export async function getServerSession() {
+  const cookieStore = await cookies();
+
+  const pb = new PocketBase(PB_URL);
+  
+  pb.beforeSend = function (url, options) {
+    options.cache = 'no-store';
+    return { url, options };
+  };
+
+  let isRemembered = false;
+  const pbAuthCookie = cookieStore.get('pb_auth');
+  if (pbAuthCookie && pbAuthCookie.value) {
+    try {
+      let val = pbAuthCookie.value;
+      if (val.includes('%7B')) val = decodeURIComponent(val);
+      const parsed = JSON.parse(val);
+      if (parsed.remember) isRemembered = true;
+    } catch (e) {}
+    pb.authStore.loadFromCookie(`pb_auth=${pbAuthCookie.value}`);
+  }
+  
+  pb.authStore.onChange(() => {
+    try {
+      const authPayload = JSON.stringify({ token: pb.authStore.token, model: pb.authStore.record, remember: isRemembered });
+      cookieStore.set('pb_auth', authPayload, {
+        path: '/',
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        ...(isRemembered && { maxAge: 60 * 60 * 24 * 14 }),
+      });
+    } catch (e) {
+      // Ignoring error if we are in a server component rendering phase
+    }
+  });
+  
+  const user = pb.authStore.isValid ? pb.authStore.record : null;
+  
+  return { pb, user };
+}
+
+export async function validateSession() {
+  const pb = await getAdminPanelClient();
+  if (!pb.authStore.isValid || !pb.authStore.record || pb.authStore.record.role !== 'admin') {
+    throw new Error('Unauthorized Admin');
+  }
+  return { pb, user: pb.authStore.record };
 }

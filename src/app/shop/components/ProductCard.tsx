@@ -16,10 +16,17 @@ export function ProductCard({ product, index }: { product: Product; index: numbe
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isAdding, setIsAdding] = useState(false);
 
+  const [addError, setAddError] = useState<string | null>(null);
+
   const handleAddToCart = () => {
     setIsAdding(true);
+    setAddError(null);
     setTimeout(() => {
-      addToCart(product);
+      const res = addToCart(product);
+      if (res && !res.success) {
+        setAddError(res.message || 'Cannot add more to cart');
+        setTimeout(() => setAddError(null), 3000);
+      }
       setIsAdding(false);
     }, 600);
   };
@@ -60,7 +67,7 @@ export function ProductCard({ product, index }: { product: Product; index: numbe
                   fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   style={{ objectPosition: product.imagePositions?.[currentImageIndex] || '50% 50%' }}
                   className={`object-cover group-hover:scale-105 transition duration-700 ${
-                    !product.inStock ? 'opacity-40 grayscale-[30%]' : ''
+                    product.quantity <= 0 ? 'opacity-40 grayscale-[30%]' : ''
                   }`}
                   unoptimized
                 />
@@ -95,13 +102,28 @@ export function ProductCard({ product, index }: { product: Product; index: numbe
           </div>
         )}
 
-        {!product.inStock && (
+        {product.quantity <= 0 && (
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none">
             <span className="px-4 py-2 bg-white/90 text-burgundy font-ui font-bold text-sm uppercase tracking-wider rounded-full shadow-lg whitespace-nowrap">
               Out of Stock
             </span>
           </div>
         )}
+
+        <AnimatePresence>
+          {addError && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="absolute top-4 left-1/2 -translate-x-1/2 z-50 w-[90%]"
+            >
+              <div className="px-3 py-2 bg-red-50/95 backdrop-blur-sm border border-red-200 text-red-700 font-body text-xs rounded-xl shadow-lg text-center leading-tight">
+                {addError}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {(product.originalPrice || 0) > 0 && (
           <div className="absolute bottom-3 left-3 z-10 transition-opacity duration-300 lg:group-hover:opacity-0">
@@ -124,7 +146,7 @@ export function ProductCard({ product, index }: { product: Product; index: numbe
         {/* Desktop Add to Cart Hover */}
         <div className="hidden lg:flex absolute bottom-3 left-3 right-3 z-10 opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition duration-300">
           <div className="w-full flex items-center gap-2">
-            {product.inStock ? (
+            {product.quantity > 0 ? (
               <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={handleAddToCart}
@@ -169,9 +191,9 @@ export function ProductCard({ product, index }: { product: Product; index: numbe
           {/* Mobile Quick Add */}
           <button aria-label="Action" 
             onClick={(e) => { e.preventDefault(); handleAddToCart(); }}
-            disabled={!product.inStock || isAdding}
+            disabled={product.quantity <= 0 || isAdding}
             className={`p-2 rounded-full min-w-[36px] min-h-[36px] flex items-center justify-center transition-colors lg:hidden ${
-              product.inStock 
+              product.quantity > 0 
                 ? 'bg-burgundy text-white shadow-sm hover:bg-wine' 
                 : 'bg-nude/50 text-burgundy/30 cursor-not-allowed'
             }`}

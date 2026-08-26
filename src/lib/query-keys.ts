@@ -40,14 +40,38 @@ export const queryKeys = {
   giftBoxes: {
     all: () => ['gift-boxes'] as const,
     byType: (type: string) => ['gift-boxes', type] as const,
+    detail: (id: string) => ['giftBoxes', 'detail', id] as const,
   },
 
   // Admin-scoped — cleared on admin logout
   admin: {
-    products: (filters: AdminProductFilters) => ['admin', 'products', filters] as const,
-    orders: (page: number, perPage: number) => ['admin', 'orders', page, perPage] as const,
-    customers: (filters: CustomerFilters) => ['admin', 'customers', filters] as const,
-    categories: () => ['admin', 'categories'] as const,
+    products: {
+      all: () => ['admin', 'products'] as const,
+      list: (filters: AdminProductFilters) => ['admin', 'products', filters] as const,
+    },
+    orders: {
+      all: () => ['admin', 'orders'] as const,
+      list: (page: number, perPage: number) => ['admin', 'orders', page, perPage] as const,
+    },
+    customers: {
+      all: () => ['admin', 'customers'] as const,
+      list: (filters: CustomerFilters) => ['admin', 'customers', filters] as const,
+    },
+    giftBoxes: {
+      all: () => ['admin', 'giftBoxes'] as const,
+    },
+    categories: {
+      all: () => ['admin', 'categories'] as const,
+      productsAll: () => ['admin', 'categories', 'products'] as const,
+      products: (categoryId: string, filters?: any) => ['admin', 'categories', 'products', categoryId, filters] as const,
+      assignableProducts: (categoryId: string, filters?: any) => ['admin', 'categories', 'assignableProducts', categoryId, filters] as const,
+    },
+    dashboard: {
+      stats: () => ['admin', 'dashboard', 'stats'] as const,
+      recentOrders: () => ['admin', 'dashboard', 'recentOrders'] as const,
+      topProducts: () => ['admin', 'dashboard', 'topProducts'] as const,
+      lowStock: () => ['admin', 'dashboard', 'lowStock'] as const,
+    }
   },
 
   // User-scoped — cleared on customer logout

@@ -7,8 +7,8 @@ import { Product } from '@/types';
 import { BRAND } from '@/lib/constants';
 
 export function ProductInfo({ 
-  product, selectedColor, setSelectedColor, quantity, setQuantity, 
-  handleAddToCart, isAdding, toggleItem, wishlisted, setIsSizeGuideOpen 
+  product, categoryName, selectedColor, setSelectedColor, quantity, setQuantity, 
+  handleAddToCart, isAdding, toggleItem, wishlisted, setIsSizeGuideOpen, addError 
 }: any) {
   const [showSticky, setShowSticky] = useState(false);
   const mainCtaRef = useRef<HTMLDivElement>(null);
@@ -29,9 +29,8 @@ export function ProductInfo({
 
   return (
     <>
-              {/* Category */}
               <span className="font-ui text-xs font-semibold uppercase tracking-[0.15em] text-rose-gold mb-3 block">
-                {product.category.replace('-', ' ')}
+                {categoryName || product.category.replace('-', ' ')}
               </span>
 
               {/* Name */}
@@ -83,7 +82,7 @@ export function ProductInfo({
               </button>
 
               {/* Out of Stock Alert */}
-              {!product.inStock && (
+              {product.quantity <= 0 && (
                 <Alert variant="destructive" className="mb-8 bg-red-50 py-4 flex items-start gap-3 border-red-200">
                   <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0 text-red-600" />
                   <div className="flex flex-col gap-1 mt-0.5">
@@ -120,15 +119,16 @@ export function ProductInfo({
               )}
 
               {/* Quantity */}
-              {product.inStock && (
+              {product.quantity > 0 && (
                 <div className="mb-8">
                   <h4 className="font-ui font-semibold text-xs uppercase tracking-wider text-burgundy/50 mb-3">
                     Quantity
                   </h4>
-                  <div className="flex items-center gap-1 w-fit">
+                  <div className="flex items-center gap-4">
                     <button
                       onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      aria-label="Interactive control" className="w-10 h-10 rounded-xl border border-nude/50 flex items-center justify-center text-burgundy/60 hover:border-burgundy/30 transition-colors"
+                      disabled={quantity <= 1}
+                      aria-label="Interactive control" className="w-10 h-10 rounded-xl border border-nude/50 flex items-center justify-center text-burgundy/60 hover:border-burgundy/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Minus size={14} />
                     </button>
@@ -136,8 +136,9 @@ export function ProductInfo({
                       {quantity}
                     </span>
                     <button
-                      onClick={() => setQuantity(quantity + 1)}
-                      aria-label="Interactive control" className="w-10 h-10 rounded-xl border border-nude/50 flex items-center justify-center text-burgundy/60 hover:border-burgundy/30 transition-colors"
+                      onClick={() => setQuantity(Math.min(quantity + 1, product.quantity))}
+                      disabled={quantity >= product.quantity}
+                      aria-label="Interactive control" className="w-10 h-10 rounded-xl border border-nude/50 flex items-center justify-center text-burgundy/60 hover:border-burgundy/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Plus size={14} />
                     </button>
@@ -145,9 +146,28 @@ export function ProductInfo({
                 </div>
               )}
 
+              {/* Add Error Alert */}
+              <AnimatePresence>
+                {addError && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }} 
+                    animate={{ opacity: 1, height: 'auto' }} 
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden mb-8"
+                  >
+                    <Alert variant="destructive" className="bg-red-50 py-3 flex items-center gap-3 border-red-200">
+                      <AlertCircle className="h-4 w-4 flex-shrink-0 text-red-600" />
+                      <AlertDescription className="text-red-700 text-sm font-semibold">
+                        {addError}
+                      </AlertDescription>
+                    </Alert>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               {/* Actions */}
               <div ref={mainCtaRef} className="flex gap-3 mb-8">
-                {product.inStock ? (
+                {product.quantity > 0 ? (
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
@@ -218,7 +238,7 @@ export function ProductInfo({
               
               {/* Mobile Sticky Add to Cart Footer */}
               <AnimatePresence>
-                {product.inStock && showSticky && (
+                {product.quantity > 0 && showSticky && (
                   <motion.div
                     initial={{ y: 100 }}
                     animate={{ y: 0 }}

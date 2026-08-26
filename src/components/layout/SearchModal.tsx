@@ -23,9 +23,11 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
   useEffect(() => {
     let timeout: NodeJS.Timeout;
     if (query.length > 1) {
-      searchProducts(query).then(setResults);
+      timeout = setTimeout(() => {
+        searchProducts(query).then(setResults);
+      }, 300);
     } else {
-      timeout = setTimeout(() => setResults([]), 0);
+      setResults([]);
     }
     return () => {
       if (timeout) clearTimeout(timeout);

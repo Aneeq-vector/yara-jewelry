@@ -1,26 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { m as motion } from 'framer-motion';
 import PageWrapper from '@/components/layout/PageWrapper';
 import FixedBoxViewer from '@/components/gift-boxes/FixedBoxViewer';
-import { getGiftBoxByType } from '@/lib/data/gift-boxes';
+import { useGiftBoxById } from '@/lib/hooks/use-gift-boxes';
 import { useCategories } from '@/lib/hooks/use-categories';
 import { GiftBox, Category } from '@/types';
 
-export default function BirthdayGiftBoxPage() {
-  const [box, setBox] = useState<GiftBox | null>(null);
-  const [boxLoading, setBoxLoading] = useState(true);
+export default function GiftBoxDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params);
+  const { data: box, isPending: boxLoading } = useGiftBoxById(resolvedParams.id);
   const { data: categories = [], isPending: categoriesLoading } = useCategories();
 
   const loading = boxLoading || categoriesLoading;
-
-  useEffect(() => {
-    getGiftBoxByType('birthday').then((data) => {
-      setBox(data || null);
-      setBoxLoading(false);
-    });
-  }, []);
 
   if (loading) {
     return (
@@ -38,7 +31,7 @@ export default function BirthdayGiftBoxPage() {
         <div className="pt-40 pb-20 text-center">
           <h1 className="font-heading text-3xl font-bold text-burgundy mb-4">Coming Soon</h1>
           <p className="font-body text-burgundy/60">
-            Our Birthday Gift Box is being prepared. Check back soon!
+            This Gift Box is being prepared. Check back soon!
           </p>
         </div>
       </PageWrapper>

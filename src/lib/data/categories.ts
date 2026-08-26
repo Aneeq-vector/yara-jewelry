@@ -62,7 +62,10 @@ function mapRecordToCategory(record: RecordModel): Category {
 export async function getAllCategories(): Promise<Category[]> {
   try {
     const pb = createClient();
-    const records = await pb.collection('categories').getFullList();
+    const records = await pb.collection('categories').getFullList({ 
+      $autoCancel: false,
+      fields: 'id,collectionId,name,slug,description,image,productCount'
+    });
     return records.map(mapRecordToCategory);
   } catch (error) {
     console.error('getAllCategories Error:', error);

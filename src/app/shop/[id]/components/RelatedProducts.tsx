@@ -23,9 +23,9 @@ export function RelatedProducts({ relatedProducts }: { relatedProducts: Product[
             <Link href={`/shop/${p.id}`}>
               <div className="relative aspect-square rounded-3xl overflow-hidden bg-champagne/30 mb-3">
                 <Image src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" style={{ objectPosition: p.imagePositions?.[0] || '50% 50%' }} className={`object-cover group-hover:scale-105 transition duration-700 ${
-                  !p.inStock ? 'opacity-40 grayscale-[30%]' : ''
+                  p.quantity <= 0 ? 'opacity-40 grayscale-[30%]' : ''
                 }`} />
-                {!p.inStock && (
+                {p.quantity <= 0 && (
                   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none flex items-center justify-center">
                     <span className="px-4 py-2 bg-white/90 text-burgundy font-ui font-bold text-xs uppercase tracking-wider rounded-full shadow-lg whitespace-nowrap">
                       Out of Stock

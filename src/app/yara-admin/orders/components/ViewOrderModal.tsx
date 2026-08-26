@@ -1,21 +1,26 @@
 import { X, ChevronDown, Phone, Mail, MapPin, ExternalLink } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { PB_URL } from '@/lib/pocketbase';
+import { PB_URL, getReceiptUrl } from '@/lib/pocketbase';
 
 export function ViewOrderModal({
   selectedOrder, setSelectedOrder, handleStatusChange, handlePaymentStatusChange
 }: any) {
 
   // Extract source from cartDetails if present (manual orders store "Source: Instagram" as first entry)
-  const cartDetailsArr: string[] = Array.isArray(selectedOrder?.cartDetails)
+  const cartDetailsArr: any[] = Array.isArray(selectedOrder?.cartDetails)
     ? selectedOrder.cartDetails
     : [];
-  const sourceEntry = cartDetailsArr.find((d: string) => d.startsWith('Source:'));
+  const sourceEntry = cartDetailsArr.find((d: any) => typeof d === 'string' && d.startsWith('Source:'));
   const source = sourceEntry ? sourceEntry.replace('Source:', '').trim() : null;
-  const visibleCartDetails = cartDetailsArr.filter((d: string) => !d.startsWith('Source:'));
+  const visibleCartDetails = cartDetailsArr.filter((d: any) => !(typeof d === 'string' && d.startsWith('Source:')));
 
-  const email = selectedOrder?.expand?.user?.email || selectedOrder?.shippingEmail || null;
-  const phone = selectedOrder?.shippingPhone || selectedOrder?.phone || null;
+  const email = typeof selectedOrder?.shippingEmail === 'string' && selectedOrder.shippingEmail.trim()
+    ? selectedOrder.shippingEmail
+    : selectedOrder?.expand?.user?.email || null;
+
+  const phone = typeof selectedOrder?.shippingPhone === 'string' && selectedOrder.shippingPhone.trim()
+    ? selectedOrder.shippingPhone
+    : selectedOrder?.expand?.user?.phone || null;
 
   return (
     <>
@@ -95,7 +100,7 @@ export function ViewOrderModal({
                   {selectedOrder.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Bank Transfer'}
                   {selectedOrder.paymentMethod === 'bank_transfer' && selectedOrder.receipt && (
                     <a
-                      href={`${PB_URL}/api/files/${selectedOrder.collectionId}/${selectedOrder.id}/${selectedOrder.receipt}`}
+                      href={getReceiptUrl(selectedOrder) || '#'}
                       target="_blank"
                       rel="noreferrer"
                       className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 hover:underline border border-blue-200"
@@ -111,6 +116,7 @@ export function ViewOrderModal({
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => handlePaymentStatusChange(selectedOrder.id, 'pending')}>Pending</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handlePaymentStatusChange(selectedOrder.id, 'paid')}>Paid</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handlePaymentStatusChange(selectedOrder.id, 'refunded')}>Refunded</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handlePaymentStatusChange(selectedOrder.id, 'failed')}>Failed</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -122,23 +128,47 @@ export function ViewOrderModal({
                 <span className="text-burgundy/60 block mb-2">Items</span>
                 <div className="space-y-1">
                   {visibleCartDetails.length > 0 ? (
-                    visibleCartDetails.map((item: string, i: number) => {
-                      if (item.startsWith('Notes:')) {
+                    visibleCartDetails.map((itemRaw: any, i: number) => {
+                      const isObject = typeof itemRaw === 'object' && itemRaw !== null;
+                      const isCustomBox = isObject 
+                        ? itemRaw.type === 'custom_box' 
+                        : typeof itemRaw === 'string' && itemRaw.includes('Custom Box');
+                      const isNotes = typeof itemRaw === 'string' && itemRaw.startsWith('Notes:');
+                      const isMetadata = isObject && itemRaw.type === 'metadata';
+
+                      if (isMetadata) {
+                        return <div key={i} className="text-xs text-burgundy/50 italic bg-ivory/50 px-2 py-1.5 rounded mt-2">{itemRaw.text}</div>;
+                      }
+
+                      if (isNotes) {
                         return (
                           <div key={i} className="text-xs text-burgundy/50 italic bg-ivory/50 px-2 py-1.5 rounded mt-2">
-                            {item}
+                            {itemRaw}
                           </div>
                         );
                       }
 
-                      if (item.includes('Custom Box')) {
-                        const [mainPart, itemsPart] = item.split(' - Items: ');
+                      if (isCustomBox) {
+                        let mainPart = '';
+                        let itemsArr: string[] = [];
+                        
+                        if (isObject) {
+                          mainPart = `${itemRaw.quantity || 1}x ${itemRaw.productName} - Rs. ${itemRaw.lineTotal || itemRaw.unitPrice}`;
+                          itemsArr = Array.isArray(itemRaw.boxItems) ? itemRaw.boxItems : [];
+                        } else if (typeof itemRaw === 'string') {
+                          const [splitMain, itemsPart] = itemRaw.split(' - Items: ');
+                          mainPart = splitMain;
+                          if (itemsPart) {
+                            itemsArr = itemsPart.includes(' | ') ? itemsPart.split(' | ') : itemsPart.split(', ');
+                          }
+                        }
+
                         return (
                           <div key={i} className="text-xs text-burgundy font-medium bg-ivory/50 p-3 rounded-lg border border-burgundy/10">
                             <div className="font-bold mb-1.5">{mainPart}</div>
-                            {itemsPart && (
+                            {itemsArr.length > 0 && (
                               <ul className="list-disc pl-4 space-y-1 text-[11px] opacity-80">
-                                {(itemsPart.includes(' | ') ? itemsPart.split(' | ') : itemsPart.split(', ')).map((boxItem, idx) => (
+                                {itemsArr.map((boxItem: string, idx: number) => (
                                   <li key={idx}>{boxItem}</li>
                                 ))}
                               </ul>
@@ -147,19 +177,32 @@ export function ViewOrderModal({
                         );
                       }
 
-                      let rawClean = item.split('[')[0].split(' - Rs.')[0].trim();
-                      let count = '';
-                      let name = rawClean;
-                      const match = rawClean.match(/^(\d+)x\s+(.*)/);
-                      if (match) { count = match[1]; name = match[2]; }
-                      name = name.replace(/\s*\([^)]*\)$/, '').trim();
-                      const extrasMatch = item.match(/\[(.*?)\]/);
-                      const extras = extrasMatch ? ` (${extrasMatch[1]})` : '';
-                      const countSuffix = count ? ` × ${count}` : '';
+                      // Standard product logic
+                      let name = '';
+                      let extras = '';
+                      let countSuffix = '';
+                      let displayTotal = '';
+
+                      if (isObject) {
+                        name = itemRaw.productName || 'Unknown Item';
+                        extras = itemRaw.extras ? ` (${itemRaw.extras})` : '';
+                        countSuffix = itemRaw.quantity ? ` × ${itemRaw.quantity}` : '';
+                        displayTotal = itemRaw.lineTotal ? ` - Rs. ${itemRaw.lineTotal}` : ` - Rs. ${itemRaw.unitPrice || 0}`;
+                      } else if (typeof itemRaw === 'string') {
+                        let rawClean = itemRaw.split('[')[0].split(' - Rs.')[0].trim();
+                        let count = '';
+                        name = rawClean;
+                        const match = rawClean.match(/^(\d+)x\s+(.*)/);
+                        if (match) { count = match[1]; name = match[2]; }
+                        name = name.replace(/\s*\([^)]*\)$/, '').trim();
+                        const extrasMatch = itemRaw.match(/\[(.*?)\]/);
+                        extras = extrasMatch ? ` (${extrasMatch[1]})` : '';
+                        countSuffix = count ? ` × ${count}` : '';
+                      }
 
                       return (
                         <div key={i} className="text-xs text-burgundy font-medium bg-ivory/50 p-2 rounded flex justify-between">
-                          <span>{name}{extras}{countSuffix}</span>
+                          <span>{name}{extras}{countSuffix}{displayTotal}</span>
                         </div>
                       );
                     })
@@ -194,6 +237,7 @@ export function ViewOrderModal({
                     <DropdownMenuItem onClick={() => handleStatusChange(selectedOrder.id, 'shipped')}>Shipped</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleStatusChange(selectedOrder.id, 'delivered')}>Delivered</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleStatusChange(selectedOrder.id, 'cancelled')}>Cancelled</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleStatusChange(selectedOrder.id, 'returned')}>Returned</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>

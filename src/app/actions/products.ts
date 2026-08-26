@@ -1,6 +1,6 @@
 'use server';
 
-import { getAdminClient } from '@/lib/pocketbase-server';
+import { validateSession } from '@/lib/pocketbase-server';
 import { revalidatePath } from 'next/cache';
 
 // Safe serializer: converts PocketBase RecordModel → plain JSON
@@ -18,7 +18,7 @@ function revalidateAll() {
 
 export async function getProductsAction(page = 1, perPage = 50, search = '', categoryId = '', sort = '-id', inStock = 'All', badge = 'All') {
   try {
-    const pb = await getAdminClient();
+    const { pb } = await validateSession();
     
     // Build filter string
     const filters: string[] = [];
@@ -54,7 +54,7 @@ export async function getProductsAction(page = 1, perPage = 50, search = '', cat
 
 export async function getCategoriesAction() {
   try {
-    const pb = await getAdminClient();
+    const { pb } = await validateSession();
     const records = await pb.collection('categories').getFullList({ sort: 'name' });
     return { success: true, categories: toPlain(records) };
   } catch (error: any) {
@@ -64,7 +64,7 @@ export async function getCategoriesAction() {
 
 export async function deleteProductAction(id: string) {
   try {
-    const pb = await getAdminClient();
+    const { pb } = await validateSession();
     await pb.collection('products').delete(id);
     revalidateAll();
     return { success: true };
@@ -75,7 +75,7 @@ export async function deleteProductAction(id: string) {
 
 export async function deleteProductsAction(ids: string[]) {
   try {
-    const pb = await getAdminClient();
+    const { pb } = await validateSession();
     await Promise.all(
       ids.map(id => pb.collection('products').delete(id).catch(e => console.error(`Delete ${id} failed:`, e)))
     );
@@ -88,7 +88,7 @@ export async function deleteProductsAction(ids: string[]) {
 
 export async function duplicateProductAction(id: string) {
   try {
-    const pb = await getAdminClient();
+    const { pb } = await validateSession();
     const original = await pb.collection('products').getOne(id);
     const newData: any = { ...toPlain(original) };
     delete newData.id;
@@ -110,7 +110,7 @@ export async function duplicateProductAction(id: string) {
 // (bypasses Next.js/Vercel body size limits and serialization overhead)
 export async function getAdminTokenAction(): Promise<{ token?: string; pbUrl?: string; error?: string }> {
   try {
-    const pb = await getAdminClient();
+    const { pb } = await validateSession();
     const pbUrl = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pb.yarasl.shop';
     return { token: pb.authStore.token, pbUrl };
   } catch (error: any) {
@@ -124,13 +124,64 @@ export async function revalidateProductsAction() {
 
 export async function getProductOptionsAction() {
   try {
-    const pb = await getAdminClient();
+    const { pb } = await validateSession();
     const records = await pb.collection('products').getFullList({
       sort: 'name',
-      fields: 'id,collectionId,name,price,inStock,images,productCode,category', // Minimal fields
+      fields: 'id,collectionId,name,price,inStock,quantity,images,productCode,category', // Minimal fields including quantity
     });
     return { success: true, products: toPlain(records) };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to fetch product options' };
+  }
+}
+
+export async function getCategoryProductsAction(categoryId: string, page = 1, perPage = 50) {
+  try {
+    const { pb } = await validateSession();
+    // Lightweight query for the edit category modal
+    const records = await pb.collection('products').getList(page, perPage, {
+      filter: `category = "${categoryId}"`,
+      fields: 'id,name,productCode,price,quantity,category',
+    });
+    return { 
+      success: true, 
+      products: toPlain(records.items),
+      page: records.page,
+      perPage: records.perPage,
+      totalItems: records.totalItems,
+      totalPages: records.totalPages
+    };
+  } catch (error: any) {
+    console.error('getCategoryProductsAction error:', error.message);
+    return { success: false, error: error.message || 'Failed to fetch category products' };
+  }
+}
+
+export async function getAssignableProductsAction(currentCategoryId: string, page = 1, perPage = 50, search = '') {
+  try {
+    const { pb } = await validateSession();
+    
+    let filterString = '';
+    if (search) {
+      filterString = `(name ~ "${search}" || productCode ~ "${search}")`;
+    }
+
+    const records = await pb.collection('products').getList(page, perPage, {
+      filter: filterString,
+      expand: 'category',
+      fields: 'id,name,productCode,price,quantity,category,expand.category.name,expand.category.id',
+    });
+    
+    return { 
+      success: true, 
+      products: toPlain(records.items),
+      page: records.page,
+      perPage: records.perPage,
+      totalItems: records.totalItems,
+      totalPages: records.totalPages
+    };
+  } catch (error: any) {
+    console.error('getAssignableProductsAction error:', error.message);
+    return { success: false, error: error.message || 'Failed to fetch assignable products' };
   }
 }

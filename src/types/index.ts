@@ -16,6 +16,7 @@ export interface Product {
   material: string;
   weight: string;
   inStock: boolean;
+  quantity: number;
   isActive?: boolean;
   colors?: string[];
   selectedColor?: string;
@@ -74,6 +75,8 @@ export interface CartItem {
   quantity: number;
   selectedColor?: string;
   isCustomBox?: boolean;
+  giftBoxType?: 'fixed' | 'custom';
+  giftBoxId?: string;
   boxItems?: Product[];
   customPrice?: number;
 }

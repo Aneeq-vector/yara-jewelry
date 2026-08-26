@@ -1,7 +1,7 @@
 import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { ChevronDown, Eye, FileText } from 'lucide-react';
-import { PB_URL } from '@/lib/pocketbase';
+import { getReceiptUrl } from '@/lib/pocketbase';
 
 export function OrdersTable({
   paginatedOrders, isAllSelected, handleSelectAll, selectedOrders, handleSelectOrder,
@@ -65,7 +65,13 @@ export function OrdersTable({
                     <td className="p-4 font-ui text-burgundy/80 text-center align-middle">{orderDate}</td>
                     <td className="p-4 text-center align-middle">
                       <div className="font-medium text-burgundy">{order.shippingName || 'Guest'}</div>
-                      <div className="text-xs text-burgundy/50">{order.expand?.user?.email || 'N/A'}</div>
+                      <div className="text-xs text-burgundy/50">
+                        {typeof order.shippingEmail === 'string' && order.shippingEmail.trim()
+                          ? order.shippingEmail
+                          : typeof order.expand?.user?.email === 'string' && order.expand.user.email.trim()
+                            ? order.expand.user.email
+                            : 'N/A'}
+                      </div>
                     </td>
                     <td className="p-4 text-center align-middle">
                       <div onClick={(e) => e.stopPropagation()}>
@@ -85,6 +91,7 @@ export function OrdersTable({
                             <DropdownMenuItem onClick={() => handleStatusChange(order.id, 'shipped')}>Shipped</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleStatusChange(order.id, 'delivered')}>Delivered</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleStatusChange(order.id, 'cancelled')}>Cancelled</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleStatusChange(order.id, 'returned')}>Returned</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -103,6 +110,7 @@ export function OrdersTable({
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => handlePaymentStatusChange(order.id, 'pending')}>Pending</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handlePaymentStatusChange(order.id, 'paid')}>Paid</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handlePaymentStatusChange(order.id, 'refunded')}>Refunded</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handlePaymentStatusChange(order.id, 'failed')}>Failed</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -111,7 +119,7 @@ export function OrdersTable({
                     <td className="p-4 text-center align-middle">
                       {order.receipt ? (
                         <a 
-                          href={`${PB_URL}/api/files/${order.collectionId}/${order.id}/${order.receipt}`} 
+                          href={getReceiptUrl(order) || '#'} 
                           target="_blank" 
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}

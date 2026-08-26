@@ -3,67 +3,281 @@
 import { getServerSession, validateSession, getAdminClient } from '@/lib/pocketbase-server';
 import { revalidatePath } from 'next/cache';
 
+const FALLBACK_BOX_ID = 'customize-gift-box-fallback';
+const FALLBACK_BOX_PRICE = 400;
+
 export async function createOrderAction(formData: FormData) {
+
   try {
-    const { pb, user } = await getServerSession();
-    // Set the user to the currently authenticated user if available
-    if (user) {
-      formData.set('user', user.id);
+    const { pb: customerPb, user: customerUser } = await getServerSession();
+    
+    if (customerUser && customerUser.role !== 'customer') {
+      return { success: false, error: 'Please sign in with a customer account to place this order.' };
+    }
+    
+    const adminPb = await getAdminClient();
+    const idempotencyKey = formData.get('idempotencyKey') as string;
+    if (!idempotencyKey) {
+      throw new Error("Missing idempotency key");
     }
 
-    // Initial status
-    formData.set('status', 'pending');
-    
-    // Set paymentStatus based on paymentMethod
-    const paymentMethod = formData.get('paymentMethod');
-    if (paymentMethod === 'cod') {
-      formData.set('paymentStatus', 'pending');
-    } else {
-      // bank_transfer
-      formData.set('paymentStatus', 'pending');
-    }
-
-    // Create the order in PocketBase
-    const record = await pb.collection('orders').create(formData);
-    
-    // Automatically reduce product quantity in stock
+    // 1. Idempotency Check
     try {
-      const adminPb = await getAdminClient();
-      const stockDeductionStr = formData.get('stockDeduction') as string;
-      if (stockDeductionStr) {
-        const stockItems = JSON.parse(stockDeductionStr) as { id: string, quantity: number }[];
-        
-        // Group by ID in case the same item appears multiple times (e.g. in a custom box)
-        const deductions = stockItems.reduce((acc, item) => {
-          acc[item.id] = (acc[item.id] || 0) + item.quantity;
-          return acc;
-        }, {} as Record<string, number>);
+      const existing = await adminPb.collection('orders').getFirstListItem(`idempotencyKey="${idempotencyKey}"`, { fields: 'id,orderId' });
+      if (existing) {
+        return { success: true, orderId: existing.orderId || existing.id, message: "Order already processed" };
+      }
+    } catch (e: any) {
+      if (e.status !== 404) throw e;
+    }
 
-        for (const [prodId, qtyToDeduct] of Object.entries(deductions)) {
-          if (prodId && qtyToDeduct > 0) {
-            try {
-              const productRecord = await adminPb.collection('products').getOne(prodId);
-              const currentQty = Number(productRecord.quantity) || 0;
-              const newQty = Math.max(0, currentQty - qtyToDeduct);
-              await adminPb.collection('products').update(prodId, {
-                quantity: newQty,
-                inStock: newQty > 0
-              });
-            } catch (err) {
-              console.error(`Failed to update quantity for product ${prodId}:`, err);
-            }
-          }
+    const paymentMethod = formData.get('paymentMethod') as string || 'cod';
+    const receiptFile = formData.get('receipt') as File | null;
+
+    if (paymentMethod === 'bank_transfer') {
+      if (!receiptFile || receiptFile.size === 0) {
+        throw new Error("Payment receipt is required for bank transfer.");
+      }
+      if (receiptFile.size > 5 * 1024 * 1024) {
+        throw new Error("Receipt file is too large (max 5MB).");
+      }
+      if (!['image/jpeg', 'image/png', 'application/pdf'].includes(receiptFile.type)) {
+        throw new Error("Invalid receipt format. Please upload JPG, PNG or PDF.");
+      }
+    }
+
+    const rawItems = formData.get('cartItems') as string;
+    if (!rawItems) throw new Error("Cart is empty");
+    
+    const cartItems = JSON.parse(rawItems);
+    if (!Array.isArray(cartItems) || cartItems.length === 0) {
+      return { success: false, error: "Your cart is empty. Please add an item before placing an order." };
+    }
+    // 2. Collect unique Product IDs and Gift Box IDs to fetch authoritative data
+    const productIdsToFetch = new Set<string>();
+    const giftBoxIdsToFetch = new Set<string>();
+
+    cartItems.forEach((item: any) => {
+      if (item.giftBoxType === 'fixed' || item.isCustomBox || item.giftBoxType === 'custom') {
+        const targetId = item.giftBoxId || item.product?.id;
+        if (targetId && targetId !== FALLBACK_BOX_ID) {
+          giftBoxIdsToFetch.add(targetId);
+        }
+        
+        if ((item.isCustomBox || item.giftBoxType === 'custom') && Array.isArray(item.boxItems)) {
+          item.boxItems.forEach((b: any) => {
+            if (b.id) productIdsToFetch.add(b.id);
+          });
+        }
+      } else {
+        if (item.product?.id) {
+          productIdsToFetch.add(item.product.id);
         }
       }
-    } catch (stockError) {
-      console.error('Failed to parse stock details for deduction:', stockError);
+    });
+
+    // 3. Fetch all referenced products and fixed gift boxes (Parallel)
+    const productMap = new Map<string, any>();
+    const giftBoxMap = new Map<string, any>();
+
+    const productPromise = productIdsToFetch.size > 0 
+      ? adminPb.collection('products').getFullList({ filter: Array.from(productIdsToFetch).map(id => `id="${id}"`).join(' || ') })
+      : Promise.resolve([]);
+      
+    const boxPromise = giftBoxIdsToFetch.size > 0
+      ? adminPb.collection('gift_boxes').getFullList({ filter: Array.from(giftBoxIdsToFetch).map(id => `id="${id}"`).join(' || '), expand: 'fixed_items' })
+      : Promise.resolve([]);
+
+    const [products, boxes] = await Promise.all([productPromise, boxPromise]);
+
+    products.forEach(p => productMap.set(p.id, p));
+
+    boxes.forEach(b => {
+      giftBoxMap.set(b.id, b);
+      if (b.expand?.fixed_items) {
+        const fixedItems = Array.isArray(b.expand.fixed_items) ? b.expand.fixed_items : [b.expand.fixed_items];
+        fixedItems.forEach((p: any) => productMap.set(p.id, p));
+      }
+    });
+
+    let calculatedSubtotal = 0;
+    const stockDeductions: Record<string, number> = {};
+    const cartDetails: any[] = [];
+    const finalProductIds = new Set<string>();
+
+    // 4. Normalize Cart, Calculate Total, Aggregate Inventory
+    for (const item of cartItems) {
+      const qty = Number(item.quantity);
+      if (qty <= 0 || !Number.isInteger(qty)) throw new Error(`Invalid quantity for item ${item.product?.name}`);
+
+      if (item.giftBoxType === 'fixed') {
+        const targetId = item.giftBoxId || item.product?.id;
+        const dbBox = giftBoxMap.get(targetId);
+        if (!dbBox || !dbBox.is_active || dbBox.type !== 'fixed') {
+          return { success: false, error: "This gift box is no longer available. Please remove it from your cart and create it again.", removeStaleCartItemId: item.cartItemId };
+        }
+
+        let innerTotal = 0;
+        const boxItemsArr = [];
+        const fixedItems = dbBox.expand?.fixed_items ? (Array.isArray(dbBox.expand.fixed_items) ? dbBox.expand.fixed_items : [dbBox.expand.fixed_items]) : [];
+
+        for (const dbInner of fixedItems) {
+          const p = Number(dbInner.price) || 0;
+          innerTotal += p;
+          finalProductIds.add(dbInner.id);
+          stockDeductions[dbInner.id] = (stockDeductions[dbInner.id] || 0) + qty;
+          const extras = [dbInner.material ? `Material: ${dbInner.material}` : '', dbInner.weight ? `Weight: ${dbInner.weight}` : ''].filter(Boolean).join(', ');
+          boxItemsArr.push(`${dbInner.name}${extras ? ` [${extras}]` : ''}`);
+        }
+
+        const basePrice = Number(dbBox.box_price) || 0;
+        const boxTotalPrice = basePrice + innerTotal;
+        const lineTotal = boxTotalPrice * qty;
+        calculatedSubtotal += lineTotal;
+
+        cartDetails.push({
+          productId: dbBox.id,
+          productName: dbBox.name,
+          quantity: qty,
+          unitPrice: boxTotalPrice,
+          lineTotal,
+          boxItems: boxItemsArr,
+          type: 'fixed_box'
+        });
+      } else if (item.isCustomBox || item.giftBoxType === 'custom') {
+        let basePrice = 0;
+        let boxName = 'Custom Box';
+        const targetId = item.giftBoxId || item.product?.id;
+        if (targetId === FALLBACK_BOX_ID) {
+          basePrice = FALLBACK_BOX_PRICE;
+        } else {
+          const dbBox = giftBoxMap.get(targetId);
+          if (!dbBox || !dbBox.is_active || dbBox.type !== 'custom') {
+            return { success: false, error: "This gift box is no longer available. Please remove it from your cart and create it again.", removeStaleCartItemId: item.cartItemId };
+          }
+          basePrice = Number(dbBox.box_price) || 0;
+          boxName = dbBox.name;
+        }
+
+        let innerTotal = 0;
+        const boxItemsArr = [];
+        if (Array.isArray(item.boxItems)) {
+          for (const b of item.boxItems) {
+            const dbInner = productMap.get(b.id);
+            if (!dbInner) throw new Error(`Box item ${b.id} not found`);
+            const p = Number(dbInner.price) || 0;
+            innerTotal += p;
+
+            finalProductIds.add(dbInner.id);
+            stockDeductions[dbInner.id] = (stockDeductions[dbInner.id] || 0) + qty;
+
+            const extras = [b.selectedColor ? `Color: ${b.selectedColor}` : '', dbInner.material ? `Material: ${dbInner.material}` : '', dbInner.weight ? `Weight: ${dbInner.weight}` : ''].filter(Boolean).join(', ');
+            boxItemsArr.push(`${dbInner.name}${extras ? ` [${extras}]` : ''}`);
+          }
+        }
+
+        const boxTotalPrice = basePrice + innerTotal;
+        const lineTotal = boxTotalPrice * qty;
+        calculatedSubtotal += lineTotal;
+
+        cartDetails.push({
+          productId: item.product.id,
+          productName: boxName,
+          quantity: qty,
+          unitPrice: boxTotalPrice,
+          lineTotal,
+          boxItems: boxItemsArr,
+          type: 'custom_box'
+        });
+      } else {
+        const dbProduct = productMap.get(item.product.id);
+        if (!dbProduct) throw new Error(`Product ${item.product.id} not found`);
+        const p = Number(dbProduct.price) || 0;
+        const lineTotal = p * qty;
+        calculatedSubtotal += lineTotal;
+
+        finalProductIds.add(dbProduct.id);
+        stockDeductions[dbProduct.id] = (stockDeductions[dbProduct.id] || 0) + qty;
+
+        const extras = [item.selectedColor ? `Color: ${item.selectedColor}` : '', dbProduct.material ? `Material: ${dbProduct.material}` : '', dbProduct.weight ? `Weight: ${dbProduct.weight}` : ''].filter(Boolean).join(', ');
+        const codeStr = dbProduct.productCode ? ` (${dbProduct.productCode})` : '';
+        
+        cartDetails.push({
+          productId: dbProduct.id,
+          productName: `${dbProduct.name}${codeStr}`,
+          quantity: qty,
+          unitPrice: p,
+          lineTotal,
+          extras,
+          type: 'standard'
+        });
+      }
+    }
+
+    if (cartDetails.length === 0) {
+      return { success: false, error: "Your cart is empty. Please add an item before placing an order." };
+    }
+
+    // Calculate shipping
+    const deliveryMethod = formData.get('deliveryMethod') as string;
+    let shippingFee = 450;
+    if (calculatedSubtotal >= 10000 && deliveryMethod === 'standard') {
+      shippingFee = 0;
+    } else {
+      if (deliveryMethod === 'express') shippingFee = 1000;
+      else if (deliveryMethod === 'premium') shippingFee = 1450;
+    }
+
+    const calculatedTotalAmount = calculatedSubtotal + shippingFee;
+    const generatedOrderId = formData.get('orderId') as string || `YRA-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    const orderPayload = {
+      idempotencyKey,
+      orderId: generatedOrderId,
+      orderDate: formData.get('orderDate') as string || new Date().toISOString(),
+      shippingName: formData.get('shippingName') as string || '',
+      shippingStreet: formData.get('shippingStreet') as string || '',
+      shippingCity: formData.get('shippingCity') as string || '',
+      shippingZip: formData.get('shippingZip') as string || '',
+      shippingCountry: formData.get('shippingCountry') as string || 'Sri Lanka',
+      shippingEmail: formData.get('email') as string || '',
+      shippingPhone: formData.get('phone') as string || '',
+      paymentMethod: formData.get('paymentMethod') as string || 'cod',
+      totalAmount: calculatedTotalAmount,
+      status: 'pending',
+      paymentStatus: 'pending',
+      stock_restored: false,
+      stock_snapshot: Object.entries(stockDeductions).map(([productId, quantity]) => ({ productId, quantity })),
+      cartDetails: JSON.stringify(cartDetails),
+      items: Array.from(finalProductIds),
+      user: (customerUser && customerUser.role === 'customer') ? customerUser.id : undefined,
+    } as any;
+    
+    if (paymentMethod === 'bank_transfer' && receiptFile) {
+      orderPayload.receipt = receiptFile;
     }
     
-    // Send Invoice Email
+    // 5. Construct Transactional Batch
+    const batch = adminPb.createBatch();
+
+    // Create Order
+    batch.collection('orders').create(orderPayload);
+
+    // Deduct Stock
+    for (const [prodId, deductQty] of Object.entries(stockDeductions)) {
+      if (deductQty > 0) {
+        batch.collection('products').update(prodId, {
+          "quantity-": deductQty
+        });
+      }
+    }
+    // Execute Batch
+    await batch.send();
+
+    // 6. Send Email (non-blocking using next/server after)
     try {
       const email = formData.get('email') as string;
       if (email) {
-        const { sendInvoiceEmail } = await import('@/lib/email');
         const fullAddress = [
           formData.get('shippingStreet'),
           formData.get('shippingCity'),
@@ -71,28 +285,36 @@ export async function createOrderAction(formData: FormData) {
           formData.get('shippingCountry')
         ].filter(Boolean).join(', ');
 
-        // Fire and forget the email, or await it. Awaiting is safer for serverless.
-        await sendInvoiceEmail({
-          orderId: record.orderId || record.id,
-          orderDate: record.orderDate || new Date().toISOString(),
-          customerName: formData.get('shippingName') as string || 'Customer',
+        const emailDetails = {
+          orderId: generatedOrderId,
+          orderDate: orderPayload.orderDate,
+          customerName: orderPayload.shippingName || 'Customer',
           customerEmail: email,
           shippingAddress: fullAddress,
-          paymentMethod: formData.get('paymentMethod') as string || 'Unknown',
-          totalAmount: formData.get('totalAmount') as string || '0',
-          cartDetails: formData.get('cartDetails') as string || '[]',
+          paymentMethod: orderPayload.paymentMethod || 'Unknown',
+          totalAmount: String(calculatedTotalAmount),
+          cartDetails: JSON.stringify(cartDetails),
+        };
+
+        const { after } = await import('next/server');
+        after(async () => {
+          try {
+            const { sendInvoiceEmail } = await import('@/lib/email');
+            await sendInvoiceEmail(emailDetails);
+          } catch (emailError) {
+            console.error('Failed to send invoice email:', emailError);
+          }
         });
       }
-    } catch (emailError) {
-      console.error('Failed to send invoice email:', emailError);
+    } catch (err) {
+      console.error('Failed to queue invoice email:', err);
     }
-    
-    // Revalidate dashboard orders page so it shows the new order
-    revalidatePath('/dashboard/orders');
 
-    return { success: true, orderId: record.orderId || record.id };
+    return { success: true, orderId: generatedOrderId };
+
   } catch (error: any) {
-    console.error('Failed to create order:', error);
+    console.error('Failed to create order via Batch:', error);
+    if (error.response?.data) console.error("Batch validation errors:", JSON.stringify(error.response.data, null, 2));
     return { success: false, error: error.message || 'Failed to create order' };
   }
 }
@@ -101,8 +323,6 @@ export interface ManualOrderItem {
   productId: string;
   productName: string;
   price: number;
-  // colorQuantities: { Yellow: 2, Green: 5 } — each color with its own count
-  // If no colors, use key '' for the single quantity
   colorQuantities: Record<string, number>;
 }
 
@@ -122,84 +342,155 @@ export interface ManualOrderPayload {
   notes?: string;
   deductStock: boolean;
   receiptFile?: File | null;
+  idempotencyKey?: string;
 }
 
 export async function createManualOrderAction(payload: ManualOrderPayload) {
   try {
     const adminPb = await getAdminClient();
+    
+    // 1. Validate Admin Session
+    const { user } = await getServerSession();
+    if (!user) {
+      throw new Error("Unauthorized: Admin session required.");
+    }
+    
+    const idempotencyKey = payload.idempotencyKey || `manual_${Date.now()}_${Math.random()}`;
+
+    // Idempotency check
+    try {
+      const existing = await adminPb.collection('orders').getFirstListItem(`idempotencyKey="${idempotencyKey}"`);
+      if (existing) {
+        return { success: true, orderId: existing.orderId || existing.id, record: structuredClone(existing) };
+      }
+    } catch (e: any) {
+      if (e.status !== 404) throw e;
+    }
+
     const generatedOrderId = `YRA-${Math.floor(100000 + Math.random() * 900000)}`;
     const orderDate = new Date().toISOString();
 
-    // Build cartDetails array — one line per color-qty combination
-    const cartDetails: string[] = [];
-    if (payload.source) {
-      cartDetails.push(`Source: ${payload.source}`);
+    const productIdsToFetch = [...new Set(payload.items.map(i => i.productId).filter(Boolean))];
+    const productMap = new Map<string, any>();
+    if (productIdsToFetch.length > 0) {
+      const idFilter = productIdsToFetch.map(id => `id="${id}"`).join(' || ');
+      const products = await adminPb.collection('products').getFullList({ filter: idFilter });
+      products.forEach(p => productMap.set(p.id, p));
     }
+
+    let calculatedTotal = 0;
+    const stockDeductions: Record<string, number> = {};
+    const cartDetails: any[] = [];
+    
+    if (payload.source) {
+      cartDetails.push({ type: 'metadata', text: `Source: ${payload.source}` });
+    }
+
     for (const item of payload.items) {
+      const dbProduct = productMap.get(item.productId);
+      if (!dbProduct) throw new Error(`Product ${item.productId} not found`);
+
+      const regularPrice = Number(dbProduct.price) || 0;
+      
+      let providedPrice = Number(item.price);
+      if (isNaN(providedPrice) || !isFinite(providedPrice) || providedPrice < 0) {
+        throw new Error(`Invalid price for product ${item.productId}`);
+      }
+
       const entries = Object.entries(item.colorQuantities).filter(([, qty]) => qty > 0);
       if (entries.length === 0) continue;
+
       for (const [color, qty] of entries) {
-        const colorStr = color ? ` [Color: ${color}]` : '';
-        cartDetails.push(`${qty}x ${item.productName}${colorStr} - Rs. ${item.price}`);
+        if (!Number.isInteger(qty) || qty <= 0) throw new Error("Invalid quantity");
+
+        const lineTotal = providedPrice * qty;
+        calculatedTotal += lineTotal;
+        
+        if (payload.deductStock) {
+          stockDeductions[item.productId] = (stockDeductions[item.productId] || 0) + qty;
+        }
+
+        const colorStr = color ? `Color: ${color}` : '';
+        cartDetails.push({
+          productId: item.productId,
+          productName: item.productName,
+          quantity: qty,
+          unitPrice: providedPrice,
+          regularPrice,
+          lineTotal,
+          priceOverride: providedPrice !== regularPrice,
+          priceOverrideBy: providedPrice !== regularPrice ? user.id : null,
+          extras: colorStr,
+          type: 'manual_standard'
+        });
       }
     }
+
     if (payload.notes) {
-      cartDetails.push(`Notes: ${payload.notes}`);
+      cartDetails.push({ type: 'metadata', text: `Notes: ${payload.notes}` });
     }
 
-    const productIds = [...new Set(payload.items.map(i => i.productId).filter(Boolean))];
+    const orderPayload = {
+      idempotencyKey,
+      orderId: generatedOrderId,
+      orderDate,
+      shippingName: payload.shippingName,
+      shippingPhone: payload.shippingPhone,
+      shippingEmail: payload.shippingEmail || '',
+      shippingStreet: payload.shippingStreet || '',
+      shippingCity: payload.shippingCity,
+      shippingZip: payload.shippingZip || '00000',
+      shippingCountry: payload.shippingCountry || 'Sri Lanka',
+      totalAmount: calculatedTotal,
+      paymentMethod: payload.paymentMethod,
+      paymentStatus: payload.paymentStatus,
+      status: 'pending',
+      stock_restored: false,
+      stock_snapshot: payload.deductStock 
+        ? Object.entries(stockDeductions).map(([productId, quantity]) => ({ productId, quantity }))
+        : [],
+      cartDetails: JSON.stringify(cartDetails),
+      items: productIdsToFetch,
+    };
 
-    // Use FormData so we can attach the receipt file if provided
-    const formData = new FormData();
-    formData.append('orderId', generatedOrderId);
-    formData.append('orderDate', orderDate);
-    formData.append('shippingName', payload.shippingName);
-    formData.append('shippingPhone', payload.shippingPhone);
-    formData.append('shippingEmail', payload.shippingEmail || '');
-    formData.append('shippingStreet', payload.shippingStreet || '');
-    formData.append('shippingCity', payload.shippingCity);
-    formData.append('shippingZip', payload.shippingZip || '00000');
-    formData.append('shippingCountry', payload.shippingCountry || 'Sri Lanka');
-    formData.append('totalAmount', String(payload.totalAmount));
-    formData.append('paymentMethod', payload.paymentMethod);
-    formData.append('paymentStatus', payload.paymentStatus);
-    formData.append('status', 'pending');
-    formData.append('cartDetails', JSON.stringify(cartDetails));
-    productIds.forEach(id => formData.append('items', id));
-    if (payload.receiptFile) {
-      formData.append('receipt', payload.receiptFile);
-    }
+    const batchRequests: any[] = [];
+    batchRequests.push({
+      method: 'POST',
+      url: '/api/collections/orders/records',
+      body: orderPayload
+    });
 
-    const record = await adminPb.collection('orders').create(formData);
-
-    // Deduct stock if requested — sum all color quantities per product
     if (payload.deductStock) {
-      const deductions: Record<string, number> = {};
-      for (const item of payload.items) {
-        if (item.productId) {
-          const totalQty = Object.values(item.colorQuantities).reduce((s, q) => s + q, 0);
-          deductions[item.productId] = (deductions[item.productId] || 0) + totalQty;
-        }
-      }
-      for (const [prodId, qty] of Object.entries(deductions)) {
-        try {
-          const productRecord = await adminPb.collection('products').getOne(prodId);
-          const currentQty = Number(productRecord.quantity) || 0;
-          const newQty = Math.max(0, currentQty - qty);
-          await adminPb.collection('products').update(prodId, {
-            quantity: newQty,
-            inStock: newQty > 0,
+      for (const [prodId, deductQty] of Object.entries(stockDeductions)) {
+        if (deductQty > 0) {
+          batchRequests.push({
+            method: 'PATCH',
+            url: `/api/collections/products/records/${prodId}`,
+            body: { "quantity-": deductQty }
           });
-        } catch (err) {
-          console.error(`Failed to deduct stock for product ${prodId}:`, err);
         }
       }
+    }
+
+    const batchRes = await adminPb.send('/api/batch', {
+      method: 'POST',
+      body: { requests: batchRequests }
+    });
+    
+    // We can fetch the created order to return its ID (the first request in batch is the order creation)
+    // Wait, the batch response typically returns an array of the results.
+    let record = null;
+    if (Array.isArray(batchRes) && batchRes.length > 0 && batchRes[0].body) {
+       record = batchRes[0].body;
+    } else {
+       record = await adminPb.collection('orders').getFirstListItem(`orderId="${generatedOrderId}"`);
     }
 
     revalidatePath('/yara-admin/orders');
-    return { success: true, orderId: record.orderId || record.id, record: structuredClone(record) };
+    return { success: true, orderId: generatedOrderId, record: structuredClone(record) };
   } catch (error: any) {
-    console.error('Failed to create manual order:', error);
+    console.error('Failed to create manual order via Batch:', error);
+    if (error.response?.data) console.error("Batch validation errors:", JSON.stringify(error.response.data, null, 2));
     return { success: false, error: error?.message || 'Failed to create manual order' };
   }
 }
@@ -209,7 +500,7 @@ export async function getAllOrdersAction(page: number = 1, perPage: number = 50)
     const { pb } = await validateSession();
     const result = await pb.collection('orders').getList(page, perPage, {
       sort: '-orderDate',
-      fields: 'id,orderId,orderDate,status,paymentStatus,totalAmount,shippingName,shippingEmail,shippingPhone,shippingCity,paymentMethod,cartDetails,user,expand',
+      fields: 'id,collectionId,collectionName,orderId,orderDate,status,paymentStatus,totalAmount,shippingName,shippingEmail,shippingPhone,shippingStreet,shippingCity,shippingZip,shippingCountry,paymentMethod,receipt,cartDetails,user,expand',
       expand: 'user',
     });
     return {
@@ -225,39 +516,111 @@ export async function getAllOrdersAction(page: number = 1, perPage: number = 50)
   }
 }
 
+export async function getCustomerOrdersAction() {
+  const { getCustomerOrdersData } = await import('@/lib/data/customer-orders');
+  return await getCustomerOrdersData();
+}
+
+function shouldStockBeRestored(status: string, paymentStatus: string): boolean {
+  if (status === 'cancelled' || status === 'returned') return true;
+  if (paymentStatus === 'refunded') return true;
+  return false;
+}
+
+async function processOrderLifecycleTransition(orderId: string, newStatus: string | undefined, newPaymentStatus: string | undefined) {
+  await validateSession();
+  const adminPb = await getAdminClient();
+  
+  const order = await adminPb.collection('orders').getOne(orderId);
+  const currentStatus = order.status;
+  const currentPaymentStatus = order.paymentStatus;
+  
+  const nextStatus = newStatus !== undefined ? newStatus : currentStatus;
+  const nextPaymentStatus = newPaymentStatus !== undefined ? newPaymentStatus : currentPaymentStatus;
+  
+  const beforeShouldRestore = shouldStockBeRestored(currentStatus, currentPaymentStatus);
+  const afterShouldRestore = shouldStockBeRestored(nextStatus, nextPaymentStatus);
+  
+  const batchRequests: any[] = [];
+  const orderUpdates: any = {};
+  if (newStatus !== undefined) orderUpdates.status = newStatus;
+  if (newPaymentStatus !== undefined) orderUpdates.paymentStatus = newPaymentStatus;
+  
+  let needsBatch = false;
+  
+  if (!beforeShouldRestore && afterShouldRestore) {
+    if (!order.stock_restored) {
+      if (!Array.isArray(order.stock_snapshot) || order.stock_snapshot.length === 0) {
+        throw new Error("Stock cannot be automatically restored for this legacy order because its original inventory snapshot is unavailable.");
+      }
+      for (const item of order.stock_snapshot) {
+        if (!item.productId || typeof item.productId !== 'string' || !item.quantity || typeof item.quantity !== 'number' || item.quantity <= 0) {
+          throw new Error("Invalid stock snapshot format.");
+        }
+        batchRequests.push({
+          method: 'PATCH',
+          url: `/api/collections/products/records/${item.productId}`,
+          body: { "quantity+": item.quantity }
+        });
+      }
+      orderUpdates.stock_restored = true;
+      needsBatch = true;
+    }
+  } else if (beforeShouldRestore && !afterShouldRestore) {
+    if (order.stock_restored) {
+      if (!Array.isArray(order.stock_snapshot) || order.stock_snapshot.length === 0) {
+        throw new Error("Cannot safely re-deduct stock for this legacy order without an inventory snapshot.");
+      }
+      
+      // Pre-check stock availability
+      for (const item of order.stock_snapshot) {
+        const product = await adminPb.collection('products').getOne(item.productId);
+        if (product.quantity < item.quantity) {
+          throw new Error(`Insufficient stock for product ${product.name || item.productId} to reactivate this order.`);
+        }
+        batchRequests.push({
+          method: 'PATCH',
+          url: `/api/collections/products/records/${item.productId}`,
+          body: { "quantity-": item.quantity }
+        });
+      }
+      orderUpdates.stock_restored = false;
+      needsBatch = true;
+    }
+  }
+  
+  if (needsBatch) {
+    batchRequests.push({
+      method: 'PATCH',
+      url: `/api/collections/orders/records/${orderId}`,
+      body: orderUpdates
+    });
+    await adminPb.send('/api/batch', {
+      method: 'POST',
+      body: { requests: batchRequests }
+    });
+  } else {
+    await adminPb.collection('orders').update(orderId, orderUpdates);
+  }
+}
+
 export async function updateOrderStatusAction(orderId: string, status: string) {
   try {
-    const { pb } = await validateSession();
-    
-    // Use pb.send to bypass any SDK update() specific issues while keeping SDK auth
-    await pb.send(`/api/collections/orders/records/${orderId}`, {
-      method: 'PATCH',
-      body: { status }
-    });
-
+    await processOrderLifecycleTransition(orderId, status, undefined);
     revalidatePath('/yara-admin/orders');
     return { success: true };
   } catch (error: any) {
-    console.error('Failed to update order status:', error?.message || error);
-    return { success: false, error: error?.message || String(error) || 'Failed to update order status' };
+    return { success: false, error: error?.message || String(error) };
   }
 }
 
 export async function updateOrderPaymentStatusAction(orderId: string, paymentStatus: string) {
   try {
-    const { pb } = await validateSession();
-    
-    // Use pb.send to bypass any SDK update() specific issues while keeping SDK auth
-    await pb.send(`/api/collections/orders/records/${orderId}`, {
-      method: 'PATCH',
-      body: { paymentStatus }
-    });
-
+    await processOrderLifecycleTransition(orderId, undefined, paymentStatus);
     revalidatePath('/yara-admin/orders');
     return { success: true };
   } catch (error: any) {
-    console.error('Failed to update order payment status:', error?.message || error);
-    return { success: false, error: error?.message || String(error) || 'Failed to update order payment status' };
+    return { success: false, error: error?.message || String(error) };
   }
 }
 
@@ -266,54 +629,23 @@ export async function deleteOrdersAction(orderIds: string[]) {
     const { pb } = await validateSession();
     const adminPb = await getAdminClient();
     
-    // Restore stock for all products in the deleted orders
-    for (const orderId of orderIds) {
-      try {
-        const order = await adminPb.collection('orders').getOne(orderId, { expand: 'items' });
-        const items = order.expand?.items || [];
-        
-        let cartDetails: string[] = [];
-        try {
-          if (Array.isArray(order.cartDetails)) {
-            cartDetails = order.cartDetails;
-          } else if (typeof order.cartDetails === 'string') {
-            cartDetails = JSON.parse(order.cartDetails || '[]');
-          }
-        } catch(e) {}
-        
-        for (const product of items) {
-          let quantityToRestore = 0;
-          
-          for (const detail of cartDetails) {
-            if (typeof detail !== 'string') continue;
-            if (detail.includes(product.name)) {
-              const match = detail.match(/^(\d+)x/);
-              if (match) {
-                quantityToRestore += parseInt(match[1], 10);
-              } else {
-                quantityToRestore += 1;
-              }
-            }
-          }
-          
-          if (quantityToRestore > 0) {
-            const currentQty = Number(product.quantity) || 0;
-            const newQty = currentQty + quantityToRestore;
-            await adminPb.collection('products').update(product.id, {
-              quantity: newQty,
-              inStock: newQty > 0
-            });
-          }
-        }
-      } catch (err) {
-        console.error(`Failed to restore stock for order ${orderId}:`, err);
-      }
-    }
+    const batchRequests: any[] = [];
     
-    // Delete all selected orders
-    await Promise.all(
-      orderIds.map(id => pb.collection('orders').delete(id))
-    );
+    for (const orderId of orderIds) {
+      batchRequests.push({
+         method: 'DELETE',
+         url: `/api/collections/orders/records/${orderId}`
+      });
+    }
+
+    // Since deleting orders and restoring stock can be large, we might have to split batches if > 200,
+    // but usually we don't delete 100 orders at once.
+    if (batchRequests.length > 0) {
+      await adminPb.send('/api/batch', {
+        method: 'POST',
+        body: { requests: batchRequests }
+      });
+    }
 
     revalidatePath('/yara-admin/orders');
     return { success: true };

@@ -20,6 +20,7 @@ export async function getCustomersAction(page = 1, perPage = 20, search = '', st
     
     // 1. Fetch paginated users
     const usersRes = await pb.collection('users').getList(page, perPage, {
+      $autoCancel: false,
       filter: filters.join(' && '),
       sort: '-created',
       fields: 'id,name,email,phone,status,created,updated,avatar'

@@ -1,4 +1,5 @@
 'use client';
+import { queryKeys } from '@/lib/query-keys';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import imageCompression from 'browser-image-compression';
@@ -55,6 +56,7 @@ export interface RawCategory {
   id: string;
   name: string;
   slug: string;
+  description?: string;
   collectionId: string;
 }
 
@@ -353,14 +355,10 @@ function ProductFormModal({
         useWebWorker: true,
       };
 
-      // We append images one by one in order. 
-      // For updates, sending the entire 'images' array replaces the old one and preserves this exact order!
       for (const item of form.unifiedImages) {
         if (item.isExisting && item.filename) {
-          // Existing image
           fd.append('images', item.filename);
         } else if (item.file) {
-          // New image
           try {
             const compressed = await imageCompression(item.file, options);
             fd.append('images', compressed, compressed.name || item.file.name);
@@ -370,21 +368,18 @@ function ProductFormModal({
           }
         }
       }
-
+      
       // Step 1: Get admin token from server action
       const tokenRes = await getAdminTokenAction();
+      
       if (!tokenRes?.token || !tokenRes?.pbUrl) {
         throw new Error(tokenRes?.error || 'Could not get upload credentials');
       }
 
-      // Step 2: Upload DIRECTLY to the remote PocketBase server from the browser!
-      // We must bypass Next.js API Routes and Rewrites entirely because Vercel
-      // imposes a strict 4.5MB limit on all requests passing through its infrastructure.
-      // Since we fixed the Nginx 1MB limit on the remote server, this will now work seamlessly.
       const proxyUrl =
         mode === 'add'
-          ? `${tokenRes.pbUrl}/api/collections/products/records`
-          : `${tokenRes.pbUrl}/api/collections/products/records/${product!.id}`;
+          ? `https://pb.yarasl.shop/api/collections/products/records`
+          : `https://pb.yarasl.shop/api/collections/products/records/${product!.id}`;
       const method = mode === 'add' ? 'POST' : 'PATCH';
 
       const response = await fetch(proxyUrl, {
@@ -397,6 +392,7 @@ function ProductFormModal({
 
       let data;
       const text = await response.text();
+      
       try {
         data = JSON.parse(text);
       } catch (err) {
@@ -410,16 +406,17 @@ function ProductFormModal({
           : '';
         throw new Error(data?.message || data?.error || `HTTP ${response.status}${details ? ` (${details})` : ''}`);
       }
-
+      
       // Revalidate Next.js cache in the background (don't block UI)
       revalidateProductsAction().catch(console.error);
+      
       res = { success: true, product: data };
 
     } catch (err: any) {
       console.error('Product save error:', err);
       res = { error: err.message || 'Failed to save product' };
     }
-
+    
     setSaving(false);
     if (res?.success && res.product) {
       addToast(mode === 'add' ? 'Product created!' : 'Product updated!', 'success');
@@ -722,6 +719,7 @@ export default function ProductsClient({
 
   const [filterBadge, setFilterBadge] = useState('All');
   const [filterStock, setFilterStock] = useState('All');
+  const [filterCategory, setFilterCategory] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -746,23 +744,27 @@ export default function ProductsClient({
   // Reset page to 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, filterBadge, filterStock, rowsPerPage]);
+  }, [debouncedSearch, filterBadge, filterStock, filterCategory, rowsPerPage]);
+
+  const initialAdminData = (currentPage === 1 && !debouncedSearch && filterStock === 'All' && filterBadge === 'All' && filterCategory === '')
+    ? { products: initialProducts, totalItems: initialTotalItems, totalPages: initialTotalPages }
+    : undefined;
 
   const { data, isFetching: loading } = useAdminProducts({
     page: currentPage,
     perPage: rowsPerPage,
     search: debouncedSearch,
-    categoryId: '',
+    categoryId: filterCategory,
     sort: '-id',
     inStock: filterStock,
     badge: filterBadge
-  });
+  }, initialAdminData);
 
   const products = (data?.products as unknown as RawProduct[]) || initialProducts;
   const totalItems = data?.totalItems ?? initialTotalItems;
   const totalPages = data?.totalPages ?? initialTotalPages;
 
-  const { data: categoriesData } = useAdminCategories();
+  const { data: categoriesData } = useAdminCategories({ success: true, categories: initialCategories });
   const categories = (categoriesData?.categories as unknown as RawCategory[]) || initialCategories;
 
   const { mutateAsync: deleteProduct } = useDeleteProduct();
@@ -828,7 +830,7 @@ export default function ProductsClient({
   const handleSaved = (_saved: RawProduct, mode: 'add' | 'edit') => {
     // Actively refetch the admin list immediately upon success
     queryClient.invalidateQueries({
-      queryKey: ['admin', 'products'],
+      queryKey: queryKeys.admin.products.all(),
       refetchType: 'active',
     });
     setFormMode(null);
@@ -904,6 +906,20 @@ export default function ProductsClient({
               >
                 <option value="All">All Badges</option>
                 {BADGE_OPTIONS.map(b => <option key={b} value={b}>{b}</option>)}
+              </select>
+              <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-burgundy/40 pointer-events-none" />
+            </div>
+
+            {/* Category filter */}
+            <div className="relative">
+              <select
+                aria-label="Filter by category"
+                value={filterCategory}
+                onChange={e => setFilterCategory(e.target.value)}
+                className="appearance-none bg-white border border-burgundy/10 text-burgundy text-sm rounded-full px-4 py-2 pr-8 font-body outline-none focus:border-burgundy/30 cursor-pointer max-w-[150px] truncate"
+              >
+                <option value="">All Categories</option>
+                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
               <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-burgundy/40 pointer-events-none" />
             </div>
@@ -1037,10 +1053,10 @@ export default function ProductsClient({
                       </td>
                       <td className="px-4 py-3 text-center">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-ui font-semibold ${
-                          product.inStock ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'
+                          (product.quantity ?? 0) > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'
                         }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${product.inStock ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                          {product.inStock ? 'In Stock' : 'Out of Stock'}
+                          <span className={`w-1.5 h-1.5 rounded-full ${(product.quantity ?? 0) > 0 ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                          {(product.quantity ?? 0) > 0 ? 'In Stock' : 'Out of Stock'}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-center">

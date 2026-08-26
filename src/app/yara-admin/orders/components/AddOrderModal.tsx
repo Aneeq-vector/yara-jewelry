@@ -34,13 +34,14 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
 
   // Products
   const { data: rawProducts, isLoading: productsLoading } = useProductOptions();
-  const allProducts = (rawProducts || []).filter(p => p.inStock !== false) as unknown as Product[];
+  const allProducts = (rawProducts || []).filter(p => p.quantity > 0) as unknown as Product[];
   const [productSearch, setProductSearch] = useState('');
   // orderItems uses colorQuantities: { Yellow: 2, Green: 5 } or { '': 3 } for no-color products
   const [orderItems, setOrderItems] = useState<ManualOrderItem[]>([]);
 
   // UI state
   const [submitting, setSubmitting] = useState(false);
+  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [showProductPicker, setShowProductPicker] = useState(false);
@@ -141,6 +142,7 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
       notes: notes.trim() || undefined,
       deductStock,
       receiptFile: receiptFile || undefined,
+      idempotencyKey,
     });
 
     setSubmitting(false);
@@ -148,6 +150,8 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
     if (result.success) {
       setSuccess(true);
       onOrderCreated(result.record);
+      // Re-roll idempotency key for the next potential order
+      setIdempotencyKey(crypto.randomUUID());
       setTimeout(() => handleClose(), 1800);
     } else {
       setError(result.error || 'Failed to create order.');
@@ -268,7 +272,7 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
                             <p className="text-sm font-body font-medium text-burgundy truncate">{product.name}</p>
                             <p className="text-xs text-burgundy/50">Rs. {product.price.toLocaleString()}</p>
                           </div>
-                          {!product.inStock && (
+                          {product.quantity <= 0 && (
                             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-100 font-ui flex-shrink-0">Out of stock</span>
                           )}
                         </button>

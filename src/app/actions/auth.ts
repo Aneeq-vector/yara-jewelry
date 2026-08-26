@@ -1,6 +1,7 @@
 'use server';
 
 import { getServerClient, getAdminPanelClient, requireAuth, getServerSession, validateSession, getAdminClient } from '@/lib/pocketbase-server';
+import PocketBase from 'pocketbase';
 import { loginSchema, registerSchema } from '@/lib/schemas';
 import { cookies } from 'next/headers';
 import { sendWelcomeEmail, sendOtpEmail } from '@/lib/email';
@@ -15,7 +16,7 @@ export async function loginAction(formData: FormData) {
   }
 
   try {
-    const pb = await getServerClient();
+    const pb = new PocketBase(process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pb.yarasl.shop');
     const authData = await pb.collection('users').authWithPassword(parsed.data.email, parsed.data.password);
     
     if (authData.record.status === 'Inactive') {
@@ -30,10 +31,14 @@ export async function loginAction(formData: FormData) {
     }
     
     const cookieStore = await cookies();
-    const authPayload = JSON.stringify({ token: pb.authStore.token, model: pb.authStore.record });
+    const remember = data.remember === 'true';
+    const authPayload = JSON.stringify({ 
+      token: pb.authStore.token, 
+      model: pb.authStore.record,
+      remember 
+    });
     
     const cookieName = authData.record.role === 'admin' ? 'pb_admin_auth' : 'pb_auth';
-    const remember = data.remember === 'true';
     
     cookieStore.set(cookieName, authPayload, {
       path: '/',
@@ -120,7 +125,11 @@ export async function verifyOtpAndRegisterAction(email: string, otp: string) {
     await pb.collection('users').authWithPassword(formData.email, formData.password);
 
     const cookieStore = await cookies();
-    const authPayload = JSON.stringify({ token: pb.authStore.token, model: pb.authStore.record });
+    const authPayload = JSON.stringify({ 
+      token: pb.authStore.token, 
+      model: pb.authStore.record,
+      remember: false
+    });
     cookieStore.set('pb_auth', authPayload, {
       path: '/',
       httpOnly: true,
@@ -201,7 +210,22 @@ export async function updateUserAction(id: string, updates: Record<string, any>)
     const record = await pb.collection('users').update(id, updates);
     
     const cookieStore = await cookies();
-    const authPayload = JSON.stringify({ token: pb.authStore.token, model: record });
+    const pbAuthCookie = cookieStore.get('pb_auth');
+    let isRemembered = false;
+    if (pbAuthCookie && pbAuthCookie.value) {
+      try {
+        let val = pbAuthCookie.value;
+        if (val.includes('%7B')) val = decodeURIComponent(val);
+        const parsed = JSON.parse(val);
+        if (parsed.remember) isRemembered = true;
+      } catch (e) {}
+    }
+    
+    const authPayload = JSON.stringify({ 
+      token: pb.authStore.token, 
+      model: record,
+      remember: isRemembered
+    });
     cookieStore.set('pb_auth', authPayload, {
       path: '/',
       httpOnly: true,

@@ -1,7 +1,7 @@
 'use client';
-import { usePublicProductRealtime } from '@/lib/hooks/use-product-realtime';
+import { useShopRealtime } from '@/lib/hooks/use-product-realtime';
 
 export default function ShopLayout({ children }: { children: React.ReactNode }) {
-  usePublicProductRealtime();
+  useShopRealtime();
   return <>{children}</>; // No wrapping UI — purely a subscription boundary
 }

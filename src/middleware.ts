@@ -30,7 +30,6 @@ export function middleware(request: NextRequest) {
 
       // Verify if the user is an admin
       if (!payload?.model || payload.model.role !== 'admin') {
-        console.log('Middleware: User is not admin. Role is:', payload?.model?.role);
         return NextResponse.redirect(new URL('/', request.url));
       }
 
