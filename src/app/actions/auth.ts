@@ -72,7 +72,7 @@ export async function sendOtpAction(formData: FormData) {
     const adminPb = await getAdminClient();
     try {
       await adminPb.collection('users').getFirstListItem(`email="${parsed.data.email}"`);
-      return { error: 'An account with this email address already exists. Please sign in to continue.' };
+      return { error: 'An account already exists with this email. Please sign in instead.' };
     } catch (e) {
       // Not found — safe to proceed
     }
@@ -143,10 +143,17 @@ export async function verifyOtpAndRegisterAction(email: string, otp: string) {
     return { success: true, user: record };
   } catch (error: any) {
     const errorData = error.data?.data || error.response?.data;
+    console.error('Signup Error:', error.status, JSON.stringify(errorData));
+    
     if (errorData?.email) {
-      return { error: 'An account with this email address already exists. Please sign in to continue.' };
+      return { error: 'An account already exists with this email. Please sign in instead.' };
     }
-    return { error: error.message || 'Failed to create account.' };
+    
+    if (error.status === 400) {
+      return { error: 'Please check your details and try again.' };
+    }
+    
+    return { error: 'We couldn\'t create your account right now. Please try again.' };
   }
 }
 
