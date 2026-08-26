@@ -121,23 +121,38 @@ export default function CustomersClient({ initialCustomers, initialTotalItems = 
       title: 'Delete Customer',
       description: 'Are you sure you want to delete this customer?',
       onConfirm: async () => {
-        const qKey = queryKeys.admin.customers.list({ page: currentPage, perPage: rowsPerPage, search: debouncedSearch, status: filterSegment });
-        
-        // Optimistic update
-        queryClient.setQueryData(qKey, (old: any) => {
-          if (!old) return old;
-          return { ...old, customers: old.customers.filter((c: Customer) => c.id !== id) };
-        });
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
         
-        // Server update
-        const res = await deleteCustomerAction(id);
-        if (!res.success) {
-          // Revert on failure
-          queryClient.invalidateQueries({ queryKey: qKey });
-          alert('Failed to delete customer');
-        } else {
-          queryClient.invalidateQueries({ queryKey: qKey });
+        const previousQueries = queryClient.getQueriesData({ queryKey: queryKeys.admin.customers.all() });
+        const previousSelection = new Set(selectedCustomerIds);
+        
+        // 1. Clear selection
+        setSelectedCustomerIds(new Set());
+
+        // 2. Optimistic update
+        queryClient.setQueriesData({ queryKey: queryKeys.admin.customers.all() }, (oldData: any) => {
+          if (!oldData || !oldData.customers) return oldData;
+          const removedCount = oldData.customers.some((c: Customer) => c.id === id) ? 1 : 0;
+          return {
+            ...oldData,
+            customers: oldData.customers.filter((c: Customer) => c.id !== id),
+            totalItems: Math.max(0, oldData.totalItems - removedCount)
+          };
+        });
+
+        // 3. Server update
+        try {
+          const res = await deleteCustomerAction(id);
+          if (!res.success) throw new Error(res.error || 'Failed to delete customer');
+          
+          queryClient.invalidateQueries({ queryKey: queryKeys.admin.customers.all() });
+        } catch (err: any) {
+          // 4. Rollback
+          previousQueries.forEach(([queryKey, oldData]) => {
+            queryClient.setQueryData(queryKey, oldData);
+          });
+          setSelectedCustomerIds(previousSelection);
+          alert(err.message || 'Failed to delete customer');
         }
       }
     });
@@ -169,25 +184,39 @@ export default function CustomersClient({ initialCustomers, initialTotalItems = 
       title: 'Delete Multiple Customers',
       description: `Are you sure you want to delete ${selectedCustomerIds.size} customers?`,
       onConfirm: async () => {
-        const idsToDelete = Array.from(selectedCustomerIds);
-        const qKey = queryKeys.admin.customers.list({ page: currentPage, perPage: rowsPerPage, search: debouncedSearch, status: filterSegment });
-        
-        // Optimistic update
-        queryClient.setQueryData(qKey, (old: any) => {
-          if (!old) return old;
-          return { ...old, customers: old.customers.filter((c: Customer) => !selectedCustomerIds.has(c.id)) };
-        });
-        setSelectedCustomerIds(new Set());
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        
+        const idsToDelete = new Set(selectedCustomerIds);
+        const previousQueries = queryClient.getQueriesData({ queryKey: queryKeys.admin.customers.all() });
+        const previousSelection = new Set(selectedCustomerIds);
+        
+        // 1. Clear selection
+        setSelectedCustomerIds(new Set());
 
-        // Server update
-        const res = await deleteCustomersAction(idsToDelete);
-        if (!res.success) {
-          // Revert on failure
-          queryClient.invalidateQueries({ queryKey: qKey });
-          alert('Failed to delete some customers');
-        } else {
-          queryClient.invalidateQueries({ queryKey: qKey });
+        // 2. Optimistic update
+        queryClient.setQueriesData({ queryKey: queryKeys.admin.customers.all() }, (oldData: any) => {
+          if (!oldData || !oldData.customers) return oldData;
+          const removedCount = oldData.customers.filter((c: Customer) => idsToDelete.has(c.id)).length;
+          return {
+            ...oldData,
+            customers: oldData.customers.filter((c: Customer) => !idsToDelete.has(c.id)),
+            totalItems: Math.max(0, oldData.totalItems - removedCount)
+          };
+        });
+
+        // 3. Server update
+        try {
+          const res = await deleteCustomersAction(Array.from(idsToDelete));
+          if (!res.success) throw new Error(res.error || 'Failed to delete some customers');
+          
+          queryClient.invalidateQueries({ queryKey: queryKeys.admin.customers.all() });
+        } catch (err: any) {
+          // 4. Rollback
+          previousQueries.forEach(([queryKey, oldData]) => {
+            queryClient.setQueryData(queryKey, oldData);
+          });
+          setSelectedCustomerIds(previousSelection);
+          alert(err.message || 'Failed to delete some customers');
         }
       }
     });

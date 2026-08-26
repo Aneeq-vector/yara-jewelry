@@ -17,15 +17,20 @@ import {
   AlertCircle,
   CheckCircle2,
   RefreshCw,
+  Trash2,
 } from 'lucide-react';
 import { createClient, PB_URL } from '@/lib/pocketbase';
 import { getAllCategories } from '@/lib/data/categories';
 import { getAllGiftBoxes } from '@/lib/data/gift-boxes';
 import { updateGiftBoxAction } from '@/app/actions/update-gift-box';
+import { deleteGiftBoxAction } from '@/app/actions/delete-gift-box';
 import { Product, Category, GiftBox } from '@/types';
 import { useProductOptions } from '@/lib/hooks/use-products';
 import { useAdminGiftBoxes } from '@/lib/hooks/use-gift-boxes';
 import { useAdminCategories } from '@/lib/hooks/use-admin-products';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/query-keys';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface RawBox {
@@ -372,15 +377,15 @@ function GiftBoxEditor({
 
   );
 }
-function GiftBoxSelector({ boxes, selectedBoxId, setSelectedBoxId }: any) {
+function GiftBoxSelector({ boxes, selectedBoxId, setSelectedBoxId, confirmDeleteBox }: any) {
   return (
         <div className="space-y-3">
           <p className="font-ui font-bold text-xs uppercase tracking-wider text-burgundy/40">
             Select Box to Edit
           </p>
           {boxes.map((box: any) => (
+            <div key={box.id} className="relative group">
             <button
-              key={box.id}
               onClick={() => setSelectedBoxId(box.id)}
               className={`w-full flex items-center gap-4 p-4 rounded-2xl border text-left transition-all ${
                 selectedBoxId === box.id
@@ -418,6 +423,14 @@ function GiftBoxSelector({ boxes, selectedBoxId, setSelectedBoxId }: any) {
                 </div>
               </div>
             </button>
+            <button 
+              onClick={(e) => { e.stopPropagation(); confirmDeleteBox(box.id, box.name); }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-xl text-burgundy/20 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
+              title="Delete Gift Box"
+            >
+              <Trash2 size={16} />
+            </button>
+            </div>
           ))}
         </div>
 
@@ -438,6 +451,11 @@ export default function GiftBoxesAdminClient({
   const { data: categories = initialCategories } = useAdminCategories(initialCategories);
   const [allProducts, setAllProducts] = useState<Product[]>(initialAllProducts);
   const [selectedBoxId, setSelectedBoxId] = useState<string | null>(null);
+  
+  const queryClient = useQueryClient();
+  const [confirmModal, setConfirmModal] = useState<{isOpen: boolean; title: string; description: string; onConfirm: () => void}>({
+    isOpen: false, title: '', description: '', onConfirm: () => {}
+  });
 
   // Editor state
   const [editorState, dispatch] = useReducer(editorReducer, initialEditorState);
@@ -545,6 +563,48 @@ export default function GiftBoxesAdminClient({
     }
   };
 
+  const confirmDeleteBox = (id: string, name: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Gift Box',
+      description: `Are you sure you want to delete "${name}"? This cannot be undone.`,
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        
+        const previousQueries = queryClient.getQueriesData({ queryKey: queryKeys.admin.giftBoxes.all() });
+        
+        if (selectedBoxId === id) {
+          setSelectedBoxId(null);
+        }
+
+        // Optimistic update
+        queryClient.setQueriesData({ queryKey: queryKeys.admin.giftBoxes.all() }, (oldData: any) => {
+          if (!oldData) return oldData;
+          return oldData.filter((b: RawBox) => b.id !== id);
+        });
+
+        try {
+          const res = await deleteGiftBoxAction(id);
+          if (!res.success) {
+             throw new Error(res.error || 'Failed to delete gift box');
+          }
+          
+          queryClient.invalidateQueries({ queryKey: queryKeys.admin.giftBoxes.all() });
+          queryClient.removeQueries({ queryKey: queryKeys.giftBoxes.detail(id) });
+        } catch (err: any) {
+          // Rollback
+          previousQueries.forEach(([queryKey, oldData]) => {
+            queryClient.setQueryData(queryKey, oldData);
+          });
+          if (selectedBoxId === id) {
+            setSelectedBoxId(id);
+          }
+          alert(err.message || 'Failed to delete gift box');
+        }
+      }
+    });
+  };
+
 
   return (
     <LazyMotion features={domAnimation}>
@@ -572,7 +632,7 @@ export default function GiftBoxesAdminClient({
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* ── Left: Box selector ─────────────────────────────────────── */}
-        <GiftBoxSelector boxes={boxes} selectedBoxId={selectedBoxId} setSelectedBoxId={setSelectedBoxId} />
+        <GiftBoxSelector boxes={boxes} selectedBoxId={selectedBoxId} setSelectedBoxId={setSelectedBoxId} confirmDeleteBox={confirmDeleteBox} />
 
         {/* ── Right: Editor ──────────────────────────────────────────── */}
         <GiftBoxEditor 
@@ -583,6 +643,16 @@ export default function GiftBoxesAdminClient({
           saveStatus={saveStatus} handleSave={handleSave} dispatch={dispatch}
         />
       </div>
+      
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        description={confirmModal.description}
+        variant="danger"
+        confirmText="Delete"
+      />
     </div>
     </LazyMotion>
   );

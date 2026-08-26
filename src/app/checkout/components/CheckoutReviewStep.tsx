@@ -41,17 +41,18 @@ export function CheckoutReviewStep({
                         <div className="p-4 rounded-2xl bg-champagne/20 border border-nude/20">
                           <h4 className="font-ui font-semibold text-xs uppercase tracking-wider text-burgundy/50 mb-3">Upload Payment Receipt</h4>
                           {!receiptFile ? (
-                            <div className="flex items-center justify-center w-full">
+                            <div className="w-full flex flex-col gap-2">
                               <label htmlFor="receipt-upload" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-burgundy/20 rounded-xl cursor-pointer bg-white/50 hover:bg-rose-gold/10 transition-colors">
-                                <div className="flex flex-col items-center justify-center pt-5 pb-6 text-burgundy/60">
+                                <div className="flex flex-col items-center justify-center pt-5 pb-6 text-burgundy/60 text-center">
                                   <Upload size={24} className="mb-2" />
                                   <p className="mb-1 text-sm font-body"><span className="font-semibold text-burgundy">Click to upload</span> or drag and drop</p>
-                                  <p className="text-xs font-body opacity-70">PNG, JPG or PDF (Maximum file size: 5 MB)</p>
+                                  <p className="text-xs font-body opacity-70">PNG, JPG or PDF</p>
+                                  <p className="text-xs font-body opacity-70">Maximum file size: 5 MB</p>
                                 </div>
                                 <input id="receipt-upload" type="file" className="hidden" accept=".png,.jpg,.jpeg,.pdf" onChange={handleFileChange} />
                               </label>
                               {receiptError && (
-                                <p className="mt-2 text-sm text-red-500 font-body">{receiptError}</p>
+                                <p className="text-sm text-red-500 leading-5 break-words font-body">{receiptError}</p>
                               )}
                             </div>
                           ) : (

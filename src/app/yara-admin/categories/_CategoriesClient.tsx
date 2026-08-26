@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { Plus, Search, Edit2, Trash2, X, Loader2, AlertCircle } from 'lucide-react';
 import { useAdminCategories, useCreateCategory, useUpdateCategoryWithProducts, useDeleteCategory, useCategoryProducts, useAdminProducts, useAssignableCategoryProducts } from '@/lib/hooks/use-admin-products';
 import { RawCategory, RawProduct } from '@/app/yara-admin/products/_ProductsClient';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/query-keys';
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -23,6 +25,9 @@ export default function CategoriesClient({ initialCategories }: { initialCategor
   const { data, isPending } = useAdminCategories({ success: true, categories: initialCategories });
   const loading = isPending && !data;
   const categories = (data?.categories as RawCategory[]) || initialCategories;
+  
+  const queryClient = useQueryClient();
+  const { mutateAsync: deleteCategory } = useDeleteCategory();
 
   const filteredCategories = categories.filter(c => 
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -154,30 +159,49 @@ export default function CategoriesClient({ initialCategories }: { initialCategor
         <DeleteCategoryModal
           category={categoryToDelete}
           onClose={() => setCategoryToDelete(null)}
+          onConfirmDelete={async (cat) => {
+            setCategoryToDelete(null);
+            
+            const previousQueries = queryClient.getQueriesData({ queryKey: queryKeys.admin.categories.all() });
+            
+            queryClient.setQueriesData({ queryKey: queryKeys.admin.categories.all() }, (oldData: any) => {
+              if (!oldData || !oldData.categories) return oldData;
+              return {
+                ...oldData,
+                categories: oldData.categories.filter((c: RawCategory) => c.id !== cat.id)
+              };
+            });
+            
+            try {
+              const res = await deleteCategory(cat.id);
+              if (!res.success) throw new Error(res.error || 'Failed to delete category');
+              queryClient.invalidateQueries({ queryKey: queryKeys.admin.categories.all() });
+            } catch (err: any) {
+              previousQueries.forEach(([queryKey, oldData]) => {
+                queryClient.setQueryData(queryKey, oldData);
+              });
+              alert(err.message || 'Failed to delete category');
+            }
+          }}
         />
       )}
     </div>
   );
 }
 
-function DeleteCategoryModal({ category, onClose }: { category: RawCategory; onClose: () => void }) {
+function DeleteCategoryModal({ category, onClose, onConfirmDelete }: { category: RawCategory; onClose: () => void; onConfirmDelete: (cat: RawCategory) => Promise<void> }) {
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { mutateAsync: deleteCategory } = useDeleteCategory();
 
   const handleDelete = async () => {
     setDeleting(true);
     setError(null);
     try {
-      const res = await deleteCategory(category.id);
-      if (!res.success) {
-        setError(res.error);
-        return;
-      }
-      onClose();
+      await onConfirmDelete(category);
+      // Let parent close and handle error via toast/alert, 
+      // but if error is thrown from inside (not handled by parent), we catch it here.
     } catch (e: any) {
       setError(e.message);
-    } finally {
       setDeleting(false);
     }
   };

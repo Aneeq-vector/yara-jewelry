@@ -816,12 +816,40 @@ export default function ProductsClient({
       title: 'Delete Product',
       description: `Delete "${name}"? This cannot be undone.`,
       onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        
+        const previousQueries = queryClient.getQueriesData({ queryKey: queryKeys.admin.products.all() });
+        const previousSelection = new Set(selectedIds);
+        
+        // 1. Clear selection
+        setSelectedIds(new Set());
+
+        // 2. Optimistic update
+        queryClient.setQueriesData({ queryKey: queryKeys.admin.products.all() }, (oldData: any) => {
+          if (!oldData || !oldData.products) return oldData;
+          const removedCount = oldData.products.some((p: any) => p.id === id) ? 1 : 0;
+          return {
+            ...oldData,
+            products: oldData.products.filter((p: any) => p.id !== id),
+            totalItems: Math.max(0, oldData.totalItems - removedCount)
+          };
+        });
+
         try {
-          await deleteProduct(id);
-          fetchAll();
+          const res = await deleteProduct(id);
+          if (res && res.success === false) {
+             throw new Error(res.error || 'Failed to delete product');
+          }
+          // 3. targeted reconciliation
+          queryClient.invalidateQueries({ queryKey: queryKeys.admin.products.all() });
           addToast('Product deleted', 'success');
-        } catch {
-          addToast('Failed to delete product', 'error');
+        } catch (err: any) {
+          // 4. Rollback
+          previousQueries.forEach(([queryKey, oldData]) => {
+            queryClient.setQueryData(queryKey, oldData);
+          });
+          setSelectedIds(previousSelection);
+          addToast(err.message || 'Failed to delete product', 'error');
         }
       },
     });
@@ -834,12 +862,41 @@ export default function ProductsClient({
       title: 'Delete Products',
       description: `Delete ${selectedIds.size} selected product(s)? This cannot be undone.`,
       onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        
+        const idsToDelete = new Set(selectedIds);
+        const previousQueries = queryClient.getQueriesData({ queryKey: queryKeys.admin.products.all() });
+        const previousSelection = new Set(selectedIds);
+        
+        // 1. Clear selection
+        setSelectedIds(new Set());
+
+        // 2. Optimistic update
+        queryClient.setQueriesData({ queryKey: queryKeys.admin.products.all() }, (oldData: any) => {
+          if (!oldData || !oldData.products) return oldData;
+          const removedCount = oldData.products.filter((p: any) => idsToDelete.has(p.id)).length;
+          return {
+            ...oldData,
+            products: oldData.products.filter((p: any) => !idsToDelete.has(p.id)),
+            totalItems: Math.max(0, oldData.totalItems - removedCount)
+          };
+        });
+
         try {
-          await deleteProducts(Array.from(selectedIds));
-          fetchAll();
+          const res = await deleteProducts(Array.from(idsToDelete));
+          if (res && res.success === false) {
+             throw new Error(res.error || 'Failed to delete products');
+          }
+          // 3. targeted reconciliation
+          queryClient.invalidateQueries({ queryKey: queryKeys.admin.products.all() });
           addToast('Products deleted', 'success');
-        } catch {
-          addToast('Failed to delete products', 'error');
+        } catch (err: any) {
+          // 4. Rollback
+          previousQueries.forEach(([queryKey, oldData]) => {
+            queryClient.setQueryData(queryKey, oldData);
+          });
+          setSelectedIds(previousSelection);
+          addToast(err.message || 'Failed to delete products', 'error');
         }
       },
     });
