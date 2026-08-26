@@ -350,7 +350,7 @@ export async function createManualOrderAction(payload: ManualOrderPayload) {
     const adminPb = await getAdminClient();
     
     // 1. Validate Admin Session
-    const { user } = await getServerSession();
+    const { user } = await validateSession();
     if (!user) {
       throw new Error("Unauthorized: Admin session required.");
     }
@@ -477,8 +477,6 @@ export async function createManualOrderAction(payload: ManualOrderPayload) {
       body: { requests: batchRequests }
     });
     
-    // We can fetch the created order to return its ID (the first request in batch is the order creation)
-    // Wait, the batch response typically returns an array of the results.
     let record = null;
     if (Array.isArray(batchRes) && batchRes.length > 0 && batchRes[0].body) {
        record = batchRes[0].body;
@@ -486,7 +484,6 @@ export async function createManualOrderAction(payload: ManualOrderPayload) {
        record = await adminPb.collection('orders').getFirstListItem(`orderId="${generatedOrderId}"`);
     }
 
-    revalidatePath('/yara-admin/orders');
     return { success: true, orderId: generatedOrderId, record: structuredClone(record) };
   } catch (error: any) {
     console.error('Failed to create manual order via Batch:', error);
