@@ -134,7 +134,6 @@ export default function OrdersClient({ initialOrders, initialTotal, initialPages
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
         
-        const t0 = performance.now();
         const idsToDelete = new Set(selectedOrders);
         const previousQueries = queryClient.getQueriesData({ queryKey: queryKeys.admin.orders.all() });
         const previousSelection = [...selectedOrders];
@@ -158,17 +157,12 @@ export default function OrdersClient({ initialOrders, initialTotal, initialPages
           };
         });
         
-        const t1 = performance.now();
-
         // 3. Server Action
         const res = await deleteOrdersAction(Array.from(idsToDelete));
-        const t2 = performance.now();
         
         if (res?.success) {
           // 4. Targeted reconciliation
-          await queryClient.invalidateQueries({ queryKey: queryKeys.admin.orders.list(currentPage, rowsPerPage) });
-          const t3 = performance.now();
-          console.log(`[ORDER_DELETE_PERF] CLIENT: T1(Optimistic)=${Math.round(t1-t0)}ms, T2(Server)=${Math.round(t2-t1)}ms, T3(Reconcile)=${Math.round(t3-t2)}ms. TOTAL=${Math.round(t3-t0)}ms`);
+          queryClient.invalidateQueries({ queryKey: queryKeys.admin.orders.all() });
         } else {
           // 5. Rollback on failure
           previousQueries.forEach(([queryKey, oldData]) => {

@@ -180,6 +180,32 @@ export async function requestPasswordResetAction(email: string) {
   }
 }
 
+export async function confirmPasswordResetAction(token: string, password: string, passwordConfirm: string) {
+  try {
+    const pb = new PocketBase(process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pb.yarasl.shop');
+    
+    await pb.collection('users').confirmPasswordReset(
+      token,
+      password,
+      passwordConfirm
+    );
+    
+    return { success: true };
+  } catch (error: any) {
+    const errorData = error.data?.data || error.response?.data;
+    
+    // Check if the error is a validation error for token, or password
+    if (error.status === 400 || error.status === 404) {
+      if (errorData?.password || errorData?.passwordConfirm) {
+        return { error: 'Passwords must match and be at least 8 characters long.' };
+      }
+      return { error: 'This password reset link is invalid or has expired. Please request a new one.' };
+    }
+    
+    return { error: 'An unexpected error occurred. Please try again later.' };
+  }
+}
+
 export async function logoutAction() {
   await getServerSession();
   const pb = await getServerClient();
