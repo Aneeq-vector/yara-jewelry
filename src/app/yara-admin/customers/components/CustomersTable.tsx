@@ -65,7 +65,7 @@ export function CustomersTable({
                       </div>
                       <div className="text-left">
                         <div className="font-bold text-burgundy">{customer.name}</div>
-                        <div className="text-xs text-burgundy/50">{customer.email}</div>
+                        <div className="text-xs text-burgundy/50">{customer.email || <span className="italic">Email unavailable</span>}</div>
                         {customer.phone && <div className="text-xs text-burgundy/40">{customer.phone}</div>}
                       </div>
                     </div>
@@ -122,8 +122,14 @@ export function CustomersTable({
                         <WhatsappIcon size={16} />
                       </button>
                       <button 
-                        onClick={() => window.location.href = `mailto:${customer.email}`}
-                        className="p-2 text-burgundy/50 hover:text-burgundy hover:bg-rose-gold/10 rounded-lg transition-colors" 
+                        onClick={() => {
+                          if (customer.email) {
+                            window.location.href = `mailto:${customer.email}`;
+                          } else {
+                            alert('No email provided for this customer.');
+                          }
+                        }}
+                        className={`p-2 rounded-lg transition-colors ${customer.email ? 'text-burgundy/50 hover:text-burgundy hover:bg-rose-gold/10' : 'text-burgundy/30 cursor-not-allowed'}`} 
                         title="Send Email"
                       >
                         <Mail size={16} />

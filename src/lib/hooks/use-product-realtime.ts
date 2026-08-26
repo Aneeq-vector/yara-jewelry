@@ -125,6 +125,10 @@ export function useGiftBoxRealtime() {
 
     const gbSub = pb.collection('gift_boxes').subscribe('*', (e) => {
       if (!disposed) {
+        if (e.action === 'delete') {
+          queryClient.removeQueries({ queryKey: queryKeys.giftBoxes.detail(e.record.id) });
+        }
+        // Invalidate all gift box queries (lists and details via prefix)
         queryClient.invalidateQueries({ queryKey: queryKeys.giftBoxes.all() });
       }
     });
@@ -132,6 +136,8 @@ export function useGiftBoxRealtime() {
     const productSub = pb.collection('products').subscribe('*', (e) => {
       if (!disposed) {
         handleProductEvent(e, queryClient);
+        // Products are embedded in gift boxes, invalidate gift boxes when products change
+        queryClient.invalidateQueries({ queryKey: queryKeys.giftBoxes.all() });
       }
     }, { expand: 'category' });
 

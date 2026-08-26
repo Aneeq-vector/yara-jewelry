@@ -40,7 +40,7 @@ export const queryKeys = {
   giftBoxes: {
     all: () => ['gift-boxes'] as const,
     byType: (type: string) => ['gift-boxes', type] as const,
-    detail: (id: string) => ['giftBoxes', 'detail', id] as const,
+    detail: (id: string) => ['gift-boxes', 'detail', id] as const,
   },
 
   // Admin-scoped — cleared on admin logout

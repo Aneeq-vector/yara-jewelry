@@ -5,7 +5,8 @@ import { revalidatePath } from 'next/cache';
 
 export async function getCustomersAction(page = 1, perPage = 20, search = '', status = 'All Status') {
   try {
-    const { pb } = await validateSession();
+    await validateSession();
+    const adminPb = await getAdminClient();
     
     // Build filter string for users
     const filters: string[] = ['role = "customer"'];
@@ -19,7 +20,7 @@ export async function getCustomersAction(page = 1, perPage = 20, search = '', st
     }
     
     // 1. Fetch paginated users
-    const usersRes = await pb.collection('users').getList(page, perPage, {
+    const usersRes = await adminPb.collection('users').getList(page, perPage, {
       $autoCancel: false,
       filter: filters.join(' && '),
       sort: '-created',
@@ -39,11 +40,11 @@ export async function getCustomersAction(page = 1, perPage = 20, search = '', st
       const userIdFilter = usersRes.items.map(u => `user = "${u.id}"`).join(' || ');
       
       const [ordersRes, addressesRes] = await Promise.all([
-        pb.collection('orders').getFullList({
+        adminPb.collection('orders').getFullList({
           filter: userIdFilter,
           fields: 'user,totalAmount'
         }),
-        pb.collection('addresses').getFullList({
+        adminPb.collection('addresses').getFullList({
           filter: userIdFilter,
           fields: 'id,user,name,street,city,state,zip,phone,isDefault'
         })
@@ -107,8 +108,9 @@ export async function getCustomersAction(page = 1, perPage = 20, search = '', st
 
 export async function deleteCustomerAction(id: string) {
   try {
-    const { pb } = await validateSession();
-    await pb.collection('users').delete(id);
+    await validateSession();
+    const adminPb = await getAdminClient();
+    await adminPb.collection('users').delete(id);
     
     revalidatePath('/yara-admin/customers');
     return { success: true };
@@ -120,11 +122,12 @@ export async function deleteCustomerAction(id: string) {
 
 export async function deleteCustomersAction(ids: string[]) {
   try {
-    const { pb } = await validateSession();
+    await validateSession();
+    const adminPb = await getAdminClient();
     
     // Delete all selected customers concurrently
     await Promise.all(
-      ids.map(id => pb.collection('users').delete(id))
+      ids.map(id => adminPb.collection('users').delete(id))
     );
 
     revalidatePath('/yara-admin/customers');
@@ -137,10 +140,11 @@ export async function deleteCustomersAction(ids: string[]) {
 
 export async function updateCustomerStatusAction(id: string, status: string) {
   try {
-    const { pb } = await validateSession();
+    await validateSession();
+    const adminPb = await getAdminClient();
     // Update the customer record with the new status
     // Note: This requires a 'status' field to exist in the 'users' collection in PocketBase.
-    await pb.collection('users').update(id, { status });
+    await adminPb.collection('users').update(id, { status });
     
     revalidatePath('/yara-admin/customers');
     return { success: true };

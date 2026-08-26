@@ -25,7 +25,7 @@ export default function GiftBoxDetailPage({ params }: { params: Promise<{ id: st
     );
   }
 
-  if (!box) {
+  if (!box || !box.isActive) {
     return (
       <PageWrapper>
         <div className="pt-40 pb-20 text-center">
