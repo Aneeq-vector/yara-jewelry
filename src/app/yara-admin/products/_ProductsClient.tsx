@@ -392,7 +392,7 @@ function ProductFormModal({
 
       let data;
       const text = await response.text();
-      
+
       try {
         data = JSON.parse(text);
       } catch (err) {
@@ -827,12 +827,21 @@ export default function ProductsClient({
     }
   };
 
-  const handleSaved = (_saved: RawProduct, mode: 'add' | 'edit') => {
-    // Actively refetch the admin list immediately upon success
-    queryClient.invalidateQueries({
-      queryKey: queryKeys.admin.products.all(),
-      refetchType: 'active',
-    });
+  const handleSaved = (saved: RawProduct, mode: 'add' | 'edit') => {
+    if (mode === 'edit') {
+      queryClient.setQueriesData({ queryKey: queryKeys.admin.products.all() }, (old: any) => {
+        if (!old || !old.products) return old;
+        return {
+          ...old,
+          products: old.products.map((p: any) => p.id === saved.id ? { ...p, ...saved } : p)
+        };
+      });
+    } else {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.admin.products.all(),
+        refetchType: 'active',
+      });
+    }
     setFormMode(null);
     setEditProduct(undefined);
   };

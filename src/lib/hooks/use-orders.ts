@@ -7,6 +7,6 @@ export function useAdminOrders(page: number, perPage: number, initialData?: any)
     queryKey: queryKeys.admin.orders.list(page, perPage),
     queryFn: () => getAllOrdersAction(page, perPage),
     initialData,
-    staleTime: 0,
+    staleTime: 60 * 1000,
   });
 }

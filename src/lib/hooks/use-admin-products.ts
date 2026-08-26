@@ -15,7 +15,7 @@ export function useAdminProducts(filters: AdminProductFilters, initialData?: any
       filters.badge
     ),
     initialData,
-    staleTime: 0, // Admin data should be fresh
+    staleTime: 60 * 1000,
     placeholderData: keepPreviousData,
   });
 }

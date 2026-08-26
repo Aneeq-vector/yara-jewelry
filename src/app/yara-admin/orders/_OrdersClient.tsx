@@ -71,36 +71,55 @@ export default function OrdersClient({ initialOrders, initialTotal, initialPages
   };
 
   const handleStatusChange = async (id: string, newStatus: string) => {
-    const qKey = queryKeys.admin.orders.list(currentPage, rowsPerPage);
-    queryClient.setQueryData(qKey, (old: any) => {
-      if (!old) return old;
+    let prevStatus = '';
+    queryClient.setQueriesData({ queryKey: queryKeys.admin.orders.all() }, (old: any) => {
+      if (!old || !old.orders) return old;
+      old.orders.forEach((o: any) => { if (o.id === id) prevStatus = o.status; });
       return { ...old, orders: old.orders.map((o: any) => o.id === id ? { ...o, status: newStatus } : o) };
     });
+    
+    const prevSelected = selectedOrder;
     setSelectedOrder((prev: any) => prev && prev.id === id ? { ...prev, status: newStatus } : prev);
     
     const res = await updateOrderStatusAction(id, newStatus);
-    if (res?.success) {
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.orders.all() });
-    } else {
+    
+    if (!res?.success) {
       alert("Failed to update status: " + (res?.error || "Unknown error"));
-      queryClient.invalidateQueries({ queryKey: qKey });
+      // Rollback
+      if (prevStatus) {
+        queryClient.setQueriesData({ queryKey: queryKeys.admin.orders.all() }, (old: any) => {
+          if (!old || !old.orders) return old;
+          return { ...old, orders: old.orders.map((o: any) => o.id === id ? { ...o, status: prevStatus } : o) };
+        });
+      }
+      setSelectedOrder(prevSelected);
     }
+    // Note: On success, we rely on Realtime to synchronize any other background state, avoiding a duplicate fetch.
   };
 
   const handlePaymentStatusChange = async (id: string, newPaymentStatus: string) => {
-    const qKey = queryKeys.admin.orders.list(currentPage, rowsPerPage);
-    queryClient.setQueryData(qKey, (old: any) => {
-      if (!old) return old;
+    let prevPaymentStatus = '';
+    queryClient.setQueriesData({ queryKey: queryKeys.admin.orders.all() }, (old: any) => {
+      if (!old || !old.orders) return old;
+      old.orders.forEach((o: any) => { if (o.id === id) prevPaymentStatus = o.paymentStatus; });
       return { ...old, orders: old.orders.map((o: any) => o.id === id ? { ...o, paymentStatus: newPaymentStatus } : o) };
     });
+    
+    const prevSelected = selectedOrder;
     setSelectedOrder((prev: any) => prev && prev.id === id ? { ...prev, paymentStatus: newPaymentStatus } : prev);
     
     const res = await updateOrderPaymentStatusAction(id, newPaymentStatus);
-    if (res?.success) {
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.orders.all() });
-    } else {
+    
+    if (!res?.success) {
       alert("Failed to update payment status: " + (res?.error || "Unknown error"));
-      queryClient.invalidateQueries({ queryKey: qKey });
+      // Rollback
+      if (prevPaymentStatus) {
+        queryClient.setQueriesData({ queryKey: queryKeys.admin.orders.all() }, (old: any) => {
+          if (!old || !old.orders) return old;
+          return { ...old, orders: old.orders.map((o: any) => o.id === id ? { ...o, paymentStatus: prevPaymentStatus } : o) };
+        });
+      }
+      setSelectedOrder(prevSelected);
     }
   };
 
