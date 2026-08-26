@@ -313,6 +313,11 @@ function ProductFormModal({
     if (!form.price || isNaN(Number(form.price))) errs.price = 'Valid price is required';
     if (!form.shortDescription.toString().trim()) errs.shortDescription = 'Short description is required';
     if (!form.description.toString().trim()) errs.description = 'Description is required';
+    if (form.quantity === '') {
+       errs.quantity = 'Enter a stock quantity (or 0 if out of stock).';
+    } else if (Number(form.quantity) < 0) {
+       errs.quantity = 'Quantity cannot be negative.';
+    }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -338,8 +343,11 @@ function ProductFormModal({
       if (form.reviewCount) fd.append('reviewCount', form.reviewCount.toString());
       if (form.material) fd.append('material', form.material.toString());
       if (form.weight) fd.append('weight', form.weight.toString());
-      if (form.quantity) fd.append('quantity', form.quantity.toString());
-      fd.append('inStock', (form.inStock as boolean) ? 'true' : 'false');
+      
+      const qty = Number(form.quantity) || 0;
+      fd.append('quantity', qty.toString());
+      fd.append('inStock', qty > 0 ? 'true' : 'false');
+      
       // Colors & tags — PocketBase accepts repeated keys for arrays
       (form.colors as string[]).forEach(c => fd.append('colors', c));
       (form.tags as string[]).forEach(t => fd.append('tags', t));
@@ -479,7 +487,8 @@ function ProductFormModal({
               </div>
               <div>
                 <label className="block text-xs font-ui font-semibold text-burgundy/70 uppercase tracking-wide mb-1">Quantity</label>
-                <input aria-label="Quantity" type="number" min={0} step="1" placeholder="0" value={form.quantity.toString()} onChange={e => set('quantity', e.target.value)} className={inp('quantity')} />
+                <input id="quantity-input" aria-label="Quantity" type="number" min={0} step="1" placeholder="0" value={form.quantity.toString()} onChange={e => set('quantity', e.target.value)} className={inp('quantity')} />
+                {errors.quantity && <p className="text-xs text-red-500 mt-1">{errors.quantity}</p>}
               </div>
             </div>
           </section>
@@ -541,13 +550,29 @@ function ProductFormModal({
             <div className="mt-4 flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => set('inStock', !(form.inStock as boolean))}
-                className={`relative w-12 h-6 rounded-full transition-colors duration-200 ${(form.inStock as boolean) ? 'bg-emerald-500' : 'bg-burgundy/20'}`}
+                onClick={() => {
+                  const isOutOfStock = !form.quantity || Number(form.quantity) <= 0;
+                  if (!isOutOfStock) {
+                    set('quantity', '0');
+                  } else {
+                    set('quantity', '');
+                    setTimeout(() => document.getElementById('quantity-input')?.focus(), 0);
+                  }
+                }}
+                className={`relative w-12 h-6 rounded-full transition-colors duration-200 ${(!form.quantity || Number(form.quantity) <= 0) ? 'bg-burgundy/20' : 'bg-emerald-500'}`}
               >
-                <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${(form.inStock as boolean) ? 'translate-x-6' : 'translate-x-0'}`} />
+                <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${(!form.quantity || Number(form.quantity) <= 0) ? 'translate-x-0' : 'translate-x-6'}`} />
               </button>
-              <span className="text-sm font-body text-burgundy cursor-pointer" onClick={() => set('inStock', !(form.inStock as boolean))}>
-                {(form.inStock as boolean) ? 'In Stock' : 'Out of Stock'}
+              <span className="text-sm font-body text-burgundy cursor-pointer" onClick={() => {
+                  const isOutOfStock = !form.quantity || Number(form.quantity) <= 0;
+                  if (!isOutOfStock) {
+                    set('quantity', '0');
+                  } else {
+                    set('quantity', '');
+                    setTimeout(() => document.getElementById('quantity-input')?.focus(), 0);
+                  }
+                }}>
+                {(!form.quantity || Number(form.quantity) <= 0) ? 'Out of Stock' : 'In Stock'}
               </span>
             </div>
           </section>

@@ -127,7 +127,7 @@ export async function getProductOptionsAction() {
     const { pb } = await validateSession();
     const records = await pb.collection('products').getFullList({
       sort: 'name',
-      fields: 'id,collectionId,name,price,inStock,quantity,images,productCode,category', // Minimal fields including quantity
+      fields: 'id,collectionId,name,price,inStock,quantity,images,productCode,category,colors', // Minimal fields including quantity and colors
     });
     return { success: true, products: toPlain(records) };
   } catch (error: any) {

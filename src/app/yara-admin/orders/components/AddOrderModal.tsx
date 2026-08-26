@@ -34,7 +34,7 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
 
   // Products
   const { data: rawProducts, isLoading: productsLoading } = useProductOptions();
-  const allProducts = (rawProducts || []).filter(p => p.quantity > 0) as unknown as Product[];
+  const allProducts = (rawProducts || []) as unknown as Product[];
   const [productSearch, setProductSearch] = useState('');
   // orderItems uses colorQuantities: { Yellow: 2, Green: 5 } or { '': 3 } for no-color products
   const [orderItems, setOrderItems] = useState<ManualOrderItem[]>([]);
@@ -264,7 +264,8 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
                     ) : (
                       filteredProducts.map(product => (
                         <button key={product.id} onClick={() => addProduct(product)}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-ivory/60 transition-colors text-left border-b border-burgundy/5 last:border-0">
+                          disabled={product.quantity <= 0}
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 transition-colors text-left border-b border-burgundy/5 last:border-0 ${product.quantity <= 0 ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'hover:bg-ivory/60'}`}>
                           {product.images?.[0] && (
                             <img src={product.images[0]} alt={product.name} className="w-9 h-9 rounded-lg object-cover flex-shrink-0 bg-ivory" />
                           )}
