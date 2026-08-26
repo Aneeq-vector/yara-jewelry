@@ -94,7 +94,6 @@ export default function OrdersClient({ initialOrders, initialTotal, initialPages
       }
       setSelectedOrder(prevSelected);
     }
-    // Note: On success, we rely on Realtime to synchronize any other background state, avoiding a duplicate fetch.
   };
 
   const handlePaymentStatusChange = async (id: string, newPaymentStatus: string) => {

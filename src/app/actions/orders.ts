@@ -607,7 +607,6 @@ async function processOrderLifecycleTransition(orderId: string, newStatus: strin
 export async function updateOrderStatusAction(orderId: string, status: string) {
   try {
     await processOrderLifecycleTransition(orderId, status, undefined);
-    revalidatePath('/yara-admin/orders');
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error?.message || String(error) };
@@ -617,7 +616,6 @@ export async function updateOrderStatusAction(orderId: string, status: string) {
 export async function updateOrderPaymentStatusAction(orderId: string, paymentStatus: string) {
   try {
     await processOrderLifecycleTransition(orderId, undefined, paymentStatus);
-    revalidatePath('/yara-admin/orders');
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error?.message || String(error) };
