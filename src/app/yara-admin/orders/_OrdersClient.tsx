@@ -133,12 +133,48 @@ export default function OrdersClient({ initialOrders, initialTotal, initialPages
       message: `Are you sure you want to delete ${selectedOrders.length} order(s)? This cannot be undone.`,
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
-        const res = await deleteOrdersAction(selectedOrders);
+        
+        const t0 = performance.now();
+        const idsToDelete = new Set(selectedOrders);
+        const previousQueries = queryClient.getQueriesData({ queryKey: queryKeys.admin.orders.all() });
+        const previousSelection = [...selectedOrders];
+        
+        // 1. Clear selection immediately
+        setSelectedOrders([]);
+
+        // 2. Optimistically update all cached pages
+        queryClient.setQueriesData({ queryKey: queryKeys.admin.orders.all() }, (old: any) => {
+          if (!old || !old.orders) return old;
+          
+          const remainingOrders = old.orders.filter((o: any) => !idsToDelete.has(o.id));
+          const deletedCount = old.orders.length - remainingOrders.length;
+          
+          if (deletedCount === 0) return old;
+          
+          return {
+            ...old,
+            orders: remainingOrders,
+            totalItems: Math.max(0, (old.totalItems || 0) - deletedCount)
+          };
+        });
+        
+        const t1 = performance.now();
+
+        // 3. Server Action
+        const res = await deleteOrdersAction(Array.from(idsToDelete));
+        const t2 = performance.now();
+        
         if (res?.success) {
-          const qKey = queryKeys.admin.orders.list(currentPage, rowsPerPage);
-          queryClient.invalidateQueries({ queryKey: qKey });
-          setSelectedOrders([]);
+          // 4. Targeted reconciliation
+          await queryClient.invalidateQueries({ queryKey: queryKeys.admin.orders.list(currentPage, rowsPerPage) });
+          const t3 = performance.now();
+          console.log(`[ORDER_DELETE_PERF] CLIENT: T1(Optimistic)=${Math.round(t1-t0)}ms, T2(Server)=${Math.round(t2-t1)}ms, T3(Reconcile)=${Math.round(t3-t2)}ms. TOTAL=${Math.round(t3-t0)}ms`);
         } else {
+          // 5. Rollback on failure
+          previousQueries.forEach(([queryKey, oldData]) => {
+            queryClient.setQueryData(queryKey, oldData);
+          });
+          setSelectedOrders(previousSelection);
           alert("Failed to delete orders: " + (res?.error || "Unknown error"));
         }
       }

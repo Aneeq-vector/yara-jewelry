@@ -51,7 +51,7 @@ export default function CustomersClient({ initialCustomers, initialTotalItems = 
 
   const isDefaultFetch = currentPage === 1 && rowsPerPage === 10 && debouncedSearch === '' && filterSegment === 'All Status';
 
-  const { data, isPending, isFetching } = useAdminCustomers({
+  const queryInfo = useAdminCustomers({
     page: currentPage,
     perPage: rowsPerPage,
     search: debouncedSearch,
@@ -62,6 +62,19 @@ export default function CustomersClient({ initialCustomers, initialTotalItems = 
     totalItems: initialTotalItems,
     totalPages: initialTotalPages
   } : undefined);
+
+  const { data, isPending, isFetching, status, fetchStatus, isPlaceholderData } = queryInfo;
+
+  console.log('[CUSTOMERS_QUERY_STATE]', {
+    queryKey: queryKeys.admin.customers.list({ page: currentPage, perPage: rowsPerPage, search: debouncedSearch, status: filterSegment }),
+    status,
+    fetchStatus,
+    isPending,
+    isFetching,
+    isPlaceholderData,
+    hasData: data !== undefined,
+    itemCount: data?.customers?.length,
+  });
 
   const loading = isPending && !data;
   const isRefreshing = isFetching;

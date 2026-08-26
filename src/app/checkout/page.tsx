@@ -49,7 +49,7 @@ const steps = [
 
 export default function CheckoutPage() {
   const {
-    currentStep, orderPlaced, orderId, receiptFile, setReceiptFile, uploadState, setUploadState, uploadProgress,
+    currentStep, orderPlaced, orderId, receiptFile, setReceiptFile, uploadState, setUploadState, uploadProgress, receiptError,
     isSubmitting, hasHydrated, savedAddresses, selectedAddressId, errors, items,
     subtotal, form, FREE_DELIVERY_THRESHOLD, shipping, total,
     handleSelectAddress, handleFileChange, retryUpload, updateForm,
@@ -164,7 +164,7 @@ export default function CheckoutPage() {
 
                 {/* Step 4: Review */}
                 {currentStep === 4 && (
-                  <CheckoutReviewStep form={form} receiptFile={receiptFile} uploadState={uploadState} uploadProgress={uploadProgress} handleFileChange={handleFileChange} retryUpload={retryUpload} setReceiptFile={setReceiptFile} setUploadState={setUploadState} currentStep={currentStep} />
+                  <CheckoutReviewStep form={form} receiptFile={receiptFile} uploadState={uploadState} uploadProgress={uploadProgress} handleFileChange={handleFileChange} retryUpload={retryUpload} setReceiptFile={setReceiptFile} setUploadState={setUploadState} receiptError={receiptError} currentStep={currentStep} />
                 )}
               </AnimatePresence>
 

@@ -11,6 +11,7 @@ export function CheckoutReviewStep({
   retryUpload,
   setReceiptFile,
   setUploadState,
+  receiptError,
   currentStep
 }: any) {
   return (
@@ -45,10 +46,13 @@ export function CheckoutReviewStep({
                                 <div className="flex flex-col items-center justify-center pt-5 pb-6 text-burgundy/60">
                                   <Upload size={24} className="mb-2" />
                                   <p className="mb-1 text-sm font-body"><span className="font-semibold text-burgundy">Click to upload</span> or drag and drop</p>
-                                  <p className="text-xs font-body opacity-70">PNG, JPG or PDF (MAX. 5MB)</p>
+                                  <p className="text-xs font-body opacity-70">PNG, JPG or PDF (Maximum file size: 5 MB)</p>
                                 </div>
                                 <input id="receipt-upload" type="file" className="hidden" accept=".png,.jpg,.jpeg,.pdf" onChange={handleFileChange} />
                               </label>
+                              {receiptError && (
+                                <p className="mt-2 text-sm text-red-500 font-body">{receiptError}</p>
+                              )}
                             </div>
                           ) : (
                             <Attachment size="default" state={uploadState} className="w-full bg-white">

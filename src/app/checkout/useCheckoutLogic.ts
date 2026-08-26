@@ -14,6 +14,9 @@ export function useCheckoutLogic() {
   const [orderId, setOrderId] = useState('');
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptError, setReceiptError] = useState<string | null>(null);
+  const MAX_RECEIPT_SIZE = 5 * 1024 * 1024;
+
   const [uploadState, setUploadState] = useState<'idle' | 'uploading' | 'processing' | 'error' | 'done'>('idle');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -97,11 +100,22 @@ export function useCheckoutLogic() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setReceiptFile(e.target.files[0]);
+      const file = e.target.files[0];
+      if (file.size > MAX_RECEIPT_SIZE) {
+        setReceiptError("File is too large. Please upload a receipt smaller than 5 MB.");
+        setReceiptFile(null);
+        setUploadState('idle');
+        setUploadProgress(0);
+        e.target.value = '';
+        return;
+      }
+      setReceiptError(null);
+      setReceiptFile(file);
       setUploadState('uploading');
       setUploadProgress(0);
     }
   };
+
 
   const retryUpload = () => {
     setUploadState('uploading');
@@ -266,7 +280,7 @@ export function useCheckoutLogic() {
     currentStep, setCurrentStep, orderPlaced, setOrderPlaced, orderId,
     receiptFile, setReceiptFile, uploadState, setUploadState, uploadProgress,
     isSubmitting, hasHydrated, user, savedAddresses, selectedAddressId, errors, items,
-    subtotal, form, FREE_DELIVERY_THRESHOLD, shipping, total,
+    subtotal, form, FREE_DELIVERY_THRESHOLD, shipping, total, receiptError,
     handleSelectAddress, handleFileChange, retryUpload, updateForm,
     nextStep, prevStep, placeOrder, getInputClass
   };

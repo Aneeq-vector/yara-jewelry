@@ -39,7 +39,7 @@ export async function createOrderAction(formData: FormData) {
         throw new Error("Payment receipt is required for bank transfer.");
       }
       if (receiptFile.size > 5 * 1024 * 1024) {
-        throw new Error("Receipt file is too large (max 5MB).");
+        throw new Error("Payment receipt must be smaller than 5 MB.");
       }
       if (!['image/jpeg', 'image/png', 'application/pdf'].includes(receiptFile.type)) {
         throw new Error("Invalid receipt format. Please upload JPG, PNG or PDF.");
@@ -620,11 +620,17 @@ export async function updateOrderPaymentStatusAction(orderId: string, paymentSta
 }
 
 export async function deleteOrdersAction(orderIds: string[]) {
+  const tStart = performance.now();
+  let tA = 0, tB = 0, tC = 0, tD = 0;
   try {
     const { pb } = await validateSession();
     const adminPb = await getAdminClient();
+    tA = performance.now();
+
     
     const batchRequests: any[] = [];
+    tB = performance.now();
+
     
     for (const orderId of orderIds) {
       batchRequests.push({
@@ -641,6 +647,10 @@ export async function deleteOrdersAction(orderIds: string[]) {
         body: { requests: batchRequests }
       });
     }
+    tC = performance.now();
+    tD = performance.now();
+
+    console.log(`[ORDER_DELETE_PERF] SERVER: A=${Math.round(tA-tStart)}ms, B=${Math.round(tB-tA)}ms, C=${Math.round(tC-tB)}ms, D=${Math.round(tD-tC)}ms. TOTAL=${Math.round(tD-tStart)}ms`);
 
     // Realtime invalidation covers Admin UI
     return { success: true };
