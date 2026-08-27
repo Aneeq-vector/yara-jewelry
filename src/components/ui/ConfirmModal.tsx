@@ -53,7 +53,7 @@ export function ConfirmModal({
           <h2 className="text-xl font-heading font-bold text-burgundy pr-8">
             {title}
           </h2>
-          <p className="text-burgundy/70 font-body text-sm leading-relaxed">
+          <p className="text-burgundy/70 font-body text-sm leading-relaxed whitespace-pre-wrap">
             {description}
           </p>
           <button 

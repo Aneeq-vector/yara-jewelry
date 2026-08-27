@@ -264,6 +264,7 @@ export async function createOrderAction(formData: FormData) {
       status: 'pending',
       paymentStatus: 'pending',
       stock_restored: false,
+      stockDeductionState: 'deducted',
       stock_snapshot: Array.from(variantDeductions.values()),
       cartDetails: JSON.stringify(cartDetails),
       items: Array.from(finalProductIds),
@@ -521,6 +522,7 @@ export async function createManualOrderAction(payload: ManualOrderPayload) {
       paymentStatus: payload.paymentStatus,
       status: 'pending',
       stock_restored: false,
+      stockDeductionState: payload.deductStock ? 'deducted' : 'not_deducted',
       stock_snapshot: payload.deductStock 
         ? Array.from(variantDeductions.values())
         : [],
@@ -818,15 +820,99 @@ export async function deleteOrdersAction(orderIds: string[]) {
     const { pb } = await validateSession();
     const adminPb = await getAdminClient();
 
-    
     const batchRequests: any[] = [];
-
     
+    // Aggregated product restorations map: productId -> Map<color, quantity>
+    // Empty string color means global
+    const productRestorations = new Map<string, Map<string, number>>();
+
+    // 1. Process all selected orders
     for (const orderId of orderIds) {
+      const order = await adminPb.collection('orders').getOne(orderId);
+      
+      if (!order.stock_restored) {
+         const hasValidSnapshot = order.stock_snapshot && Array.isArray(order.stock_snapshot) && order.stock_snapshot.length > 0;
+         const deductionState = order.stockDeductionState; // "deducted" | "not_deducted" | undefined/empty
+
+         if (deductionState === 'not_deducted') {
+            // Case B: explicitly never deducted -> delete only
+         } else if (deductionState === 'deducted' && hasValidSnapshot) {
+            // Case C: deducted and valid snapshot -> restore snapshot
+            for (const item of order.stock_snapshot) {
+               if (!item.productId || typeof item.quantity !== 'number' || item.quantity <= 0) {
+                  throw new Error(`Invalid stock snapshot format in order ${orderId}.`);
+               }
+               const colorKey = item.color ? String(item.color).trim() : '';
+               const pMap = productRestorations.get(item.productId) || new Map<string, number>();
+               const currentQty = pMap.get(colorKey) || 0;
+               pMap.set(colorKey, currentQty + item.quantity);
+               productRestorations.set(item.productId, pMap);
+            }
+         } else if (deductionState === 'deducted' && !hasValidSnapshot) {
+            // Case D: deducted but snapshot missing/invalid -> block
+            throw new Error("Cannot safely delete this order because its original inventory deduction state or stock snapshot is unavailable.");
+         } else if ((!deductionState || deductionState === '') && hasValidSnapshot) {
+            // Case E: empty/unknown and valid snapshot -> snapshot is authoritative evidence -> restore snapshot
+            for (const item of order.stock_snapshot) {
+               if (!item.productId || typeof item.quantity !== 'number' || item.quantity <= 0) {
+                  throw new Error(`Invalid stock snapshot format in order ${orderId}.`);
+               }
+               const colorKey = item.color ? String(item.color).trim() : '';
+               const pMap = productRestorations.get(item.productId) || new Map<string, number>();
+               const currentQty = pMap.get(colorKey) || 0;
+               pMap.set(colorKey, currentQty + item.quantity);
+               productRestorations.set(item.productId, pMap);
+            }
+         } else if ((!deductionState || deductionState === '') && !hasValidSnapshot) {
+            // Case F: empty/unknown and no usable snapshot -> block
+            if (order.status !== 'cancelled' && order.status !== 'returned' && order.paymentStatus !== 'refunded') {
+               throw new Error("Cannot safely delete this order because its original inventory deduction state or stock snapshot is unavailable.");
+            }
+         }
+      }
+      
       batchRequests.push({
          method: 'DELETE',
          url: `/api/collections/orders/records/${orderId}`
       });
+    }
+
+    // 2. Fetch required products and construct PATCH requests
+    for (const [prodId, colorMap] of productRestorations.entries()) {
+       const product = await adminPb.collection('products').getOne(prodId);
+       
+       if (product.inventoryMode === 'color') {
+          const colorStock = { ...(product.colorStock || {}) };
+          
+          for (const [colorName, qty] of colorMap.entries()) {
+             if (!colorName) {
+                throw new Error(`This legacy order was created before color-level inventory tracking. The original color allocation is unavailable, so stock cannot be safely restored for product '${product.name || prodId}'.`);
+             }
+             if (typeof colorStock[colorName] === 'number') {
+                colorStock[colorName] += qty;
+             } else {
+                throw new Error(`Cannot restore ${product.name || prodId} - ${colorName} because this color is no longer configured for inventory.`);
+             }
+          }
+          
+          const newTotalQty = Object.values(colorStock).reduce((sum: number, q: any) => sum + Number(q), 0);
+          
+          batchRequests.push({
+             method: 'PATCH',
+             url: `/api/collections/products/records/${prodId}`,
+             body: { colorStock, quantity: newTotalQty }
+          });
+       } else {
+          let totalRestore = 0;
+          for (const [colorName, qty] of colorMap.entries()) {
+             totalRestore += qty;
+          }
+          batchRequests.push({
+             method: 'PATCH',
+             url: `/api/collections/products/records/${prodId}`,
+             body: { "quantity+": totalRestore }
+          });
+       }
     }
 
     // Since deleting orders and restoring stock can be large, we might have to split batches if > 200,

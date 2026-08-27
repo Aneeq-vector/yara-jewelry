@@ -127,10 +127,39 @@ export default function OrdersClient({ initialOrders, initialTotal, initialPages
   const handleDeleteSelected = () => {
     if (selectedOrders.length === 0) return;
     
+    const selectedOrderData = orders.filter((o: any) => selectedOrders.includes(o.id));
+    const requiresRestoration = selectedOrderData.some((o: any) => !o.stock_restored && Array.isArray(o.stock_snapshot) && o.stock_snapshot.length > 0);
+    const explicitlyNotDeducted = selectedOrderData.every((o: any) => o.stockDeductionState === 'not_deducted');
+    const alreadyRestored = selectedOrderData.every((o: any) => o.stock_restored === true);
+    
+    let confirmMessage = `Are you sure you want to delete ${selectedOrders.length} order(s)? This cannot be undone.`;
+    
+    if (selectedOrders.length === 1) {
+       if (alreadyRestored) {
+          confirmMessage = "Delete this order permanently?\n\nInventory has already been restored and will not be changed.";
+       } else if (explicitlyNotDeducted) {
+          confirmMessage = "Delete this order permanently?\n\nNo inventory was deducted for this order, so product stock will not change.";
+       } else if (requiresRestoration) {
+          confirmMessage = "Delete this order permanently?\n\nThe inventory deducted for this order will be restored automatically.";
+       } else {
+          confirmMessage = "Delete this order permanently?\n\nInventory will not be restored.";
+       }
+    } else {
+       if (alreadyRestored) {
+          confirmMessage = `Delete ${selectedOrders.length} orders permanently?\n\nInventory has already been restored and will not be changed.`;
+       } else if (explicitlyNotDeducted) {
+          confirmMessage = `Delete ${selectedOrders.length} orders permanently?\n\nNo inventory was deducted for these orders, so product stock will not change.`;
+       } else if (requiresRestoration) {
+          confirmMessage = `Delete ${selectedOrders.length} orders permanently?\n\nThe inventory deducted for these orders will be restored automatically.`;
+       } else {
+          confirmMessage = `Delete ${selectedOrders.length} orders permanently?\n\nInventory will not be restored.`;
+       }
+    }
+
     setConfirmModal({
       isOpen: true,
       title: 'Delete Orders',
-      message: `Are you sure you want to delete ${selectedOrders.length} order(s)? This cannot be undone.`,
+      message: confirmMessage,
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
         
