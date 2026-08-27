@@ -107,17 +107,180 @@ export async function duplicateProductAction(id: string) {
   }
 }
 
-// Returns admin token so the browser can upload files DIRECTLY to PocketBase
-// (bypasses Next.js/Vercel body size limits and serialization overhead)
-export async function getAdminTokenAction(): Promise<{ token?: string; pbUrl?: string; error?: string }> {
+
+const MAX_PRODUCT_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB per image
+const MAX_IMAGES = 10;
+
+export async function saveProductAction(formData: FormData, id?: string) {
   try {
     const { pb } = await validateSession();
-    const pbUrl = process.env.NEXT_PUBLIC_POCKETBASE_URL || 'https://pb.yarasl.shop';
-    return { token: pb.authStore.token, pbUrl };
+    
+    // 1. STRICTLY VALIDATE inventoryMode
+    const inventoryMode = formData.get('inventoryMode');
+    if (inventoryMode !== 'global' && inventoryMode !== 'color') {
+      return { success: false, error: 'inventoryMode must be exactly "global" or "color".' };
+    }
+
+    // 2 & 3. VALIDATE customColors SHAPE
+    const customColorsStr = formData.get('customColors') as string;
+    let customColors: any[] = [];
+    if (customColorsStr) {
+      try {
+        customColors = JSON.parse(customColorsStr);
+      } catch (e) {
+        return { success: false, error: "Invalid custom color data." };
+      }
+    }
+    
+    if (!Array.isArray(customColors)) {
+      return { success: false, error: "customColors must be an array." };
+    }
+    
+    const canonicalCustomColors = [];
+    for (const cc of customColors) {
+      if (typeof cc !== 'object' || Array.isArray(cc) || !cc) {
+        return { success: false, error: "customColors entries must be objects." };
+      }
+      if (typeof cc.name !== 'string' || !cc.name.trim() || cc.name.trim().length > 50) {
+        return { success: false, error: "customColor name must be a non-empty string under 50 characters." };
+      }
+      if (typeof cc.hex !== 'string' || !/^#[0-9A-Fa-f]{6}$/i.test(cc.hex)) {
+        return { success: false, error: `Invalid HEX code for color ${cc.name}.` };
+      }
+      canonicalCustomColors.push({
+        name: cc.name.trim(),
+        hex: cc.hex.toUpperCase()
+      });
+    }
+
+    // 4. VALIDATE PRESET COLORS
+    const ALLOWED_PRESETS = new Set([
+      'Gold', 'Silver', 'Rose Gold', 'Platinum', 'Black', 'Yellow', 'Purple', 'Green', 'Pink'
+    ]);
+    const presetColors = formData.getAll('colors');
+    for (const pc of presetColors) {
+      if (typeof pc !== 'string' || !ALLOWED_PRESETS.has(pc)) {
+        return { success: false, error: `Invalid preset color: ${pc}` };
+      }
+    }
+
+    // Check custom colors count + presets
+    if (presetColors.length + canonicalCustomColors.length > 5) {
+      return { success: false, error: 'Cannot have more than 5 colors total.' };
+    }
+
+    const uniqueNames = new Set([...presetColors, ...canonicalCustomColors.map(c => c.name)].map(n => String(n).trim().toLowerCase()));
+    if (uniqueNames.size < presetColors.length + canonicalCustomColors.length) {
+      return { success: false, error: 'Color names must be unique (case-insensitive).' };
+    }
+
+    // 9 & 10. IMAGE VALIDATION & COUNT
+    const imagesFormValues = formData.getAll('images');
+    let newFileCount = 0;
+    let existingFileCount = 0;
+    let totalSize = 0;
+    const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
+    
+    for (const val of imagesFormValues) {
+      if (val instanceof File) {
+        newFileCount++;
+        if (val.size > MAX_PRODUCT_IMAGE_SIZE) {
+          return { success: false, error: `Image ${val.name} exceeds the 2MB limit.` };
+        }
+        if (!ALLOWED_MIME.has(val.type)) {
+          return { success: false, error: `File ${val.name} has an invalid MIME type (${val.type}). Allowed: jpeg, png, webp, avif.` };
+        }
+        totalSize += val.size;
+      } else if (typeof val === 'string') {
+        existingFileCount++;
+      }
+    }
+    
+    if (newFileCount + existingFileCount > MAX_IMAGES) {
+      return { success: false, error: `Cannot have more than ${MAX_IMAGES} final images.` };
+    }
+    if (totalSize > 8 * 1024 * 1024) {
+      return { success: false, error: `Total image upload size exceeds 8MB.` };
+    }
+
+    // 5. VALIDATE colorStock keys match configuredColors EXACTLY
+    const colorStockStr = formData.get('colorStock') as string;
+    let colorStock: Record<string, number> = {};
+    if (colorStockStr) {
+      try {
+        colorStock = JSON.parse(colorStockStr);
+      } catch (e) {
+        return { success: false, error: "Invalid color stock data." };
+      }
+    }
+
+    const configuredColors = new Set([...presetColors as string[], ...canonicalCustomColors.map(c => c.name)]);
+    
+    if (inventoryMode === 'color') {
+      const canonicalColorStock: Record<string, number> = {};
+      let finalQty = 0;
+      
+      // Check for unknown keys
+      for (const key of Object.keys(colorStock)) {
+        if (!configuredColors.has(key)) {
+          return { success: false, error: `colorStock contains unknown color: ${key}` };
+        }
+      }
+      
+      // Ensure every configured color gets an authoritative stock entry (default 0)
+      for (const colorName of configuredColors) {
+         const stock = Number(colorStock[colorName]);
+         if (isNaN(stock) || stock < 0 || !Number.isInteger(stock)) {
+           return { success: false, error: 'Color stock must be a non-negative integer.' };
+         }
+         canonicalColorStock[colorName] = stock;
+         finalQty += stock;
+      }
+      
+      // 6. SERVER-DERIVE COLOR TOTAL
+      formData.set('quantity', finalQty.toString());
+      formData.set('inStock', finalQty > 0 ? 'true' : 'false');
+      formData.set('colorStock', JSON.stringify(canonicalColorStock));
+      
+      // 8. FIRST GLOBAL -> COLOR CONVERSION
+      if (id) {
+        const originalProduct = await pb.collection('products').getOne(id);
+        if (originalProduct.inventoryMode === 'global' || !originalProduct.inventoryMode) {
+          if (finalQty !== originalProduct.quantity) {
+             return { success: false, error: `Tamper alert: Converted color stock sum (${finalQty}) must exactly match existing global quantity (${originalProduct.quantity}).` };
+          }
+        }
+      }
+    } else {
+      // 7. GLOBAL MODE AUTHORITATIVE
+      const submittedQty = Number(formData.get('quantity'));
+      if (isNaN(submittedQty) || submittedQty < 0 || !Number.isInteger(submittedQty)) {
+        return { success: false, error: 'Global quantity must be a non-negative integer.' };
+      }
+      formData.set('quantity', submittedQty.toString());
+      formData.set('inStock', submittedQty > 0 ? 'true' : 'false');
+      formData.set('colorStock', JSON.stringify({}));
+    }
+    
+    formData.set('customColors', JSON.stringify(canonicalCustomColors));
+
+    let record;
+    if (id) {
+      record = await pb.collection('products').update(id, formData);
+    } else {
+      record = await pb.collection('products').create(formData);
+    }
+    
+    // 14. PRODUCT SAVE PERFORMANCE - Background invalidation
+    revalidateProductsAction().catch(console.error);
+    
+    return { success: true, product: toPlain(record) };
   } catch (error: any) {
-    return { error: error.message || 'Failed to get admin token' };
+    console.error('saveProductAction error:', error.message);
+    return { success: false, error: error.message || 'Failed to save product' };
   }
 }
+
 
 export async function revalidateProductsAction() {
   revalidateAll();

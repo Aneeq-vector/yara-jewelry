@@ -12,16 +12,16 @@ interface CartStore {
   clearCart: () => void;
   getTotal: () => number;
   getItemCount: () => number;
-  getCartProductQuantity: (productId: string) => number;
+  getCartProductQuantity: (productId: string, color?: string) => number;
 }
 
 export const useCartStore = create<CartStore>()(
   persist(
     (set, get) => ({
       items: [],
-      getCartProductQuantity: (productId: string) => {
+      getCartProductQuantity: (productId: string, color?: string) => {
         return get().items.reduce((total, item) => {
-          if (!item.isCustomBox && item.product.id === productId) {
+          if (!item.isCustomBox && item.product.id === productId && (color ? item.selectedColor === color : true)) {
             return total + item.quantity;
           }
           return total;
@@ -51,20 +51,24 @@ export const useCartStore = create<CartStore>()(
           return { success: true };
         }
 
-        const currentQtyInCart = get().getCartProductQuantity(product.id);
-        const remainingStock = Math.max(0, product.quantity - currentQtyInCart);
+        const currentQtyInCart = get().getCartProductQuantity(product.id, color);
+        const maxStock = product.inventoryMode === 'color' && color && product.colorStock 
+            ? (product.colorStock[color] || 0) 
+            : product.quantity;
+            
+        const remainingStock = Math.max(0, maxStock - currentQtyInCart);
 
         if (quantity > remainingStock) {
           if (remainingStock === 0) {
-            return { success: false, message: `Only ${product.quantity} available. You already have ${currentQtyInCart} in your cart.` };
+            return { success: false, message: `Only ${maxStock} available. You already have ${currentQtyInCart} in your cart.` };
           } else {
             return { success: false, message: `Only ${remainingStock} more available to add.` };
           }
         }
 
-        // Merge same standard product ignoring selected color differences as per requirements
+        // Merge same standard product matching selected color differences as per requirements
         const existing = items.find(
-          (item) => !item.isCustomBox && item.product.id === product.id
+          (item) => !item.isCustomBox && item.product.id === product.id && item.selectedColor === color
         );
         
         if (existing) {
@@ -114,18 +118,22 @@ export const useCartStore = create<CartStore>()(
           return { success: true };
         }
 
-        // Calculate total of ALL instances of this product minus this specific cart item's current qty
+        // Calculate total of ALL instances of this product & color minus this specific cart item's current qty
         const otherQty = get().items.reduce((total, item) => {
-          if (!item.isCustomBox && item.product.id === itemToUpdate.product.id && item.cartItemId !== cartItemId) {
+          if (!item.isCustomBox && item.product.id === itemToUpdate.product.id && item.selectedColor === itemToUpdate.selectedColor && item.cartItemId !== cartItemId) {
             return total + item.quantity;
           }
           return total;
         }, 0);
         
-        const remainingStockForThisItem = itemToUpdate.product.quantity - otherQty;
+        const maxStock = itemToUpdate.product.inventoryMode === 'color' && itemToUpdate.selectedColor && itemToUpdate.product.colorStock 
+            ? (itemToUpdate.product.colorStock[itemToUpdate.selectedColor] || 0) 
+            : itemToUpdate.product.quantity;
+
+        const remainingStockForThisItem = Math.max(0, maxStock - otherQty);
         
         if (quantity > remainingStockForThisItem) {
-           return { success: false, message: `Cannot exceed available stock of ${itemToUpdate.product.quantity}` };
+           return { success: false, message: `Cannot exceed available stock of ${maxStock}` };
         }
         
         set({
@@ -159,17 +167,25 @@ export const useCartStore = create<CartStore>()(
           if (item.isCustomBox) {
             merged.push(item);
           } else {
-            const existing = merged.find(i => !i.isCustomBox && i.product.id === item.product.id);
+            const existing = merged.find(i => !i.isCustomBox && i.product.id === item.product.id && i.selectedColor === item.selectedColor);
             if (existing) {
               existing.quantity += item.quantity;
+              
+              const maxStock = existing.product.inventoryMode === 'color' && existing.selectedColor && existing.product.colorStock 
+                  ? (existing.product.colorStock[existing.selectedColor] || 0) 
+                  : existing.product.quantity;
+                  
               // Cap at max stock
-              if (existing.quantity > existing.product.quantity) {
-                 existing.quantity = existing.product.quantity;
+              if (existing.quantity > maxStock) {
+                 existing.quantity = maxStock;
               }
             } else {
+              const maxStock = item.product.inventoryMode === 'color' && item.selectedColor && item.product.colorStock 
+                  ? (item.product.colorStock[item.selectedColor] || 0) 
+                  : item.product.quantity;
               // Cap at max stock
-              if (item.quantity > item.product.quantity) {
-                item.quantity = item.product.quantity;
+              if (item.quantity > maxStock) {
+                item.quantity = maxStock;
               }
               merged.push({...item});
             }

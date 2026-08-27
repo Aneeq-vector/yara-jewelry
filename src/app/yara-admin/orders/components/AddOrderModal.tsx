@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { X, Search, Plus, Minus, Trash2, Package, Loader2, CheckCircle, Upload } from 'lucide-react';
 import { createManualOrderAction, ManualOrderItem } from '@/app/actions/orders';
 import { useProductOptions } from '@/lib/hooks/use-products';
+import { getProductColors } from '@/lib/colors';
 import { Product } from '@/types';
 
 const SOURCES = ['Instagram', 'Facebook', 'WhatsApp', 'Walk-in', 'Phone Call', 'Other'];
@@ -80,9 +81,9 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
     // Build initial colorQuantities:
     // If product has colors, start all at 0 so admin sets counts explicitly
     // If no colors, use '' key with qty 1
-    const colors = product.colors ?? [];
-    const colorQuantities: Record<string, number> = colors.length > 0
-      ? Object.fromEntries(colors.map(c => [c, 0]))
+    const colorsInfo = getProductColors(product);
+    const colorQuantities: Record<string, number> = colorsInfo.length > 0
+      ? Object.fromEntries(colorsInfo.map(c => [c.name, 0]))
       : { '': 1 };
 
     setOrderItems(prev => [...prev, {
@@ -97,10 +98,31 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
 
   const updateColorQty = (itemIndex: number, color: string, delta: number) => {
     const updated = [...orderItems];
-    const current = updated[itemIndex].colorQuantities[color] ?? 0;
+    const item = updated[itemIndex];
+    const product = allProducts.find(p => p.id === item.productId);
+    
+    const current = item.colorQuantities[color] ?? 0;
+    
+    let maxAllowed = Infinity;
+    if (deductStock && product) {
+       if (product.inventoryMode === 'color') {
+          maxAllowed = product.colorStock?.[color] ?? 0;
+       } else {
+          maxAllowed = product.quantity;
+       }
+    }
+    
+    // Also consider other colors sharing the global stock if inventoryMode === 'global'
+    if (deductStock && product && product.inventoryMode !== 'color') {
+       const otherColorsTotal = Object.entries(item.colorQuantities).filter(([k]) => k !== color).reduce((s, [_, q]) => s + q, 0);
+       maxAllowed = Math.max(0, product.quantity - otherColorsTotal);
+    }
+    
+    const newQty = Math.max(0, Math.min(current + delta, maxAllowed));
+    
     updated[itemIndex].colorQuantities = {
-      ...updated[itemIndex].colorQuantities,
-      [color]: Math.max(0, current + delta),
+      ...item.colorQuantities,
+      [color]: newQty,
     };
     setOrderItems(updated);
   };
@@ -321,26 +343,35 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
 
                         {/* Per-color quantity rows */}
                         <div className="space-y-2">
-                          {Object.entries(item.colorQuantities).map(([color, qty]) => (
-                            <div key={color} className="flex items-center justify-between">
+                          {Object.entries(item.colorQuantities).map(([color, qty]) => {
+                            const isOutOfStock = deductStock && color !== '' && productData?.inventoryMode === 'color' && (productData.colorStock?.[color] || 0) <= 0;
+                            const maxStock = color !== '' && productData?.inventoryMode === 'color' ? (productData.colorStock?.[color] || 0) : (productData?.quantity || 0);
+
+                            return (
+                            <div key={color} className={`flex items-center justify-between ${isOutOfStock ? 'opacity-50' : ''}`}>
                               {hasColors ? (
-                                <span className={`text-xs font-ui font-semibold px-2.5 py-1 rounded-full border ${qty > 0 ? 'bg-burgundy text-white border-burgundy' : 'text-burgundy/50 border-burgundy/20 bg-white'}`}>
-                                  {color}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-xs font-ui font-semibold px-2.5 py-1 rounded-full border ${qty > 0 ? 'bg-burgundy text-white border-burgundy' : 'text-burgundy/50 border-burgundy/20 bg-white'}`}>
+                                    {color}
+                                  </span>
+                                  {isOutOfStock && <span className="text-[10px] text-red-500 font-ui font-bold">Out of stock</span>}
+                                </div>
                               ) : (
                                 <span className="text-xs font-body text-burgundy/50">Quantity</span>
                               )}
                               <div className="flex items-center gap-2.5">
                                 <button
                                   onClick={() => updateColorQty(idx, color, -1)}
-                                  className="w-6 h-6 rounded-full bg-white border border-burgundy/15 text-burgundy hover:bg-burgundy hover:text-white transition-colors flex items-center justify-center"
+                                  className="w-6 h-6 rounded-full bg-white border border-burgundy/15 text-burgundy hover:bg-burgundy hover:text-white transition-colors flex items-center justify-center disabled:opacity-30"
+                                  disabled={isOutOfStock}
                                 >
                                   <Minus size={11} />
                                 </button>
                                 <span className="text-sm font-ui font-bold text-burgundy w-6 text-center">{qty}</span>
                                 <button
                                   onClick={() => updateColorQty(idx, color, 1)}
-                                  className="w-6 h-6 rounded-full bg-white border border-burgundy/15 text-burgundy hover:bg-burgundy hover:text-white transition-colors flex items-center justify-center"
+                                  className="w-6 h-6 rounded-full bg-white border border-burgundy/15 text-burgundy hover:bg-burgundy hover:text-white transition-colors flex items-center justify-center disabled:opacity-30"
+                                  disabled={isOutOfStock || (deductStock && qty >= maxStock)}
                                 >
                                   <Plus size={11} />
                                 </button>
@@ -351,7 +382,7 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
                                 )}
                               </div>
                             </div>
-                          ))}
+                          )})}
                         </div>
                       </div>
                     );

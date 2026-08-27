@@ -111,6 +111,11 @@ export async function sendInvoiceEmail(details: InvoiceDetails) {
           } else if (item.extras) {
              meta = item.extras;
           }
+          
+          if (item.color) {
+             const colorStr = `Color: ${item.color}`;
+             meta = meta ? `${meta} | ${colorStr}` : colorStr;
+          }
         }
         
         const lineTotal = price * quantity;

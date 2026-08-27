@@ -34,6 +34,9 @@ export function mapRecordToProduct(record: RecordModel): Product {
     quantity: record.quantity ?? 0,
     isActive: record.is_active ?? true,
     colors: record.colors || [],
+    customColors: record.customColors || [],
+    inventoryMode: record.inventoryMode || 'global',
+    colorStock: record.colorStock || {},
     tags: record.tags || [],
   };
 }
@@ -43,7 +46,7 @@ export async function getAllProducts(): Promise<Product[]> {
     const pb = createClient();
     const records = await pb.collection('products').getFullList({
       expand: 'category',
-      fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,imagePositions,shortDescription,description,badge,colors,tags,material,weight,expand.category.id,expand.category.name',
+      fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,imagePositions,shortDescription,description,badge,colors,customColors,inventoryMode,colorStock,tags,material,weight,expand.category.id,expand.category.name',
       $autoCancel: false,
     });
     return records.map(mapRecordToProduct);
@@ -74,7 +77,7 @@ export async function getProductsByCategory(category: string, limit = 500): Prom
       filter: `category="${category}"`,
       $autoCancel: false,
       expand: 'category',
-      fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,imagePositions,shortDescription,description,badge,colors,tags,material,weight,expand.category.id,expand.category.name',
+      fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,imagePositions,shortDescription,description,badge,colors,customColors,inventoryMode,colorStock,tags,material,weight,expand.category.id,expand.category.name',
     });
     return records.items.map(mapRecordToProduct);
   } catch (error) {

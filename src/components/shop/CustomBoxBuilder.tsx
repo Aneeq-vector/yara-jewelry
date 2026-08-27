@@ -19,6 +19,7 @@ import {
 import { useCartStore } from '@/lib/store/cart-store';
 import { Product, Category } from '@/types';
 import { formatPrice } from '@/lib/utils';
+import { getProductColors } from '@/lib/colors';
 import { useRouter } from 'next/navigation';
 import { BRAND } from '@/lib/constants';
 
@@ -196,22 +197,37 @@ export default function CustomBoxBuilder({
                 className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6"
               >
                 {availableProducts.map((product) => {
-                  const activeColor = activeColors[product.id] || product.colors?.[0] || undefined;
+                  const colorsInfo = getProductColors(product);
+                  const activeColorObj = activeColors[product.id] 
+                     ? colorsInfo.find(c => c.name === activeColors[product.id]) 
+                     : colorsInfo[0];
+                  
+                  const activeColor = activeColorObj?.name;
+                  
                   const totalCount = selectedItems.filter((i) => i.product.id === product.id).reduce((s, i) => s + i.quantity, 0);
                   const selectedCount =
                     selectedItems.find((i) => i.product.id === product.id && i.color === activeColor)?.quantity || 0;
 
+                  // determine stock
+                  let maxStock = product.quantity;
+                  if (product.inventoryMode === 'color') {
+                     maxStock = activeColorObj ? (activeColorObj.stock || 0) : 0;
+                  }
+                  
+                  const isOOS = maxStock <= 0;
+                  const canAddMore = selectedCount < maxStock;
+
                   return (
                     <div
                       key={product.id}
-                      className="relative group bg-champagne/20 rounded-2xl p-3 border border-transparent hover:border-burgundy/20 transition-colors"
+                      className={`relative group rounded-2xl p-3 border border-transparent transition-colors ${isOOS && selectedCount === 0 ? 'bg-gray-100 opacity-60' : 'bg-champagne/20 hover:border-burgundy/20'}`}
                     >
-                      <div className="relative aspect-square rounded-xl overflow-hidden mb-3">
+                      <div className="relative aspect-square rounded-xl overflow-hidden mb-3 bg-white">
                         <Image
                           src={product.images[0]}
                           alt={product.name}
                           fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                          className="object-cover transition-transform duration-500 group-hover:scale-105"
+                          className={`object-cover transition-transform duration-500 ${isOOS && selectedCount === 0 ? 'grayscale' : 'group-hover:scale-105'}`}
                           unoptimized
                         />
                         <Link
@@ -222,8 +238,13 @@ export default function CustomBoxBuilder({
                           View details
                         </Link>
                         {totalCount > 0 && (
-                          <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-burgundy text-ivory flex items-center justify-center font-ui text-xs font-bold z-30">
+                          <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-burgundy text-ivory flex items-center justify-center font-ui text-xs font-bold z-30 shadow-md">
                             {totalCount}
+                          </div>
+                        )}
+                        {isOOS && selectedCount === 0 && (
+                          <div className="absolute bottom-2 left-2 right-2 bg-black/60 text-white text-[10px] uppercase font-bold text-center py-1 rounded backdrop-blur-sm z-10">
+                            Out of Stock
                           </div>
                         )}
                       </div>
@@ -234,7 +255,7 @@ export default function CustomBoxBuilder({
                         <span className="font-body font-bold text-sm text-burgundy">
                           {formatPrice(product.price)}
                         </span>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 relative z-30">
                           {selectedCount > 0 && (
                             <button
                               aria-label="Remove item"
@@ -246,26 +267,34 @@ export default function CustomBoxBuilder({
                           )}
                           <button
                             aria-label="Add item"
-                            onClick={() => handleAddItem(product, activeColor)}
-                            className="p-1.5 rounded-full bg-burgundy/10 text-burgundy hover:bg-burgundy hover:text-ivory transition-colors"
+                            onClick={() => {
+                               if (canAddMore) {
+                                  handleAddItem(product, activeColor);
+                               }
+                            }}
+                            disabled={!canAddMore}
+                            className={`p-1.5 rounded-full transition-colors ${!canAddMore ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-burgundy/10 text-burgundy hover:bg-burgundy hover:text-ivory'}`}
                           >
                             <Plus size={14} />
                           </button>
                         </div>
                       </div>
                       
-                      {product.colors && product.colors.length > 0 && (
-                        <div className="flex items-center gap-1.5 mt-2">
-                          {product.colors.map((c) => {
-                            const l = c.toLowerCase();
-                            const cssColor = l === 'gold' ? '#FFD700' : l === 'silver' ? '#C0C0C0' : l === 'rose gold' ? '#B76E79' : l === 'platinum' ? '#E5E4E2' : l === 'black' ? '#222222' : c;
+                      {colorsInfo.length > 0 && (
+                        <div className="flex items-center flex-wrap gap-1.5 mt-2 relative z-30">
+                          {colorsInfo.map((cInfo) => {
+                            const isColorOOS = product.inventoryMode === 'color' && (cInfo.stock || 0) <= 0;
+                            const isSelected = activeColor === cInfo.name;
+                            const inCart = selectedItems.find((i) => i.product.id === product.id && i.color === cInfo.name)?.quantity || 0;
+                            
                             return (
                               <button
-                                key={c}
-                                onClick={() => setActiveColors(prev => ({ ...prev, [product.id]: c }))}
-                                className={`w-4 h-4 rounded-full border border-burgundy/20 ${activeColor === c ? 'ring-2 ring-burgundy/50 ring-offset-1 ring-offset-champagne/20' : ''}`}
-                                style={{ backgroundColor: cssColor }}
-                                title={c}
+                                key={cInfo.name}
+                                onClick={() => setActiveColors(prev => ({ ...prev, [product.id]: cInfo.name }))}
+                                disabled={isColorOOS && inCart === 0}
+                                className={`w-4 h-4 rounded-full border border-burgundy/30 transition-all ${isSelected ? 'ring-2 ring-burgundy/50 ring-offset-1 ring-offset-champagne/20 scale-110' : ''} ${isColorOOS && inCart === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:scale-110'}`}
+                                style={{ backgroundColor: cInfo.hex || '#ccc' }}
+                                title={`${cInfo.name}${isColorOOS && inCart === 0 ? ' (Out of Stock)' : ''}`}
                               />
                             );
                           })}

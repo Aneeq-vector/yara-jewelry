@@ -19,6 +19,8 @@ import { useCartStore } from '@/lib/store/cart-store';
 import { formatPrice } from '@/lib/utils';
 import { BRAND } from '@/lib/constants';
 
+import { getProductColors } from '@/lib/colors';
+
 interface FixedBoxViewerProps {
   box: GiftBox;
   categories?: Category[];
@@ -71,6 +73,11 @@ export default function FixedBoxViewer({ box, categories = [] }: FixedBoxViewerP
   };
 
   const handleAddToCart = () => {
+    const mappedItems = box.fixedItems.map(p => ({
+      ...p,
+      selectedColor: colorSelections[p.id] || getProductColors(p)[0]?.name
+    }));
+
     addToCart(
       {
         id: box.id,
@@ -92,7 +99,7 @@ export default function FixedBoxViewer({ box, categories = [] }: FixedBoxViewerP
       1,
       undefined,
       true,
-      box.fixedItems,
+      mappedItems,
       totalPrice,
       'fixed',
       box.id

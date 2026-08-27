@@ -43,7 +43,7 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { ProductsPagination } from './components/ProductsPagination';
 import {
   revalidateProductsAction,
-  getAdminTokenAction,
+  saveProductAction,
 } from '@/app/actions/products';
 import { useAdminProducts, useAdminCategories } from '@/lib/hooks/use-admin-products';
 import { useDeleteProduct, useDeleteProducts, useDuplicateProduct } from '@/lib/hooks/use-products';
@@ -80,6 +80,9 @@ export interface RawProduct {
   quantity?: number;
   inStock?: boolean;
   colors?: string[];
+  customColors?: { name: string; hex: string }[];
+  colorStock?: Record<string, number>;
+  inventoryMode?: 'global' | 'color';
   tags?: string[];
   created: string;
   updated: string;
@@ -146,6 +149,9 @@ function emptyForm() {
     quantity: '',
     inStock: true,
     colors: [] as string[],
+    customColors: [] as { name: string; hex: string }[],
+    colorStock: {} as Record<string, number>,
+    inventoryMode: 'global' as 'global' | 'color',
     tags: [] as string[],
     unifiedImages: [] as FormImage[],
   };
@@ -247,6 +253,9 @@ function ProductFormModal({
         quantity: product.quantity?.toString() ?? '',
         inStock: product.inStock ?? true,
         colors: product.colors ?? [],
+        customColors: product.customColors ?? [],
+        colorStock: product.colorStock ?? {},
+        inventoryMode: product.inventoryMode || 'global',
         tags: product.tags ?? [],
         unifiedImages: (product.images ?? []).map((img, i) => ({
           id: img,
@@ -261,6 +270,9 @@ function ProductFormModal({
   });
 
   const [saving, setSaving] = useState(false);
+  const [showCustomColorForm, setShowCustomColorForm] = useState(false);
+  const [customColorName, setCustomColorName] = useState('');
+  const [customColorHex, setCustomColorHex] = useState('#000000');
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const imageInputRef = useRef<HTMLInputElement>(null);
 
@@ -313,10 +325,21 @@ function ProductFormModal({
     if (!form.price || isNaN(Number(form.price))) errs.price = 'Valid price is required';
     if (!form.shortDescription.toString().trim()) errs.shortDescription = 'Short description is required';
     if (!form.description.toString().trim()) errs.description = 'Description is required';
-    if (form.quantity === '') {
-       errs.quantity = 'Enter a stock quantity (or 0 if out of stock).';
-    } else if (Number(form.quantity) < 0) {
-       errs.quantity = 'Quantity cannot be negative.';
+    if (form.inventoryMode === 'global') {
+      if (form.quantity === '') {
+         errs.quantity = 'Enter a stock quantity (or 0 if out of stock).';
+      } else if (Number(form.quantity) < 0) {
+         errs.quantity = 'Quantity cannot be negative.';
+      }
+    } else {
+      // Color mode validation
+      if (mode === 'edit' && product && product.inventoryMode !== 'color') {
+         // Converting from global to color for the first time
+         const totalColorStock = Object.values(form.colorStock).reduce((sum, q) => sum + (Number(q) || 0), 0);
+         if (totalColorStock !== (product.quantity || 0)) {
+           errs.quantity = `Total color stock (${totalColorStock}) must equal existing global quantity (${product.quantity}) during conversion.`;
+         }
+      }
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -351,6 +374,25 @@ function ProductFormModal({
       // Colors & tags — PocketBase accepts repeated keys for arrays
       (form.colors as string[]).forEach(c => fd.append('colors', c));
       (form.tags as string[]).forEach(t => fd.append('tags', t));
+      fd.append('inventoryMode', form.inventoryMode);
+      fd.append('customColors', JSON.stringify(form.customColors));
+      
+      let finalQty = 0;
+      if (form.inventoryMode === 'color') {
+        const colorStockMap = form.colorStock as Record<string, number>;
+        const validColorStock: Record<string, number> = {};
+        const activeColors = [...(form.colors as string[]), ...(form.customColors as any[]).map(c=>c.name)];
+        
+        for (const c of activeColors) {
+          validColorStock[c] = Number(colorStockMap[c]) || 0;
+          finalQty += validColorStock[c];
+        }
+        fd.append('colorStock', JSON.stringify(validColorStock));
+        fd.set('quantity', finalQty.toString());
+        fd.set('inStock', finalQty > 0 ? 'true' : 'false');
+      } else {
+        fd.append('colorStock', JSON.stringify({}));
+      }
 
       // Extract positions in the EXACT order of unifiedImages
       const positionsArray = form.unifiedImages.map(img => img.position);
@@ -377,48 +419,14 @@ function ProductFormModal({
         }
       }
       
-      // Step 1: Get admin token from server action
-      const tokenRes = await getAdminTokenAction();
+      // Call authoritative server action
+      const actionRes = await saveProductAction(fd, mode === 'edit' ? product?.id : undefined);
       
-      if (!tokenRes?.token || !tokenRes?.pbUrl) {
-        throw new Error(tokenRes?.error || 'Could not get upload credentials');
-      }
-
-      const proxyUrl =
-        mode === 'add'
-          ? `https://pb.yarasl.shop/api/collections/products/records`
-          : `https://pb.yarasl.shop/api/collections/products/records/${product!.id}`;
-      const method = mode === 'add' ? 'POST' : 'PATCH';
-
-      const response = await fetch(proxyUrl, {
-        method,
-        headers: {
-          Authorization: `Bearer ${tokenRes.token}`,
-        },
-        body: fd,
-      });
-
-      let data;
-      const text = await response.text();
-
-      try {
-        data = JSON.parse(text);
-      } catch (err) {
-        console.error('Non-JSON response from rewrite:', text.substring(0, 500));
-        throw new Error(`Server returned an invalid response. Status: ${response.status}`);
-      }
-
-      if (!response.ok) {
-        const details = data?.data
-          ? Object.entries(data.data).map(([k, v]: any) => `${k}: ${v?.message}`).join(', ')
-          : '';
-        throw new Error(data?.message || data?.error || `HTTP ${response.status}${details ? ` (${details})` : ''}`);
+      if (!actionRes.success) {
+        throw new Error(actionRes.error || 'Failed to save product');
       }
       
-      // Revalidate Next.js cache in the background (don't block UI)
-      revalidateProductsAction().catch(console.error);
-      
-      res = { success: true, product: data };
+      res = { success: true, product: actionRes.product };
 
     } catch (err: any) {
       console.error('Product save error:', err);
@@ -487,7 +495,16 @@ function ProductFormModal({
               </div>
               <div>
                 <label className="block text-xs font-ui font-semibold text-burgundy/70 uppercase tracking-wide mb-1">Quantity</label>
-                <input id="quantity-input" aria-label="Quantity" type="number" min={0} step="1" placeholder="0" value={form.quantity.toString()} onChange={e => set('quantity', e.target.value)} className={inp('quantity')} />
+                <input 
+  id="quantity-input" 
+  aria-label="Quantity" 
+  type="number" min={0} step="1" placeholder="0" 
+  value={form.inventoryMode === 'color' ? Object.values(form.colorStock as Record<string,number>).reduce((sum, q) => sum + (Number(q) || 0), 0) : form.quantity.toString()} 
+  onChange={e => set('quantity', e.target.value)} 
+  disabled={form.inventoryMode === 'color'}
+  className={`${inp('quantity')} ${form.inventoryMode === 'color' ? 'bg-gray-100 cursor-not-allowed text-burgundy/50' : ''}`} 
+/>
+{form.inventoryMode === 'color' && <p className="text-[10px] text-burgundy/50 mt-1">Auto-calculated from color stock</p>}
                 {errors.quantity && <p className="text-xs text-red-500 mt-1">{errors.quantity}</p>}
               </div>
             </div>
@@ -577,10 +594,100 @@ function ProductFormModal({
             </div>
           </section>
 
-          {/* Colors & Tags */}
+          {/* Inventory Mode & Colors */}
           <section className="space-y-4">
-            <ChipPicker label="Colors (max 5)" options={COLOR_OPTIONS} selected={form.colors as string[]} onChange={v => set('colors', v)} limit={5} />
-            <ChipPicker label="Tags (max 15)" options={TAG_OPTIONS} selected={form.tags as string[]} onChange={v => set('tags', v)} limit={15} />
+            <div className="bg-ivory/30 p-4 rounded-xl border border-burgundy/10">
+              <label className="block text-xs font-ui font-semibold text-burgundy/70 uppercase tracking-wide mb-2">Inventory Tracking Mode</label>
+              <select 
+                value={form.inventoryMode} 
+                onChange={e => set('inventoryMode', e.target.value)} 
+                className={inp('inventoryMode')}
+              >
+                <option value="global">Global (Single Stock)</option>
+                <option value="color">Per-Color Stock</option>
+              </select>
+              <p className="text-[10px] text-burgundy/50 mt-1">
+                {form.inventoryMode === 'global' ? 'Inventory is tracked at the product level.' : 'Inventory is tracked per individual color variant. Total product quantity will be calculated automatically.'}
+              </p>
+            </div>
+
+            <ChipPicker 
+              label="Preset Colors (max 5 combined with custom)" 
+              options={COLOR_OPTIONS} 
+              selected={form.colors as string[]} 
+              onChange={v => {
+                if (v.length + (form.customColors as any[]).length > 5) {
+                   addToast('Maximum 5 colors allowed total', 'error');
+                   return;
+                }
+                set('colors', v);
+              }} 
+            />
+            
+            <div className="mt-4">
+              <label className="block text-xs font-ui font-semibold text-burgundy/70 uppercase tracking-wide mb-2">Custom Colors</label>
+              <div className="flex flex-col gap-2">
+                {(form.customColors as any[]).map((c, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full border border-burgundy/20" style={{backgroundColor: c.hex}}></div>
+                    <span className="text-sm font-body">{c.name} ({c.hex})</span>
+                    <button type="button" onClick={() => {
+                        const newCustom = [...(form.customColors as any[])];
+                        newCustom.splice(i, 1);
+                        set('customColors', newCustom);
+                    }} className="text-red-500 hover:bg-red-50 p-1 rounded"><Trash2 size={14}/></button>
+                  </div>
+                ))}
+                
+                {(form.colors as string[]).length + (form.customColors as any[]).length < 5 && (
+                  <button type="button" onClick={() => {
+                     const name = window.prompt("Enter custom color name:");
+                     if (!name) return;
+                     const hex = window.prompt("Enter custom HEX code (e.g. #FF0000):");
+                     if (!hex) return;
+                     
+                     // check dup
+                     const exists = (form.customColors as any[]).some(c => c.name.toLowerCase() === name.toLowerCase()) || (form.colors as string[]).some(c => c.toLowerCase() === name.toLowerCase());
+                     if (exists) {
+                       addToast('Color already exists', 'error');
+                       return;
+                     }
+                     set('customColors', [...(form.customColors as any[]), { name, hex }]);
+                  }} className="text-xs font-ui flex items-center gap-1 text-burgundy bg-burgundy/5 hover:bg-burgundy/10 w-max px-3 py-1.5 rounded-full mt-1">
+                    <Plus size={12}/> Add Custom Color
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {form.inventoryMode === 'color' && (
+              <div className="bg-ivory/50 p-4 rounded-xl border border-burgundy/10 mt-4">
+                 <label className="block text-xs font-ui font-semibold text-burgundy/70 uppercase tracking-wide mb-3">Color Inventory Quantities</label>
+                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                   {[...(form.colors as string[]), ...(form.customColors as any[]).map(c => c.name)].map(cName => (
+                      <div key={cName}>
+                        <label className="block text-[10px] text-burgundy/60 mb-1">{cName}</label>
+                        <input 
+                          type="number" min={0} 
+                          value={(form.colorStock as Record<string,number>)[cName] ?? ''} 
+                          onChange={e => {
+                             set('colorStock', {
+                               ...(form.colorStock as Record<string,number>),
+                               [cName]: parseInt(e.target.value) || 0
+                             });
+                          }}
+                          className={inp('colorStock')}
+                          placeholder="0"
+                        />
+                      </div>
+                   ))}
+                 </div>
+              </div>
+            )}
+
+            <div className="pt-2">
+              <ChipPicker label="Tags (max 15)" options={TAG_OPTIONS} selected={form.tags as string[]} onChange={v => set('tags', v)} limit={15} />
+            </div>
           </section>
 
           {/* Images */}

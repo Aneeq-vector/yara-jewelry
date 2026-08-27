@@ -2,6 +2,7 @@
 
 import { getServerSession, validateSession, getAdminClient } from '@/lib/pocketbase-server';
 import { revalidatePath } from 'next/cache';
+import { validateColorStock, normalizeColorName } from '@/lib/colors';
 
 const FALLBACK_BOX_ID = 'customize-gift-box-fallback';
 const FALLBACK_BOX_PRICE = 400;
@@ -101,7 +102,18 @@ export async function createOrderAction(formData: FormData) {
     });
 
     let calculatedSubtotal = 0;
-    const stockDeductions: Record<string, number> = {};
+    const variantDeductions = new Map<string, { productId: string; color?: string; quantity: number }>();
+    
+    function addVariantDeduction(productId: string, quantity: number, color?: string) {
+      const normalizedColor = color ? normalizeColorName(color) : undefined;
+      const key = normalizedColor ? `${productId}::${normalizedColor}` : productId;
+      const existing = variantDeductions.get(key);
+      if (existing) {
+        existing.quantity += quantity;
+      } else {
+        variantDeductions.set(key, { productId, color, quantity });
+      }
+    }
     const cartDetails: any[] = [];
     const finalProductIds = new Set<string>();
 
@@ -121,12 +133,17 @@ export async function createOrderAction(formData: FormData) {
         const boxItemsArr = [];
         const fixedItems = dbBox.expand?.fixed_items ? (Array.isArray(dbBox.expand.fixed_items) ? dbBox.expand.fixed_items : [dbBox.expand.fixed_items]) : [];
 
+        const submittedBoxItems = Array.isArray(item.boxItems) ? item.boxItems : [];
         for (const dbInner of fixedItems) {
           const p = Number(dbInner.price) || 0;
           innerTotal += p;
           finalProductIds.add(dbInner.id);
-          stockDeductions[dbInner.id] = (stockDeductions[dbInner.id] || 0) + qty;
-          const extras = [dbInner.material ? `Material: ${dbInner.material}` : '', dbInner.weight ? `Weight: ${dbInner.weight}` : ''].filter(Boolean).join(', ');
+          
+          const submittedInner = submittedBoxItems.find((b: any) => b.id === dbInner.id);
+          const selectedColor = submittedInner?.selectedColor;
+          addVariantDeduction(dbInner.id, qty, selectedColor);
+          
+          const extras = [selectedColor ? `Color: ${selectedColor}` : '', dbInner.material ? `Material: ${dbInner.material}` : '', dbInner.weight ? `Weight: ${dbInner.weight}` : ''].filter(Boolean).join(', ');
           boxItemsArr.push(`${dbInner.name}${extras ? ` [${extras}]` : ''}`);
         }
 
@@ -169,7 +186,7 @@ export async function createOrderAction(formData: FormData) {
             innerTotal += p;
 
             finalProductIds.add(dbInner.id);
-            stockDeductions[dbInner.id] = (stockDeductions[dbInner.id] || 0) + qty;
+            addVariantDeduction(dbInner.id, qty, b.selectedColor);
 
             const extras = [b.selectedColor ? `Color: ${b.selectedColor}` : '', dbInner.material ? `Material: ${dbInner.material}` : '', dbInner.weight ? `Weight: ${dbInner.weight}` : ''].filter(Boolean).join(', ');
             boxItemsArr.push(`${dbInner.name}${extras ? ` [${extras}]` : ''}`);
@@ -197,7 +214,7 @@ export async function createOrderAction(formData: FormData) {
         calculatedSubtotal += lineTotal;
 
         finalProductIds.add(dbProduct.id);
-        stockDeductions[dbProduct.id] = (stockDeductions[dbProduct.id] || 0) + qty;
+        addVariantDeduction(dbProduct.id, qty, item.selectedColor);
 
         const extras = [item.selectedColor ? `Color: ${item.selectedColor}` : '', dbProduct.material ? `Material: ${dbProduct.material}` : '', dbProduct.weight ? `Weight: ${dbProduct.weight}` : ''].filter(Boolean).join(', ');
         const codeStr = dbProduct.productCode ? ` (${dbProduct.productCode})` : '';
@@ -247,7 +264,7 @@ export async function createOrderAction(formData: FormData) {
       status: 'pending',
       paymentStatus: 'pending',
       stock_restored: false,
-      stock_snapshot: Object.entries(stockDeductions).map(([productId, quantity]) => ({ productId, quantity })),
+      stock_snapshot: Array.from(variantDeductions.values()),
       cartDetails: JSON.stringify(cartDetails),
       items: Array.from(finalProductIds),
       user: (customerUser && customerUser.role === 'customer') ? customerUser.id : undefined,
@@ -264,11 +281,60 @@ export async function createOrderAction(formData: FormData) {
     batch.collection('orders').create(orderPayload);
 
     // Deduct Stock
-    for (const [prodId, deductQty] of Object.entries(stockDeductions)) {
-      if (deductQty > 0) {
+    // 1. Group deductions by productId
+    const productDeductions = new Map<string, { color?: string; quantity: number, canonicalName?: string }[]>();
+    for (const deduction of variantDeductions.values()) {
+      const { productId, color, quantity } = deduction;
+      const dbProduct = productMap.get(productId);
+      if (!dbProduct) throw new Error(`Product ${productId} not found for deduction`);
+      
+      const v = validateColorStock(dbProduct, color || '', quantity);
+      if (!v.valid) {
+        throw new Error(v.error || `Stock error for ${dbProduct.name}`);
+      }
+      
+      const arr = productDeductions.get(productId) || [];
+      arr.push({ color, quantity, canonicalName: v.canonicalName });
+      productDeductions.set(productId, arr);
+      
+      // Update the canonical name in the snapshot if needed
+      if (v.canonicalName) {
+        deduction.color = v.canonicalName;
+      }
+    }
+
+    // 2. Compute one update per product
+    for (const [prodId, deductionsArr] of productDeductions.entries()) {
+      const dbProduct = productMap.get(prodId);
+      
+      if (dbProduct.inventoryMode === 'color') {
+        const colorStock = { ...(dbProduct.colorStock || {}) };
+        let totalDeductedGlobal = 0;
+        
+        for (const ded of deductionsArr) {
+          const cName = ded.canonicalName || ded.color;
+          if (cName && typeof colorStock[cName] === 'number') {
+            colorStock[cName] -= ded.quantity;
+            totalDeductedGlobal += ded.quantity;
+          }
+        }
+        
+        // Compute new global quantity
+        const newTotalQty = Object.values(colorStock).reduce((sum: number, q: any) => sum + Number(q), 0);
+        
         batch.collection('products').update(prodId, {
-          "quantity-": deductQty
+          colorStock: colorStock,
+          quantity: newTotalQty
         });
+        
+      } else {
+        // Global inventory mode
+        const totalDeduct = deductionsArr.reduce((sum: number, d: any) => sum + d.quantity, 0);
+        if (totalDeduct > 0) {
+          batch.collection('products').update(prodId, {
+            "quantity-": totalDeduct
+          });
+        }
       }
     }
     // Execute Batch
@@ -380,6 +446,7 @@ export async function createManualOrderAction(payload: ManualOrderPayload) {
 
     let calculatedTotal = 0;
     const stockDeductions: Record<string, number> = {};
+    const variantDeductions = new Map<string, { productId: string; color?: string; quantity: number }>();
     const cartDetails: any[] = [];
     
     if (payload.source) {
@@ -407,7 +474,15 @@ export async function createManualOrderAction(payload: ManualOrderPayload) {
         calculatedTotal += lineTotal;
         
         if (payload.deductStock) {
-          stockDeductions[item.productId] = (stockDeductions[item.productId] || 0) + qty;
+          const normalizedColor = color && color !== 'undefined' ? normalizeColorName(color) : undefined;
+          const key = normalizedColor ? `${item.productId}::${normalizedColor}` : item.productId;
+          const existing = variantDeductions.get(key);
+          if (existing) {
+            existing.quantity += qty;
+          } else {
+            const actualColor = color && color !== 'undefined' ? color : undefined;
+            variantDeductions.set(key, { productId: item.productId, color: actualColor, quantity: qty });
+          }
         }
 
         const colorStr = color ? `Color: ${color}` : '';
@@ -447,7 +522,7 @@ export async function createManualOrderAction(payload: ManualOrderPayload) {
       status: 'pending',
       stock_restored: false,
       stock_snapshot: payload.deductStock 
-        ? Object.entries(stockDeductions).map(([productId, quantity]) => ({ productId, quantity }))
+        ? Array.from(variantDeductions.values())
         : [],
       cartDetails: JSON.stringify(cartDetails),
       items: productIdsToFetch,
@@ -461,13 +536,60 @@ export async function createManualOrderAction(payload: ManualOrderPayload) {
     });
 
     if (payload.deductStock) {
-      for (const [prodId, deductQty] of Object.entries(stockDeductions)) {
-        if (deductQty > 0) {
+      // 1. Group deductions by productId
+      const productDeductions = new Map<string, { color?: string; quantity: number, canonicalName?: string }[]>();
+      for (const deduction of variantDeductions.values()) {
+        const { productId, color, quantity } = deduction;
+        const dbProduct = productMap.get(productId);
+        if (!dbProduct) throw new Error(`Product ${productId} not found for deduction`);
+        
+        const v = validateColorStock(dbProduct, color || '', quantity);
+        if (!v.valid) {
+          throw new Error(v.error || `Stock error for ${dbProduct.name}`);
+        }
+        
+        const arr = productDeductions.get(productId) || [];
+        arr.push({ color, quantity, canonicalName: v.canonicalName });
+        productDeductions.set(productId, arr);
+        
+        if (v.canonicalName) {
+          deduction.color = v.canonicalName;
+        }
+      }
+
+      // 2. Compute one update per product
+      for (const [prodId, deductionsArr] of productDeductions.entries()) {
+        const dbProduct = productMap.get(prodId);
+        
+        if (dbProduct.inventoryMode === 'color') {
+          const colorStock = { ...(dbProduct.colorStock || {}) };
+          let totalDeductedGlobal = 0;
+          
+          for (const ded of deductionsArr) {
+            const cName = ded.canonicalName || ded.color;
+            if (cName && typeof colorStock[cName] === 'number') {
+              colorStock[cName] -= ded.quantity;
+              totalDeductedGlobal += ded.quantity;
+            }
+          }
+          
+          const newTotalQty = Object.values(colorStock).reduce((sum: number, q: any) => sum + Number(q), 0);
+          
           batchRequests.push({
             method: 'PATCH',
             url: `/api/collections/products/records/${prodId}`,
-            body: { "quantity-": deductQty }
+            body: { colorStock, quantity: newTotalQty }
           });
+          
+        } else {
+          const totalDeduct = deductionsArr.reduce((sum: number, d: any) => sum + d.quantity, 0);
+          if (totalDeduct > 0) {
+            batchRequests.push({
+              method: 'PATCH',
+              url: `/api/collections/products/records/${prodId}`,
+              body: { "quantity-": totalDeduct }
+            });
+          }
         }
       }
     }
@@ -550,16 +672,53 @@ async function processOrderLifecycleTransition(orderId: string, newStatus: strin
       if (!Array.isArray(order.stock_snapshot) || order.stock_snapshot.length === 0) {
         throw new Error("Stock cannot be automatically restored for this legacy order because its original inventory snapshot is unavailable.");
       }
+      
+      const productDeductions = new Map<string, any[]>();
+      
       for (const item of order.stock_snapshot) {
         if (!item.productId || typeof item.productId !== 'string' || !item.quantity || typeof item.quantity !== 'number' || item.quantity <= 0) {
           throw new Error("Invalid stock snapshot format.");
         }
-        batchRequests.push({
-          method: 'PATCH',
-          url: `/api/collections/products/records/${item.productId}`,
-          body: { "quantity+": item.quantity }
-        });
+        
+        const arr = productDeductions.get(item.productId) || [];
+        arr.push(item);
+        productDeductions.set(item.productId, arr);
       }
+      
+      for (const [prodId, items] of productDeductions.entries()) {
+        const product = await adminPb.collection('products').getOne(prodId);
+        
+        if (product.inventoryMode === 'color') {
+          const colorStock = { ...(product.colorStock || {}) };
+          
+          for (const item of items) {
+             if (!item.color) {
+               throw new Error("This is a legacy order created before color-level inventory tracking. The original color allocation is unavailable, so inventory cannot be automatically adjusted for this order.");
+             }
+             if (typeof colorStock[item.color] === 'number') {
+                colorStock[item.color] += item.quantity;
+             } else {
+                throw new Error(`Color '${item.color}' is no longer configured for product '${product.name || prodId}'. Cannot safely restore inventory. Please adjust inventory mode to global or re-add the color before cancelling/refunding this order.`);
+             }
+          }
+          
+          const newTotalQty = Object.values(colorStock).reduce((sum: number, q: any) => sum + Number(q), 0);
+          
+          batchRequests.push({
+            method: 'PATCH',
+            url: `/api/collections/products/records/${prodId}`,
+            body: { colorStock, quantity: newTotalQty }
+          });
+        } else {
+           const totalRestore = items.reduce((sum: number, i: any) => sum + i.quantity, 0);
+           batchRequests.push({
+             method: 'PATCH',
+             url: `/api/collections/products/records/${prodId}`,
+             body: { "quantity+": totalRestore }
+           });
+        }
+      }
+      
       orderUpdates.stock_restored = true;
       needsBatch = true;
     }
@@ -569,17 +728,52 @@ async function processOrderLifecycleTransition(orderId: string, newStatus: strin
         throw new Error("Cannot safely re-deduct stock for this legacy order without an inventory snapshot.");
       }
       
-      // Pre-check stock availability
+      const productDeductions = new Map<string, any[]>();
+      
       for (const item of order.stock_snapshot) {
-        const product = await adminPb.collection('products').getOne(item.productId);
-        if (product.quantity < item.quantity) {
-          throw new Error(`Insufficient stock for product ${product.name || item.productId} to reactivate this order.`);
+        const arr = productDeductions.get(item.productId) || [];
+        arr.push(item);
+        productDeductions.set(item.productId, arr);
+      }
+      
+      // Pre-check stock availability
+      for (const [prodId, items] of productDeductions.entries()) {
+        const product = await adminPb.collection('products').getOne(prodId);
+        
+        if (product.inventoryMode === 'color') {
+          const colorStock = { ...(product.colorStock || {}) };
+          
+          for (const item of items) {
+             if (!item.color) {
+               throw new Error("This is a legacy order created before color-level inventory tracking. The original color allocation is unavailable, so inventory cannot be automatically adjusted for this order.");
+             }
+             if (typeof colorStock[item.color] !== 'number') {
+                throw new Error(`Color '${item.color}' is no longer configured for product '${product.name || prodId}'. Cannot safely re-deduct inventory to reactivate this order.`);
+             }
+             if (colorStock[item.color] < item.quantity) {
+                throw new Error(`Insufficient stock for ${product.name || prodId} - ${item.color}.`);
+             }
+             colorStock[item.color] -= item.quantity;
+          }
+          
+          const newTotalQty = Object.values(colorStock).reduce((sum: number, q: any) => sum + Number(q), 0);
+          
+          batchRequests.push({
+            method: 'PATCH',
+            url: `/api/collections/products/records/${prodId}`,
+            body: { colorStock, quantity: newTotalQty }
+          });
+        } else {
+           const totalDeduct = items.reduce((sum: number, i: any) => sum + i.quantity, 0);
+           if (product.quantity < totalDeduct) {
+              throw new Error(`Insufficient stock for product ${product.name || prodId} to reactivate this order.`);
+           }
+           batchRequests.push({
+             method: 'PATCH',
+             url: `/api/collections/products/records/${prodId}`,
+             body: { "quantity-": totalDeduct }
+           });
         }
-        batchRequests.push({
-          method: 'PATCH',
-          url: `/api/collections/products/records/${item.productId}`,
-          body: { "quantity-": item.quantity }
-        });
       }
       orderUpdates.stock_restored = false;
       needsBatch = true;

@@ -20,6 +20,9 @@ export interface Product {
   isActive?: boolean;
   colors?: string[];
   selectedColor?: string;
+  inventoryMode?: 'global' | 'color';
+  colorStock?: Record<string, number>;
+  customColors?: { name: string; hex: string }[];
   tags: string[];
 }
 

@@ -186,6 +186,13 @@ export function ViewOrderModal({
                       if (isObject) {
                         name = itemRaw.productName || 'Unknown Item';
                         extras = itemRaw.extras ? ` (${itemRaw.extras})` : '';
+                        if (itemRaw.color) {
+                          if (extras) {
+                            extras = extras.replace(')', ` | Color: ${itemRaw.color})`);
+                          } else {
+                            extras = ` (Color: ${itemRaw.color})`;
+                          }
+                        }
                         countSuffix = itemRaw.quantity ? ` × ${itemRaw.quantity}` : '';
                         displayTotal = itemRaw.lineTotal ? ` - Rs. ${itemRaw.lineTotal}` : ` - Rs. ${itemRaw.unitPrice || 0}`;
                       } else if (typeof itemRaw === 'string') {
