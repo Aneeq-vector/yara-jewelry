@@ -60,6 +60,7 @@ export default function LoginPage() {
       
       if (result.error) {
         setError(result.error.includes('Failed to authenticate') ? 'Invalid email or password.' : result.error);
+        setLoading(false);
         return;
       }
       
