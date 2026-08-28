@@ -8,10 +8,10 @@ import { useWishlistStore } from '@/lib/store/wishlist-store';
 import { formatPrice, calculateDiscount } from '@/lib/utils';
 import { BADGE_CONFIG } from '@/lib/constants';
 import { Product } from '@/types';
-import { getOptimizedImageUrl, isPocketBaseResizable } from '@/lib/image-utils';
+import { getOptimizedImageUrl, isPocketBaseResizable, pbLoader } from '@/lib/image-utils';
 
 
-export function ProductCard({ product, index, priority = false }: { product: Product; index: number, priority?: boolean }) {
+export function ProductCard({ product, index, aboveFold = false }: { product: Product; index: number, aboveFold?: boolean }) {
   const addToCart = useCartStore((s) => s.addItem);
   const { isInWishlist, toggleItem } = useWishlistStore();
   const wishlisted = isInWishlist(product.id);
@@ -64,16 +64,16 @@ export function ProductCard({ product, index, priority = false }: { product: Pro
                 className="absolute inset-0"
               >
                 <Image
-                  src={getOptimizedImageUrl(product.images[currentImageIndex], 'card')}
+                  src={product.images[currentImageIndex]}
                   alt={product.name}
                   fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   style={{ objectPosition: product.imagePositions?.[currentImageIndex] || '50% 50%' }}
                   className={`object-cover group-hover:scale-105 transition duration-700 ${
                     product.quantity <= 0 ? 'opacity-40 grayscale-[30%]' : ''
                   }`}
-                  priority={priority}
-                  loading={priority ? undefined : "lazy"}
-                  unoptimized={isPocketBaseResizable(product.images[currentImageIndex])}
+                  
+                  loading={aboveFold ? "eager" : "lazy"}
+                  loader={isPocketBaseResizable(product.images[currentImageIndex]) ? pbLoader : undefined}
                 />
               </motion.div>
             </AnimatePresence>

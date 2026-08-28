@@ -1,3 +1,5 @@
+import { ImageLoaderProps } from 'next/image';
+
 export type ImagePreset = 'thumb' | 'card' | 'gallery' | 'full';
 
 export function getOptimizedImageUrl(originalUrl: string, size: ImagePreset = 'full'): string {
@@ -11,8 +13,6 @@ export function getOptimizedImageUrl(originalUrl: string, size: ImagePreset = 'f
       return originalUrl;
     }
 
-    // PocketBase standard binary (Go image lib) does not support AVIF thumbnails natively.
-    // If we request a thumb for AVIF, it will just return the original file, so we skip adding the query.
     if (url.pathname.toLowerCase().endsWith('.avif') || size === 'full') {
       return originalUrl;
     }
@@ -52,5 +52,27 @@ export function isPocketBaseResizable(originalUrl: string): boolean {
     return true;
   } catch (e) {
     return false;
+  }
+}
+
+export function pbLoader({ src, width }: ImageLoaderProps): string {
+  if (!isPocketBaseResizable(src)) return src;
+
+  try {
+    const url = new URL(src);
+    
+    if (width > 1400) {
+      // For very large displays, return the original master URL
+      url.searchParams.delete('thumb');
+      return url.toString();
+    }
+
+    const sizes = [250, 500, 700, 1000, 1400];
+    const targetWidth = sizes.find(s => s >= width) || 1400;
+    
+    url.searchParams.set('thumb', `${targetWidth}x0`);
+    return url.toString();
+  } catch (e) {
+    return src;
   }
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { getOptimizedImageUrl, isPocketBaseResizable } from '@/lib/image-utils';
+import { getOptimizedImageUrl, isPocketBaseResizable , pbLoader } from '@/lib/image-utils';
 import { useState, useEffect } from 'react';
 import { m as motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
@@ -96,8 +96,8 @@ export default function CartPage() {
                       <Link href={`/shop/${item.product.id}`} className="flex-shrink-0">
                         <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl overflow-hidden bg-champagne/30">
                           <Image
-                            src={getOptimizedImageUrl(item.product.images[0], "thumb")}
-                            unoptimized={isPocketBaseResizable(item.product.images[0])}
+                            src={item.product.images[0]}
+                            loader={isPocketBaseResizable(item.product.images[0]) ? pbLoader : undefined}
                             alt={item.product.name}
                             width={128}
                             height={128}

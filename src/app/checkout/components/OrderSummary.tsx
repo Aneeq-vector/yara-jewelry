@@ -1,4 +1,4 @@
-import { getOptimizedImageUrl, isPocketBaseResizable } from '@/lib/image-utils';
+import { getOptimizedImageUrl, isPocketBaseResizable , pbLoader } from '@/lib/image-utils';
 import Image from 'next/image';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatPrice } from '@/lib/utils';
@@ -13,8 +13,8 @@ export function OrderSummary({ items, subtotal, shipping, total }: any) {
             {items.map((item: any) => (
               <div key={item.cartItemId} className="flex items-center gap-3">
                 <div className="relative w-12 h-12 rounded-xl bg-champagne/30 overflow-hidden flex-shrink-0">
-                  <Image src={getOptimizedImageUrl(item.product.images[0], "thumb")}
-                  unoptimized={isPocketBaseResizable(item.product.images[0])} alt="" fill sizes="48px" className="object-cover" />
+                  <Image src={item.product.images[0]}
+                  loader={isPocketBaseResizable(item.product.images[0]) ? pbLoader : undefined} alt="" fill sizes="48px" className="object-cover" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-ui text-xs font-semibold text-burgundy truncate">{item.product.name}</p>

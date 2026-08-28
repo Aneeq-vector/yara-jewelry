@@ -4,6 +4,9 @@ import ProductDetailClient from './_ProductDetailClient';
 import { Metadata, ResolvingMetadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Product } from '@/types';
+import ReactDOM from 'react-dom';
+import { getImageProps } from 'next/image';
+import { isPocketBaseResizable, pbLoader } from '@/lib/image-utils';
 
 type Props = {
   params: Promise<{ id: string }>
@@ -54,6 +57,28 @@ export default async function ProductDetailPage({ params }: Props) {
   let allProducts = undefined;
   if (product.name.toLowerCase() === 'build your own gift box') {
     allProducts = await getAllProducts();
+  }
+
+  // 4. Preload Hero Image for LCP Optimization
+  if (product.images && product.images.length > 0) {
+    const heroSrc = product.images[0];
+    const isResizable = isPocketBaseResizable(heroSrc);
+    
+    // We use getImageProps to generate the exact same srcset that <Image> will render
+    const { props: { srcSet, sizes, src } } = getImageProps({
+      src: heroSrc,
+      alt: product.name,
+      fill: true,
+      sizes: "(max-width: 768px) 100vw, (max-width: 1200px) 55vw, 50vw",
+      loader: isResizable ? pbLoader : undefined
+    });
+    
+    ReactDOM.preload(src, { 
+      as: 'image', 
+      imageSrcSet: srcSet, 
+      imageSizes: sizes,
+      fetchPriority: 'high' 
+    });
   }
 
   return (

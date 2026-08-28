@@ -1,6 +1,6 @@
 'use client';
 const emptyArray: any[] = [];
-import { getOptimizedImageUrl, isPocketBaseResizable } from '@/lib/image-utils';
+import { getOptimizedImageUrl, isPocketBaseResizable , pbLoader } from '@/lib/image-utils';
 import { CustomBoxSidebar } from './CustomBoxSidebar';
 
 import { useState, useMemo } from 'react';
@@ -225,8 +225,8 @@ export default function CustomBoxBuilder({
                     >
                       <div className="relative aspect-square rounded-xl overflow-hidden mb-3 bg-white">
                         <Image
-                          src={getOptimizedImageUrl(product.images[0], "thumb")}
-                                  unoptimized={isPocketBaseResizable(product.images[0])}
+                          src={product.images[0]}
+                                  loader={isPocketBaseResizable(product.images[0]) ? pbLoader : undefined}
                           alt={product.name}
                           fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                           className={`object-cover transition-transform duration-500 ${isOOS && selectedCount === 0 ? 'grayscale' : 'group-hover:scale-105'}`}

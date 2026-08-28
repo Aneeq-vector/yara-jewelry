@@ -36,7 +36,7 @@ import { Product, Category } from '@/types';
 import { useCartStore } from '@/lib/store/cart-store';
 import { useWishlistStore } from '@/lib/store/wishlist-store';
 import { formatPrice, calculateDiscount } from '@/lib/utils';
-import { getOptimizedImageUrl, isPocketBaseResizable } from '@/lib/image-utils';
+import { getOptimizedImageUrl, isPocketBaseResizable, pbLoader } from '@/lib/image-utils';
 
 import { BADGE_CONFIG, BRAND } from '@/lib/constants';
 
@@ -204,19 +204,19 @@ export default function ProductDetailClient({
                     className="absolute inset-0"
                   >
                     <Image
-                      src={getOptimizedImageUrl(product.images[selectedImage], 'gallery')}
+                      src={product.images[selectedImage]}
                       alt={product.name}
-                      fill sizes="(max-width: 1024px) 100vw, 50vw"
+                      fill
                       style={{ objectPosition: product.imagePositions?.[selectedImage] || '50% 50%' }}
                       className="object-cover group-hover:scale-110 transition-transform duration-700"
-                      priority={selectedImage === 0}
-                      loading={selectedImage === 0 ? undefined : "lazy"}
-                      unoptimized={isPocketBaseResizable(product.images[selectedImage])}
+                      loading={selectedImage === 0 ? "eager" : "lazy"}
+                      loader={isPocketBaseResizable(product.images[selectedImage]) ? pbLoader : undefined}
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 55vw, 50vw" 
                     />
                     
                     {/* Idle Prefetch next image */}
                     {product.images.length > 1 && selectedImage + 1 < product.images.length && (
-                       <link rel="prefetch" href={getOptimizedImageUrl(product.images[selectedImage + 1], 'gallery')} />
+                       <link rel="prefetch" href={product.images[selectedImage + 1]} />
                     )}
                   </motion.div>
                 </AnimatePresence>
@@ -261,7 +261,7 @@ export default function ProductDetailClient({
                         : 'opacity-60 hover:opacity-100'
                     }`}
                   >
-                    <Image src={getOptimizedImageUrl(img, 'thumb')} alt="" fill sizes="80px" style={{ objectPosition: product.imagePositions?.[i] || '50% 50%' }} className="object-cover" unoptimized={isPocketBaseResizable(img)} />
+                    <Image src={img} alt="" fill sizes="80px" style={{ objectPosition: product.imagePositions?.[i] || '50% 50%' }} className="object-cover" loader={isPocketBaseResizable(img) ? pbLoader : undefined} />
                   </button>
                 ))}
               </div>

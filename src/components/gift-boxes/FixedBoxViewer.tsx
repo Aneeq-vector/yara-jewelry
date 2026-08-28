@@ -1,6 +1,6 @@
 'use client';
 
-import { getOptimizedImageUrl, isPocketBaseResizable } from '@/lib/image-utils';
+import { getOptimizedImageUrl, isPocketBaseResizable , pbLoader } from '@/lib/image-utils';
 import { useState, useMemo } from 'react';
 import { m as motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
@@ -153,8 +153,8 @@ export default function FixedBoxViewer({ box, categories = [] }: FixedBoxViewerP
                       key={img}
                       className="relative w-16 h-16 rounded-2xl overflow-hidden border-2 border-nude/40"
                     >
-                      <Image src={getOptimizedImageUrl(img, "thumb")}
-                      unoptimized={isPocketBaseResizable(img)} alt={`${box.name} ${i + 1}`} fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" />
+                      <Image src={img}
+                      loader={isPocketBaseResizable(img) ? pbLoader : undefined} alt={`${box.name} ${i + 1}`} fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" />
                     </div>
                   ))}
                 </div>

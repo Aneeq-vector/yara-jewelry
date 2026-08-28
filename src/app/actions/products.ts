@@ -3,6 +3,8 @@
 import { validateSession } from '@/lib/pocketbase-server';
 import { revalidatePath } from 'next/cache';
 import { mapRecordToProduct } from '@/lib/data/products';
+import { after } from 'next/server';
+import { PB_URL } from '@/lib/pocketbase';
 
 // Safe serializer: converts PocketBase RecordModel → plain JSON
 function toPlain<T>(data: T): T {
@@ -405,6 +407,39 @@ export async function finalizeProductImagesAction(productId: string, finalImages
       }
     }
     
+    if (finalImages.length > 0) {
+      const heroImg = finalImages[0];
+      const ext = heroImg.split('.').pop()?.toLowerCase();
+      
+      // Warm primary hero sizes if supported
+      if (ext && ['jpg', 'jpeg', 'png', 'webp'].includes(ext)) {
+        const heroUrl = `${PB_URL}/api/files/${currentProduct.collectionId}/${productId}/${heroImg}`;
+        
+        // Mandatory warm - throws if fails
+        await Promise.all([
+          warmImage(`${heroUrl}?thumb=700x0`),
+          warmImage(`${heroUrl}?thumb=1000x0`),
+          warmImage(`${heroUrl}?thumb=1400x0`)
+        ]);
+        
+        // Background warm other sizes
+        const collectionId = currentProduct.collectionId;
+        const remainingImages = finalImages.slice(1);
+        after(async () => {
+          await Promise.allSettled([
+            fetch(`${heroUrl}?thumb=250x0`, { cache: 'no-store' }),
+            fetch(`${heroUrl}?thumb=500x0`, { cache: 'no-store' }),
+            ...remainingImages.map(img => 
+              fetch(`${PB_URL}/api/files/${collectionId}/${productId}/${img}?thumb=250x0`, { cache: 'no-store' })
+            ),
+            ...remainingImages.map(img => 
+              fetch(`${PB_URL}/api/files/${collectionId}/${productId}/${img}?thumb=700x0`, { cache: 'no-store' })
+            )
+          ]);
+        });
+      }
+    }
+
     const record = await pb.collection('products').update(productId, {
       images: finalImages,
       imagePositions: finalPositions,
@@ -428,5 +463,12 @@ export async function rollbackNewProductAction(productId: string) {
   } catch (error: any) {
     console.error('rollbackNewProductAction error:', error.message);
     return { success: false, error: error.message || 'Failed to rollback product' };
+  }
+}
+
+async function warmImage(url: string) {
+  const response = await fetch(url, { cache: 'no-store' });
+  if (!response.ok) {
+    throw new Error(`Failed to warm image derivative (${response.status})`);
   }
 }

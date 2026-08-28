@@ -45,6 +45,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={cn("h-full antialiased", "font-sans", geist.variable)}>
+      <head>
+        <link rel="preconnect" href="https://pb.yarasl.shop" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://pb.yarasl.shop" />
+      </head>
       <body className="min-h-full flex flex-col bg-ivory text-burgundy overflow-x-hidden">
         <QueryProvider>
           <MotionProvider>{children}</MotionProvider>
