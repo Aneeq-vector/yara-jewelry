@@ -272,7 +272,8 @@ function ProductFormModal({
   const [savingState, setSavingState] = useState<string | null>(null);
   const [showCustomColorForm, setShowCustomColorForm] = useState(false);
   const [customColorName, setCustomColorName] = useState('');
-  const [customColorHex, setCustomColorHex] = useState('#000000');
+  const [customColorHex, setCustomColorHex] = useState('#1F8A5B');
+  const [customColorQuantity, setCustomColorQuantity] = useState('0');
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const imageInputRef = useRef<HTMLInputElement>(null);
 
@@ -280,6 +281,20 @@ function ProductFormModal({
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
+
+  useEffect(() => {
+    if (!showCustomColorForm) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowCustomColorForm(false);
+        setCustomColorName('');
+        setCustomColorHex('#1F8A5B');
+        setCustomColorQuantity('0');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showCustomColorForm]);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -422,6 +437,9 @@ function ProductFormModal({
                  uploadImages[index] = { isExisting: false, data: compressed, name: compressed.name || item.file.name };
                } catch (error) {
                  console.error('Image compression failed for', item.file.name, error);
+                 if (item.file.size > 2 * 1024 * 1024) {
+                   throw new Error(`Could not optimize ${item.file.name}. Please try the image again.`);
+                 }
                  uploadImages[index] = { isExisting: false, data: item.file, name: item.file.name };
                }
              }
@@ -432,7 +450,31 @@ function ProductFormModal({
       };
 
       const workers = Array.from({ length: Math.min(concurrencyLimit, form.unifiedImages.length) }, () => worker());
-      await Promise.all(workers);
+      try {
+        await Promise.all(workers);
+      } catch (err: any) {
+        setSavingState(null);
+        addToast(err.message, 'error');
+        return;
+      }
+
+      let totalNewSize = 0;
+      for (const res of uploadImages) {
+        if (res && !res.isExisting && res.data) {
+          if (res.data.size > 2 * 1024 * 1024) {
+            setSavingState(null);
+            addToast(`Image ${res.name} exceeds the 2MB limit after optimization.`, 'error');
+            return;
+          }
+          totalNewSize += res.data.size;
+        }
+      }
+
+      if (totalNewSize > 16 * 1024 * 1024) {
+        setSavingState(null);
+        addToast('The selected images are still too large to upload together. Please remove one or more images and try again.', 'error');
+        return;
+      }
 
       for (const res of uploadImages) {
         if (res) {
@@ -662,20 +704,7 @@ function ProductFormModal({
                 ))}
                 
                 {(form.colors as string[]).length + (form.customColors as any[]).length < 5 && (
-                  <button type="button" onClick={() => {
-                     const name = window.prompt("Enter custom color name:");
-                     if (!name) return;
-                     const hex = window.prompt("Enter custom HEX code (e.g. #FF0000):");
-                     if (!hex) return;
-                     
-                     // check dup
-                     const exists = (form.customColors as any[]).some(c => c.name.toLowerCase() === name.toLowerCase()) || (form.colors as string[]).some(c => c.toLowerCase() === name.toLowerCase());
-                     if (exists) {
-                       addToast('Color already exists', 'error');
-                       return;
-                     }
-                     set('customColors', [...(form.customColors as any[]), { name, hex }]);
-                  }} className="text-xs font-ui flex items-center gap-1 text-burgundy bg-burgundy/5 hover:bg-burgundy/10 w-max px-3 py-1.5 rounded-full mt-1">
+                  <button type="button" onClick={() => setShowCustomColorForm(true)} className="text-xs font-ui flex items-center gap-1 text-burgundy bg-burgundy/5 hover:bg-burgundy/10 w-max px-3 py-1.5 rounded-full mt-1">
                     <Plus size={12}/> Add Custom Color
                   </button>
                 )}
@@ -768,6 +797,84 @@ function ProductFormModal({
           </div>
         </form>
       </div>
+
+      {/* Custom Color Modal */}
+      {showCustomColorForm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/35 backdrop-blur-sm" onClick={() => {
+            setShowCustomColorForm(false);
+            setCustomColorName('');
+            setCustomColorHex('#1F8A5B');
+            setCustomColorQuantity('0');
+          }} />
+          <div className="relative bg-[#FDFBF7] border border-burgundy/20 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.12)] w-full max-w-[440px] p-6 space-y-6">
+            <div>
+              <h3 className="text-xl font-heading font-bold text-burgundy">Add Custom Color</h3>
+              <p className="text-xs text-burgundy/60 font-body mt-1">Create a custom color option for this product.</p>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-ui font-semibold text-burgundy/70 uppercase tracking-wide mb-1">Color Name</label>
+                <input type="text" value={customColorName} onChange={e => setCustomColorName(e.target.value)} placeholder="e.g. Emerald" autoFocus className="w-full px-3 py-2 border border-burgundy/20 rounded-xl text-sm font-body text-burgundy bg-white placeholder:text-burgundy/30 focus:outline-none focus:ring-2 focus:ring-burgundy/20" />
+              </div>
+
+              <div>
+                <label className="block text-xs font-ui font-semibold text-burgundy/70 uppercase tracking-wide mb-1">Color Shade</label>
+                <div className="flex items-center gap-3">
+                  <div className="relative w-10 h-10 rounded-full overflow-hidden border border-burgundy/20 shadow-sm flex-shrink-0 cursor-pointer">
+                    <input type="color" value={customColorHex} onChange={e => setCustomColorHex(e.target.value.toUpperCase())} className="absolute inset-[-10px] w-[60px] h-[60px] cursor-pointer" />
+                  </div>
+                  <input type="text" value={customColorHex} onChange={e => setCustomColorHex(e.target.value.toUpperCase())} placeholder="#1F8A5B" className="flex-1 px-3 py-2 border border-burgundy/20 rounded-xl text-sm font-body text-burgundy bg-white placeholder:text-burgundy/30 focus:outline-none focus:ring-2 focus:ring-burgundy/20 uppercase" />
+                </div>
+              </div>
+
+              {form.inventoryMode === 'color' && (
+                <div>
+                  <label className="block text-xs font-ui font-semibold text-burgundy/70 uppercase tracking-wide mb-1">Quantity</label>
+                  <input type="number" min="0" value={customColorQuantity} onChange={e => setCustomColorQuantity(e.target.value)} className="w-full px-3 py-2 border border-burgundy/20 rounded-xl text-sm font-body text-burgundy bg-white placeholder:text-burgundy/30 focus:outline-none focus:ring-2 focus:ring-burgundy/20" />
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button type="button" onClick={() => {
+                setShowCustomColorForm(false);
+                setCustomColorName('');
+                setCustomColorHex('#1F8A5B');
+                setCustomColorQuantity('0');
+              }} className="px-5 py-2 text-sm font-body font-medium text-burgundy bg-ivory/50 hover:bg-rose-gold/20 rounded-xl transition-colors">
+                Cancel
+              </button>
+              <button type="button" onClick={() => {
+                const name = customColorName.trim();
+                if (!name) return addToast('Name required', 'error');
+                if (name.length > 50) return addToast('Name too long', 'error');
+                if (!/^#[0-9A-F]{6}$/i.test(customColorHex)) return addToast('Invalid HEX', 'error');
+                
+                const qty = parseInt(customColorQuantity, 10);
+                if (form.inventoryMode === 'color' && (isNaN(qty) || qty < 0)) return addToast('Invalid quantity', 'error');
+
+                const exists = (form.customColors as any[]).some(c => c.name.toLowerCase() === name.toLowerCase()) || (form.colors as string[]).some(c => c.toLowerCase() === name.toLowerCase());
+                if (exists) return addToast('Color already exists', 'error');
+                if ((form.colors as string[]).length + (form.customColors as any[]).length >= 5) return addToast('Max 5 colors', 'error');
+
+                set('customColors', [...(form.customColors as any[]), { name, hex: customColorHex.toUpperCase() }]);
+                if (form.inventoryMode === 'color') {
+                  set('colorStock', { ...form.colorStock, [name]: qty });
+                }
+
+                setShowCustomColorForm(false);
+                setCustomColorName('');
+                setCustomColorHex('#1F8A5B');
+                setCustomColorQuantity('0');
+              }} className="px-5 py-2 text-sm font-body font-medium text-white bg-burgundy hover:bg-burgundy/90 rounded-xl transition-colors shadow-sm">
+                Add Color
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

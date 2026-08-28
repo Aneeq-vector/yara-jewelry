@@ -199,8 +199,8 @@ export async function saveProductAction(formData: FormData, id?: string) {
     if (newFileCount + existingFileCount > MAX_IMAGES) {
       return { success: false, error: `Cannot have more than ${MAX_IMAGES} final images.` };
     }
-    if (totalSize > 8 * 1024 * 1024) {
-      return { success: false, error: `Total image upload size exceeds 8MB.` };
+    if (totalSize > 16 * 1024 * 1024) {
+      return { success: false, error: `Total new image upload size exceeds 16MB.` };
     }
 
     // 5. VALIDATE colorStock keys match configuredColors EXACTLY
