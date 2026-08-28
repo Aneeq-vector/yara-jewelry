@@ -47,8 +47,9 @@ export async function getAllProducts(): Promise<Product[]> {
   try {
     const pb = createClient();
     const records = await pb.collection('products').getFullList({
-      filter: 'isStaged != true && isHidden != true',
+      filter: 'isStaged = false && isHidden = false',
       expand: 'category',
+      sort: '-id',
       fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,imagePositions,shortDescription,description,badge,colors,customColors,inventoryMode,colorStock,tags,material,weight,expand.category.id,expand.category.name',
       $autoCancel: false,
     });
@@ -78,31 +79,64 @@ export async function getProductsByCategory(category: string, limit = 500): Prom
   try {
     const pb = createClient();
     const records = await pb.collection('products').getList(1, limit, {
-      filter: `category="${category}" && isStaged != true && isHidden != true`,
+      filter: `category="${category}" && isStaged = false && isHidden = false`,
+      sort: '-id',
       $autoCancel: false,
       expand: 'category',
       fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,imagePositions,shortDescription,description,badge,colors,customColors,inventoryMode,colorStock,tags,material,weight,expand.category.id,expand.category.name',
     });
-    return records.items.map(mapRecordToProduct);
+    const results = records.items.map(mapRecordToProduct);
+    
+    // JS sort available-first
+    results.sort((a, b) => {
+      if (a.inStock && !b.inStock) return -1;
+      if (!a.inStock && b.inStock) return 1;
+      return 0; // -created preserves the order
+    });
+    
+    return results;
   } catch (error) {
     
     return [];
   }
 }
 
+async function getAvailableFirstLimitedProducts(baseFilter: string, limit: number, secondarySort = '-id'): Promise<Product[]> {
+  const pb = createClient();
+  
+  // 1. Fetch IN-STOCK records first
+  const availableFilter = `(${baseFilter}) && inStock = true && isStaged = false && isHidden = false`;
+  const availableRecords = await pb.collection('products').getList(1, limit, {
+    filter: availableFilter,
+    sort: secondarySort,
+    $autoCancel: false,
+    expand: 'category'
+  });
+  
+  let results = availableRecords.items.map(mapRecordToProduct);
+  
+  // 2. & 3. If fewer than limit, fetch OUT-OF-STOCK records
+  if (results.length < limit) {
+    const remainingLimit = limit - results.length;
+    const outOfStockFilter = `(${baseFilter}) && inStock = false && isStaged = false && isHidden = false`;
+    const outOfStockRecords = await pb.collection('products').getList(1, remainingLimit, {
+      filter: outOfStockFilter,
+      sort: secondarySort,
+      $autoCancel: false,
+      expand: 'category'
+    });
+    
+    results = [...results, ...outOfStockRecords.items.map(mapRecordToProduct)];
+  }
+  
+  return results;
+}
+
 const TRENDING_SLOTS = 4;
 
 export async function getTrendingProducts(): Promise<Product[]> {
   try {
-    const pb = createClient();
-
-    // Fetch trending in-stock products
-    const trendingRecords = await pb.collection('products').getList(1, TRENDING_SLOTS, {
-      filter: 'badge="trending" && inStock=true && isStaged != true && isHidden != true',
-      $autoCancel: false,
-      expand: 'category'
-    });
-    return trendingRecords.items.map(mapRecordToProduct);
+    return await getAvailableFirstLimitedProducts('badge="trending"', TRENDING_SLOTS);
   } catch (error) {
     return [];
   }
@@ -110,13 +144,7 @@ export async function getTrendingProducts(): Promise<Product[]> {
 
 async function getNewArrivals(): Promise<Product[]> {
   try {
-    const pb = createClient();
-    const records = await pb.collection('products').getList(1, 8, {
-      filter: '(badge="new" || category="new-arrivals") && inStock=true && isStaged != true && isHidden != true',
-      $autoCancel: false,
-      expand: 'category'
-    });
-    return records.items.map(mapRecordToProduct);
+    return await getAvailableFirstLimitedProducts('badge="new" || category="new-arrivals"', 8);
   } catch (error) {
     
     return [];
@@ -132,15 +160,25 @@ export async function searchProducts(query: string): Promise<Product[]> {
     if (terms.length === 0) return [];
     
     // Create a filter where each word must be present in the name
-    const filter = terms.map(term => `name ~ "${term}"`).join(' && ') + ' && isStaged != true && isHidden != true';
+    const filter = terms.map(term => `name ~ "${term}"`).join(' && ') + ' && isStaged = false && isHidden = false';
 
     const records = await pb.collection('products').getFullList({
-      
+      sort: '-id',
       filter,
       $autoCancel: false,
       expand: 'category'
     });
-    return records.map(mapRecordToProduct);
+    
+    const results = records.map(mapRecordToProduct);
+    
+    // JS sort available-first for search results
+    results.sort((a, b) => {
+      if (a.inStock && !b.inStock) return -1;
+      if (!a.inStock && b.inStock) return 1;
+      return 0; // -created preserves the order
+    });
+    
+    return results;
   } catch (error) {
     
     return [];

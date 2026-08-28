@@ -285,7 +285,7 @@ export async function getProductOptionsAction() {
   try {
     const { pb } = await validateSession();
     const records = await pb.collection('products').getFullList({
-      sort: 'name', filter: 'isStaged != true && isHidden != true',
+      sort: 'name', filter: 'isStaged = false && isHidden = false',
       fields: 'id,collectionId,name,price,inStock,quantity,images,productCode,category,colors,isHidden,isStaged',
     });
     return { success: true, products: toPlain(records.map(mapRecordToProduct)) };
@@ -299,7 +299,7 @@ export async function getCategoryProductsAction(categoryId: string, page = 1, pe
     const { pb } = await validateSession();
     // Lightweight query for the edit category modal
     const records = await pb.collection('products').getList(page, perPage, {
-      filter: `category = "${categoryId}" && isStaged != true && isHidden != true`,
+      filter: `category = "${categoryId}" && isStaged = false && isHidden = false`,
       fields: 'id,name,productCode,price,quantity,category,isHidden,isStaged',
     });
     return { 

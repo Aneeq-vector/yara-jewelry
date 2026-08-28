@@ -129,20 +129,27 @@ function ShopContent({ initialProducts, initialCategories }: { initialProducts: 
     result = result.filter((p) => p.price >= range.min && p.price <= range.max);
 
     // Sort
-    switch (sortBy) {
-      case 'price-asc':
-        result.sort((a, b) => a.price - b.price);
-        break;
-      case 'price-desc':
-        result.sort((a, b) => b.price - a.price);
-        break;
-      case 'rating':
-        result.sort((a, b) => b.rating - a.rating);
-        break;
-      case 'newest':
-        result.sort((a, b) => (a.badge === 'new' ? -1 : (b.badge === 'new' ? 1 : 0)));
-        break;
-    }
+    result.sort((a, b) => {
+      // 1. Availability MUST BE PRIMARY SORT
+      if (a.inStock && !b.inStock) return -1;
+      if (!a.inStock && b.inStock) return 1;
+
+      // 2. SECONDARY SORT
+      switch (sortBy) {
+        case 'price-asc':
+          return a.price - b.price;
+        case 'price-desc':
+          return b.price - a.price;
+        case 'rating':
+          return b.rating - a.rating;
+        case 'newest':
+          if (a.badge === 'new' && b.badge !== 'new') return -1;
+          if (b.badge === 'new' && a.badge !== 'new') return 1;
+          return 0;
+        default:
+          return 0; // Maintain DB order (which is now -inStock) for 'featured'
+      }
+    });
 
     return result;
   }, [selectedCategory, sortBy, priceRange, search, products, categories]);
