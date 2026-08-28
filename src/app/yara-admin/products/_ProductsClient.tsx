@@ -738,12 +738,20 @@ function ProductFormModal({
                       <div key={cName}>
                         <label className="block text-[10px] text-burgundy/60 mb-1">{cName}</label>
                         <input 
-                          type="number" min={0} 
-                          value={(form.colorStock as Record<string,number>)[cName] ?? ''} 
+                          type="number" min={0} step="1"
+                          value={(form.colorStock as Record<string,any>)[cName] !== undefined ? (form.colorStock as Record<string,any>)[cName] : ''} 
                           onChange={e => {
+                             const raw = e.target.value;
                              set('colorStock', {
-                               ...(form.colorStock as Record<string,number>),
-                               [cName]: parseInt(e.target.value) || 0
+                               ...(form.colorStock as Record<string,any>),
+                               [cName]: raw === '' ? '' : raw
+                             });
+                          }}
+                          onBlur={e => {
+                             const raw = e.target.value;
+                             set('colorStock', {
+                               ...(form.colorStock as Record<string,any>),
+                               [cName]: raw === '' ? 0 : Number(raw)
                              });
                           }}
                           className={inp('colorStock')}
@@ -846,7 +854,7 @@ function ProductFormModal({
               {form.inventoryMode === 'color' && (
                 <div>
                   <label className="block text-xs font-ui font-semibold text-burgundy/70 uppercase tracking-wide mb-1">Quantity</label>
-                  <input type="number" min="0" value={customColorQuantity} onChange={e => setCustomColorQuantity(e.target.value)} className="w-full px-3 py-2 border border-burgundy/20 rounded-xl text-sm font-body text-burgundy bg-white placeholder:text-burgundy/30 focus:outline-none focus:ring-2 focus:ring-burgundy/20" />
+                  <input type="number" min="0" step="1" value={customColorQuantity} onChange={e => setCustomColorQuantity(e.target.value)} onBlur={e => setCustomColorQuantity(e.target.value === '' ? '0' : Number(e.target.value).toString())} className="w-full px-3 py-2 border border-burgundy/20 rounded-xl text-sm font-body text-burgundy bg-white placeholder:text-burgundy/30 focus:outline-none focus:ring-2 focus:ring-burgundy/20" />
                 </div>
               )}
             </div>
