@@ -632,17 +632,31 @@ function ProductFormModal({
               <button
                 type="button"
                 onClick={() => {
-                  const isOutOfStock = !form.quantity || Number(form.quantity) <= 0;
+                  const isOutOfStock = form.inventoryMode === 'color' 
+                    ? Object.values(form.colorStock || {}).reduce((a, b) => a + (Number(b) || 0), 0) <= 0
+                    : (!form.quantity || Number(form.quantity) <= 0);
+                    
                   if (!isOutOfStock) {
-                    set('quantity', '0');
+                    if (form.inventoryMode === 'color') {
+                      const newColorStock = { ...(form.colorStock as Record<string, number>) };
+                      const allColors = [...(form.colors as string[]), ...(form.customColors as any[]).map(c => c.name)];
+                      for (const c of allColors) {
+                        newColorStock[c] = 0;
+                      }
+                      setForm(prev => ({ ...prev, quantity: '0', colorStock: newColorStock }));
+                    } else {
+                      set('quantity', '0');
+                    }
                   } else {
-                    set('quantity', '');
-                    setTimeout(() => document.getElementById('quantity-input')?.focus(), 0);
+                    if (form.inventoryMode === 'global') {
+                      set('quantity', '');
+                      setTimeout(() => document.getElementById('quantity-input')?.focus(), 0);
+                    }
                   }
                 }}
-                className={`relative w-12 h-6 rounded-full transition-colors duration-200 ${(!form.quantity || Number(form.quantity) <= 0) ? 'bg-burgundy/20' : 'bg-emerald-500'}`}
+                className={`relative w-12 h-6 rounded-full transition-colors duration-200 ${(form.inventoryMode === 'color' ? Object.values(form.colorStock || {}).reduce((a, b) => a + (Number(b) || 0), 0) <= 0 : (!form.quantity || Number(form.quantity) <= 0)) ? 'bg-burgundy/20' : 'bg-emerald-500'}`}
               >
-                <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${(!form.quantity || Number(form.quantity) <= 0) ? 'translate-x-0' : 'translate-x-6'}`} />
+                <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${(form.inventoryMode === 'color' ? Object.values(form.colorStock || {}).reduce((a, b) => a + (Number(b) || 0), 0) <= 0 : (!form.quantity || Number(form.quantity) <= 0)) ? 'translate-x-0' : 'translate-x-6'}`} />
               </button>
               <span className="text-sm font-body text-burgundy cursor-pointer" onClick={() => {
                   const isOutOfStock = !form.quantity || Number(form.quantity) <= 0;
@@ -653,7 +667,7 @@ function ProductFormModal({
                     setTimeout(() => document.getElementById('quantity-input')?.focus(), 0);
                   }
                 }}>
-                {(!form.quantity || Number(form.quantity) <= 0) ? 'Out of Stock' : 'In Stock'}
+                {(form.inventoryMode === 'color' ? Object.values(form.colorStock || {}).reduce((a, b) => a + (Number(b) || 0), 0) <= 0 : (!form.quantity || Number(form.quantity) <= 0)) ? 'Out of Stock' : 'In Stock'}
               </span>
             </div>
           </section>
