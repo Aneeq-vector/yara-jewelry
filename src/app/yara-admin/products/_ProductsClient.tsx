@@ -269,7 +269,7 @@ function ProductFormModal({
     return emptyForm();
   });
 
-  const [saving, setSaving] = useState(false);
+  const [savingState, setSavingState] = useState<string | null>(null);
   const [showCustomColorForm, setShowCustomColorForm] = useState(false);
   const [customColorName, setCustomColorName] = useState('');
   const [customColorHex, setCustomColorHex] = useState('#000000');
@@ -316,6 +316,10 @@ function ProductFormModal({
   };
 
   const removeImage = (id: string) => {
+    const imgToRemove = form.unifiedImages.find(img => img.id === id);
+    if (imgToRemove && imgToRemove.previewUrl && !imgToRemove.previewUrl.startsWith('http')) {
+      URL.revokeObjectURL(imgToRemove.previewUrl);
+    }
     set('unifiedImages', form.unifiedImages.filter(img => img.id !== id));
   };
 
@@ -333,13 +337,7 @@ function ProductFormModal({
       }
     } else {
       // Color mode validation
-      if (mode === 'edit' && product && product.inventoryMode !== 'color') {
-         // Converting from global to color for the first time
-         const totalColorStock = Object.values(form.colorStock).reduce((sum, q) => sum + (Number(q) || 0), 0);
-         if (totalColorStock !== (product.quantity || 0)) {
-           errs.quantity = `Total color stock (${totalColorStock}) must equal existing global quantity (${product.quantity}) during conversion.`;
-         }
-      }
+      // (Equality requirement removed: admin is permitted to update inventory while converting modes)
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -348,7 +346,7 @@ function ProductFormModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
-    setSaving(true);
+    setSavingState('Optimizing images...');
 
     let res: any;
     try {
@@ -371,7 +369,6 @@ function ProductFormModal({
       fd.append('quantity', qty.toString());
       fd.append('inStock', qty > 0 ? 'true' : 'false');
       
-      // Colors & tags — PocketBase accepts repeated keys for arrays
       (form.colors as string[]).forEach(c => fd.append('colors', c));
       (form.tags as string[]).forEach(t => fd.append('tags', t));
       fd.append('inventoryMode', form.inventoryMode);
@@ -394,32 +391,57 @@ function ProductFormModal({
         fd.append('colorStock', JSON.stringify({}));
       }
 
-      // Extract positions in the EXACT order of unifiedImages
       const positionsArray = form.unifiedImages.map(img => img.position);
       fd.append('imagePositions', JSON.stringify(positionsArray));
 
-      // Compress images before upload to ensure lightning-fast saves
       const options = {
-        maxSizeMB: 1, // Max size 1MB per image
-        maxWidthOrHeight: 1920, // Max 1920px width/height
+        maxSizeMB: 1.5, 
+        maxWidthOrHeight: 1920, 
         useWebWorker: true,
       };
 
-      for (const item of form.unifiedImages) {
-        if (item.isExisting && item.filename) {
-          fd.append('images', item.filename);
-        } else if (item.file) {
-          try {
-            const compressed = await imageCompression(item.file, options);
-            fd.append('images', compressed, compressed.name || item.file.name);
-          } catch (error) {
-            console.error('Image compression failed for', item.file.name, error);
-            fd.append('images', item.file, item.file.name);
+      const uploadImages: any[] = new Array(form.unifiedImages.length);
+      const concurrencyLimit = 3;
+      let currentIndex = 0;
+
+      const worker = async () => {
+        while (currentIndex < form.unifiedImages.length) {
+          const index = currentIndex++;
+          const item = form.unifiedImages[index];
+
+          if (item.isExisting && item.filename) {
+             uploadImages[index] = { isExisting: true, data: item.filename };
+          } else if (item.file) {
+             const isOptimizedType = ['image/webp', 'image/avif', 'image/jpeg'].includes(item.file.type);
+             const isSmallEnough = item.file.size < 650 * 1024;
+             if (isOptimizedType && isSmallEnough) {
+                uploadImages[index] = { isExisting: false, data: item.file, name: item.file.name };
+             } else {
+               try {
+                 const compressed = await imageCompression(item.file, options);
+                 uploadImages[index] = { isExisting: false, data: compressed, name: compressed.name || item.file.name };
+               } catch (error) {
+                 console.error('Image compression failed for', item.file.name, error);
+                 uploadImages[index] = { isExisting: false, data: item.file, name: item.file.name };
+               }
+             }
+          } else {
+             uploadImages[index] = null;
           }
         }
+      };
+
+      const workers = Array.from({ length: Math.min(concurrencyLimit, form.unifiedImages.length) }, () => worker());
+      await Promise.all(workers);
+
+      for (const res of uploadImages) {
+        if (res) {
+           if (res.isExisting) fd.append('images', res.data as string);
+           else fd.append('images', res.data as Blob, res.name);
+        }
       }
-      
-      // Call authoritative server action
+
+      setSavingState('Uploading images...');
       const actionRes = await saveProductAction(fd, mode === 'edit' ? product?.id : undefined);
       
       if (!actionRes.success) {
@@ -433,7 +455,7 @@ function ProductFormModal({
       res = { error: err.message || 'Failed to save product' };
     }
     
-    setSaving(false);
+    setSavingState(null);
     if (res?.success && res.product) {
       addToast(mode === 'add' ? 'Product created!' : 'Product updated!', 'success');
       onSaved(res.product as RawProduct, mode);
@@ -663,6 +685,11 @@ function ProductFormModal({
             {form.inventoryMode === 'color' && (
               <div className="bg-ivory/50 p-4 rounded-xl border border-burgundy/10 mt-4">
                  <label className="block text-xs font-ui font-semibold text-burgundy/70 uppercase tracking-wide mb-3">Color Inventory Quantities</label>
+                 {mode === 'edit' && product?.inventoryMode !== 'color' && (
+                   <p className="text-xs text-burgundy/60 mb-3 bg-burgundy/5 p-2 rounded border border-burgundy/10">
+                     Your previous total stock was {product?.quantity || 0}. Enter the quantity available for each color. The new total will be calculated automatically.
+                   </p>
+                 )}
                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                    {[...(form.colors as string[]), ...(form.customColors as any[]).map(c => c.name)].map(cName => (
                       <div key={cName}>
@@ -731,12 +758,12 @@ function ProductFormModal({
             </button>
             <button
               type="submit"
-              disabled={saving}
+              disabled={savingState !== null}
               id="product-form-submit-btn"
               className="px-6 py-2.5 bg-burgundy text-white rounded-xl font-body text-sm font-medium hover:bg-burgundy/90 transition-colors disabled:opacity-60 flex items-center gap-2"
             >
-              {saving && <RefreshCw size={14} className="animate-spin" />}
-              {saving ? 'Saving…' : mode === 'add' ? 'Create Product' : 'Save Changes'}
+              {savingState !== null && <RefreshCw size={14} className="animate-spin" />}
+              {savingState !== null ? savingState : mode === 'add' ? 'Create Product' : 'Save Changes'}
             </button>
           </div>
         </form>

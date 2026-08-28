@@ -243,14 +243,7 @@ export async function saveProductAction(formData: FormData, id?: string) {
       formData.set('colorStock', JSON.stringify(canonicalColorStock));
       
       // 8. FIRST GLOBAL -> COLOR CONVERSION
-      if (id) {
-        const originalProduct = await pb.collection('products').getOne(id);
-        if (originalProduct.inventoryMode === 'global' || !originalProduct.inventoryMode) {
-          if (finalQty !== originalProduct.quantity) {
-             return { success: false, error: `Tamper alert: Converted color stock sum (${finalQty}) must exactly match existing global quantity (${originalProduct.quantity}).` };
-          }
-        }
-      }
+      // (Equality requirement removed: admin is permitted to update inventory while converting modes)
     } else {
       // 7. GLOBAL MODE AUTHORITATIVE
       const submittedQty = Number(formData.get('quantity'));
