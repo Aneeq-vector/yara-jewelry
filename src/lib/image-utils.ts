@@ -60,6 +60,12 @@ export function pbLoader({ src, width }: ImageLoaderProps): string {
 
   try {
     const url = new URL(src);
+    const isPng = url.pathname.toLowerCase().endsWith('.png');
+    
+    if (isPng && width > 1000) {
+      url.searchParams.delete('thumb');
+      return url.toString();
+    }
     
     if (width > 1400) {
       // For very large displays, return the original master URL

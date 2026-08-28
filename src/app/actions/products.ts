@@ -416,11 +416,16 @@ export async function finalizeProductImagesAction(productId: string, finalImages
         const heroUrl = `${PB_URL}/api/files/${currentProduct.collectionId}/${productId}/${heroImg}`;
         
         // Mandatory warm - throws if fails
-        await Promise.all([
+        const warmTasks = [
           warmImage(`${heroUrl}?thumb=700x0`),
-          warmImage(`${heroUrl}?thumb=1000x0`),
-          warmImage(`${heroUrl}?thumb=1400x0`)
-        ]);
+          warmImage(`${heroUrl}?thumb=1000x0`)
+        ];
+        
+        if (ext !== 'png') {
+          warmTasks.push(warmImage(`${heroUrl}?thumb=1400x0`));
+        }
+        
+        await Promise.all(warmTasks);
         
         // Background warm other sizes
         const collectionId = currentProduct.collectionId;
