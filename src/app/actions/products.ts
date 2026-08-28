@@ -32,9 +32,9 @@ export async function getProductsAction(page = 1, perPage = 50, search = '', cat
       filters.push(`category = "${categoryId}"`);
     }
     if (inStock === 'In Stock') {
-      filters.push(`inStock = true`);
+      filters.push(`quantity > 0`);
     } else if (inStock === 'Out of Stock') {
-      filters.push(`inStock = false`);
+      filters.push(`quantity = 0`);
     }
     if (badge !== 'All') {
       filters.push(`badge = "${badge}"`);

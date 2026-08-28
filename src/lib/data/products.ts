@@ -1,4 +1,5 @@
 import { Product } from '@/types';
+import { isProductAvailable } from '@/lib/utils';
 import { createClient, PB_URL } from '@/lib/pocketbase';
 import { RecordModel } from 'pocketbase';
 
@@ -91,8 +92,10 @@ export async function getProductsByCategory(category: string, limit = 500): Prom
     
     // JS sort available-first
     results.sort((a, b) => {
-      if (a.inStock && !b.inStock) return -1;
-      if (!a.inStock && b.inStock) return 1;
+      const aAvail = isProductAvailable(a);
+      const bAvail = isProductAvailable(b);
+      if (aAvail && !bAvail) return -1;
+      if (!aAvail && bAvail) return 1;
       return 0; // -created preserves the order
     });
     
@@ -107,7 +110,7 @@ async function getAvailableFirstLimitedProducts(baseFilter: string, limit: numbe
   const pb = createClient();
   
   // 1. Fetch IN-STOCK records first
-  const availableFilter = `(${baseFilter}) && inStock = true && isStaged = false && isHidden = false`;
+  const availableFilter = `(${baseFilter}) && quantity > 0 && isStaged = false && isHidden = false`;
   const availableRecords = await pb.collection('products').getList(1, limit, {
     filter: availableFilter,
     sort: secondarySort,
@@ -120,7 +123,7 @@ async function getAvailableFirstLimitedProducts(baseFilter: string, limit: numbe
   // 2. & 3. If fewer than limit, fetch OUT-OF-STOCK records
   if (results.length < limit) {
     const remainingLimit = limit - results.length;
-    const outOfStockFilter = `(${baseFilter}) && inStock = false && isStaged = false && isHidden = false`;
+    const outOfStockFilter = `(${baseFilter}) && quantity = 0 && isStaged = false && isHidden = false`;
     const outOfStockRecords = await pb.collection('products').getList(1, remainingLimit, {
       filter: outOfStockFilter,
       sort: secondarySort,
@@ -175,8 +178,10 @@ export async function searchProducts(query: string): Promise<Product[]> {
     
     // JS sort available-first for search results
     results.sort((a, b) => {
-      if (a.inStock && !b.inStock) return -1;
-      if (!a.inStock && b.inStock) return 1;
+      const aAvail = isProductAvailable(a);
+      const bAvail = isProductAvailable(b);
+      if (aAvail && !bAvail) return -1;
+      if (!aAvail && bAvail) return 1;
       return 0; // -created preserves the order
     });
     

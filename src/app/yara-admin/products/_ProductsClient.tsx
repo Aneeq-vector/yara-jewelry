@@ -292,6 +292,13 @@ function ProductFormModal({
   );
 
   useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
+
+  useEffect(() => {
     if (!showCustomColorForm) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -563,11 +570,11 @@ function ProductFormModal({
     }`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
       <div className="absolute inset-0 bg-burgundy/20 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white border border-burgundy/10 rounded-2xl shadow-2xl w-full max-w-3xl my-6">
+      <div className="relative flex flex-col bg-white border border-burgundy/10 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-3rem)]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-burgundy/10 bg-ivory/40 rounded-t-2xl">
+        <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b border-burgundy/10 bg-ivory/40 rounded-t-2xl">
           <div>
             <h2 className="text-xl font-heading font-bold text-burgundy">
               {mode === 'add' ? 'Add New Product' : 'Edit Product'}
@@ -581,7 +588,8 @@ function ProductFormModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto max-h-[78vh]">
+        <form onSubmit={handleSubmit} className="flex-1 min-h-0 flex flex-col">
+          <div className="p-4 sm:p-6 space-y-8 overflow-y-auto flex-1">
 
           {/* Basic Info */}
           <section>
@@ -866,8 +874,10 @@ function ProductFormModal({
             <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/heic,image/heif" multiple className="hidden" onChange={e => handleImageFiles(e.target.files)} />
           </section>
 
+          </div>
+
           {/* Footer */}
-          <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end pt-2 border-t border-burgundy/10">
+          <div className="shrink-0 bg-gray-50/50 rounded-b-2xl p-4 sm:px-6 sm:py-4 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end border-t border-burgundy/10">
             <button type="button" onClick={onClose} className="px-6 py-2.5 border border-burgundy/20 text-burgundy rounded-xl font-body text-sm hover:bg-rose-gold/10 transition-colors">
               Cancel
             </button>
@@ -893,7 +903,7 @@ function ProductFormModal({
             setCustomColorHex('#1F8A5B');
             setCustomColorQuantity('0');
           }} />
-          <div className="relative bg-[#FDFBF7] border border-burgundy/20 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.12)] w-full max-w-[440px] p-6 space-y-6">
+          <div className="relative bg-[#FDFBF7] border border-burgundy/20 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.12)] w-full max-w-[440px] max-h-[calc(100dvh-2rem)] overflow-y-auto p-6 space-y-6">
             <div>
               <h3 className="text-xl font-heading font-bold text-burgundy">Add Custom Color</h3>
               <p className="text-xs text-burgundy/60 font-body mt-1">Create a custom color option for this product.</p>

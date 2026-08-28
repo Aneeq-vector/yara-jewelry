@@ -3,6 +3,24 @@
 import { getServerSession, validateSession, getAdminClient } from '@/lib/pocketbase-server';
 import { revalidatePath } from 'next/cache';
 import { validateColorStock, normalizeColorName } from '@/lib/colors';
+import { unstable_noStore as noStore } from 'next/cache';
+async function syncInStock(productIds: string[]) {
+  if (!productIds || productIds.length === 0) return;
+  try {
+    const adminPb = await getAdminClient();
+    for (const pid of [...new Set(productIds)]) {
+      const p = await adminPb.collection('products').getOne(pid);
+      const expectedInStock = Number(p.quantity) > 0;
+      if (p.inStock !== expectedInStock) {
+        await adminPb.collection('products').update(pid, { inStock: expectedInStock }).catch(e => {
+          console.error(`Failed to sync inStock for product ${pid}:`, e);
+        });
+      }
+    }
+  } catch (err) {
+    console.error("Failed to sync inStock:", err);
+  }
+}
 
 const FALLBACK_BOX_ID = 'customize-gift-box-fallback';
 const FALLBACK_BOX_PRICE = 400;
@@ -345,6 +363,9 @@ export async function createOrderAction(formData: FormData) {
     // Execute Batch
     await batch.send();
 
+    // Best-effort inStock sync
+    syncInStock(Array.from(productIdsToFetch)).catch(console.error);
+
     // 6. Send Email (non-blocking using next/server after)
     try {
       const email = formData.get('email') as string;
@@ -605,6 +626,9 @@ export async function createManualOrderAction(payload: ManualOrderPayload) {
       body: { requests: batchRequests }
     });
     
+    // Best-effort inStock sync
+    syncInStock(productIdsToFetch).catch(console.error);
+    
     let record = null;
     if (Array.isArray(batchRes) && batchRes.length > 0 && batchRes[0].body) {
        record = batchRes[0].body;
@@ -796,6 +820,16 @@ async function processOrderLifecycleTransition(orderId: string, newStatus: strin
       method: 'POST',
       body: { requests: batchRequests }
     });
+    
+    // Best-effort inStock sync
+    // Best-effort inStock sync
+    const keys = new Set<string>();
+    for (const req of batchRequests) {
+      if (req.url?.startsWith('/api/collections/products/records/')) {
+        keys.add(req.url.split('/').pop()!);
+      }
+    }
+    syncInStock(Array.from(keys)).catch(console.error);
   } else {
     await adminPb.collection('orders').update(orderId, orderUpdates);
   }
@@ -926,6 +960,15 @@ export async function deleteOrdersAction(orderIds: string[]) {
         method: 'POST',
         body: { requests: batchRequests }
       });
+      
+      // Best-effort inStock sync
+      const keys = new Set<string>();
+      for (const req of batchRequests) {
+        if (req.url?.startsWith('/api/collections/products/records/')) {
+          keys.add(req.url.split('/').pop()!);
+        }
+      }
+      syncInStock(Array.from(keys)).catch(console.error);
     }
 
     // Realtime invalidation covers Admin UI
