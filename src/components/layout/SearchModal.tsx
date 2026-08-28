@@ -1,5 +1,6 @@
 'use client';
 
+import { getOptimizedImageUrl, isPocketBaseResizable } from '@/lib/image-utils';
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -117,7 +118,8 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
                           >
                             <div className="w-14 h-14 rounded-xl overflow-hidden bg-champagne flex-shrink-0">
                               <Image
-                                src={product.images[0]}
+                                src={getOptimizedImageUrl(product.images[0], "thumb")}
+                                unoptimized={isPocketBaseResizable(product.images[0])}
                                 alt={product.name}
                                 width={56}
                                 height={56}

@@ -1,5 +1,6 @@
 'use client';
 
+import { getOptimizedImageUrl, isPocketBaseResizable } from '@/lib/image-utils';
 import { m as motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -90,8 +91,7 @@ export function IncludedItemsList({
                     alt={item.name}
                     fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     className="object-cover"
-                    unoptimized
-                  />
+                    />
                 </div>
               </Link>
 

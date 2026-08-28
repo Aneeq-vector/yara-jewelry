@@ -1,5 +1,6 @@
 'use client';
 
+import { getOptimizedImageUrl, isPocketBaseResizable } from '@/lib/image-utils';
 import { useState, useSyncExternalStore } from 'react';
 import { m as motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
@@ -70,7 +71,8 @@ export default function WishlistPage() {
                 >
                   <div className="relative rounded-3xl overflow-hidden bg-champagne/30 mb-4">
                     <Link href={`/shop/${product.id}`} className="block relative aspect-square">
-                      <Image src={product.images[0]} alt={product.name} fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover group-hover:scale-105 transition-transform duration-700" unoptimized />
+                      <Image src={getOptimizedImageUrl(product.images[0], "card")}
+                      unoptimized={isPocketBaseResizable(product.images[0])} alt={product.name} fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover group-hover:scale-105 transition-transform duration-700" />
                     </Link>
 
                     <button

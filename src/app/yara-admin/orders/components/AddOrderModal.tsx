@@ -1,5 +1,6 @@
 'use client';
 
+import { getOptimizedImageUrl, isPocketBaseResizable } from '@/lib/image-utils';
 import { useState, useEffect, useRef } from 'react';
 import { X, Search, Plus, Minus, Trash2, Package, Loader2, CheckCircle, Upload } from 'lucide-react';
 import { createManualOrderAction, ManualOrderItem } from '@/app/actions/orders';
@@ -289,7 +290,7 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
                           disabled={product.quantity <= 0}
                           className={`w-full flex items-center gap-3 px-3 py-2.5 transition-colors text-left border-b border-burgundy/5 last:border-0 ${product.quantity <= 0 ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'hover:bg-ivory/60'}`}>
                           {product.images?.[0] && (
-                            <img src={product.images[0]} alt={product.name} className="w-9 h-9 rounded-lg object-cover flex-shrink-0 bg-ivory" />
+                            <img src={getOptimizedImageUrl(product.images[0], "thumb")} alt={product.name} className="w-9 h-9 rounded-lg object-cover flex-shrink-0 bg-ivory" />
                           )}
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-body font-medium text-burgundy truncate">{product.name}</p>
@@ -323,7 +324,7 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
                         {/* Product header */}
                         <div className="flex items-start gap-3 mb-3">
                           {productData?.images?.[0] && (
-                            <img src={productData.images[0]} alt={item.productName} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                            <img src={getOptimizedImageUrl(productData.images[0], "thumb")} alt={item.productName} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
                           )}
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-body font-medium text-burgundy truncate">{item.productName}</p>

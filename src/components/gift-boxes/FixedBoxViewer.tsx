@@ -1,5 +1,6 @@
 'use client';
 
+import { getOptimizedImageUrl, isPocketBaseResizable } from '@/lib/image-utils';
 import { useState, useMemo } from 'react';
 import { m as motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
@@ -135,8 +136,7 @@ export default function FixedBoxViewer({ box, categories = [] }: FixedBoxViewerP
                   alt={box.name}
                   fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   className="object-cover"
-                  unoptimized
-                />
+                  />
                 <div className="absolute top-4 left-4">
                   <span className="px-3 py-1.5 rounded-full bg-burgundy text-ivory font-ui text-[10px] font-bold uppercase tracking-wider shadow-lg flex items-center gap-1.5">
                     <Gift size={12} />
@@ -153,7 +153,8 @@ export default function FixedBoxViewer({ box, categories = [] }: FixedBoxViewerP
                       key={img}
                       className="relative w-16 h-16 rounded-2xl overflow-hidden border-2 border-nude/40"
                     >
-                      <Image src={img} alt={`${box.name} ${i + 1}`} fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" unoptimized />
+                      <Image src={getOptimizedImageUrl(img, "thumb")}
+                      unoptimized={isPocketBaseResizable(img)} alt={`${box.name} ${i + 1}`} fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" />
                     </div>
                   ))}
                 </div>

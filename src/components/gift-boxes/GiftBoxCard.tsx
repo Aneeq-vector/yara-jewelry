@@ -1,5 +1,6 @@
 'use client';
 
+import { getOptimizedImageUrl, isPocketBaseResizable } from '@/lib/image-utils';
 import { m as motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -69,12 +70,12 @@ export default function GiftBoxCard({ box, index }: GiftBoxCardProps) {
           {/* Image */}
           <div className="relative aspect-[4/3] overflow-hidden">
             <Image
-              src={box.images[0]}
+              src={getOptimizedImageUrl(box.images[0], "card")}
+              unoptimized={isPocketBaseResizable(box.images[0])}
               alt={box.name}
               fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               className="object-cover transition-transform duration-700 group-hover:scale-105"
-              unoptimized
-            />
+              />
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
           </div>
 
@@ -131,8 +132,7 @@ export default function GiftBoxCard({ box, index }: GiftBoxCardProps) {
                         alt={item.name}
                         fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                         className="object-cover"
-                        unoptimized
-                      />
+                        />
                     </div>
                   ))}
                   {box.fixedItems.length > 5 && (
