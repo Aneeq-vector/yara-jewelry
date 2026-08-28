@@ -1,4 +1,6 @@
 'use client';
+import imageCompression from 'browser-image-compression';
+import { prepareCommerceImage } from '@/lib/image-compression';
 
 import { useState, useEffect, useMemo, useRef, useReducer } from 'react';
 import { m as motion, LazyMotion, domAnimation, AnimatePresence } from 'framer-motion';
@@ -530,7 +532,15 @@ export default function GiftBoxesAdminClient({
       const formData = new FormData();
 
       if (pendingImage) {
-        formData.append('images', pendingImage);
+        try {
+          const prepared = await prepareCommerceImage(pendingImage);
+          formData.append('images', prepared.file);
+        } catch (e: any) {
+          console.error("Preparation failed", e);
+          alert(e.message || "Failed to prepare image. Please try another image.");
+          dispatch({ type: 'SET_SAVE_STATUS', payload: 'idle' });
+          return;
+        }
       }
       if (editorCategory) {
         formData.append('category', editorCategory);

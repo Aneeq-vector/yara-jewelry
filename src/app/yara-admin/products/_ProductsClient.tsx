@@ -3,6 +3,7 @@ import { queryKeys } from '@/lib/query-keys';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import imageCompression from 'browser-image-compression';
+import { prepareCommerceImage } from '@/lib/image-compression';
 import Image from 'next/image';
 import {
   DndContext,
@@ -425,21 +426,12 @@ function ProductFormModal({
           if (item.isExisting && item.filename) {
              uploadImages[index] = { isExisting: true, data: item.filename };
           } else if (item.file) {
-             const isOptimizedType = ['image/webp', 'image/avif', 'image/jpeg'].includes(item.file.type);
-             const isSmallEnough = item.file.size < 650 * 1024;
-             if (isOptimizedType && isSmallEnough) {
-                uploadImages[index] = { isExisting: false, data: item.file, name: item.file.name };
-             } else {
-               try {
-                 const compressed = await imageCompression(item.file, options);
-                 uploadImages[index] = { isExisting: false, data: compressed, name: compressed.name || item.file.name };
-               } catch (error) {
+             try {
+                const prepared = await prepareCommerceImage(item.file);
+                uploadImages[index] = { isExisting: false, data: prepared.file, name: prepared.file.name };
+             } catch (error: any) {
                  console.error('Image compression failed for', item.file.name, error);
-                 if (item.file.size > 2 * 1024 * 1024) {
-                   throw new Error(`Could not optimize ${item.file.name}. Please try the image again.`);
-                 }
-                 uploadImages[index] = { isExisting: false, data: item.file, name: item.file.name };
-               }
+                 throw new Error(error.message || `Could not prepare ${item.file.name}. Please try another image.`);
              }
           }
         }
