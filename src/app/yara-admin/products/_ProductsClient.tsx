@@ -1116,7 +1116,7 @@ export default function ProductsClient({
     perPage: rowsPerPage,
     search: debouncedSearch,
     categoryId: filterCategory,
-    sort: '-id',
+    sort: '-addedAt,-id',
     inStock: filterStock,
     badge: filterBadge
   }, initialAdminData);

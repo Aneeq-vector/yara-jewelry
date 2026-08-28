@@ -26,6 +26,7 @@ export interface Product {
   tags: string[];
   isHidden?: boolean;
   isStaged?: boolean;
+  addedAt?: string;
   publishedAt?: string;
   hasBeenPublished?: boolean;
 }

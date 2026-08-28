@@ -19,7 +19,7 @@ function revalidateAll() {
   revalidatePath('/', 'page'); // home page (trending products etc)
 }
 
-export async function getProductsAction(page = 1, perPage = 50, search = '', categoryId = '', sort = '-id', inStock = 'All', badge = 'All') {
+export async function getProductsAction(page = 1, perPage = 50, search = '', categoryId = '', sort = '-addedAt,-id', inStock = 'All', badge = 'All') {
   try {
     const { pb } = await validateSession();
     
@@ -47,7 +47,7 @@ export async function getProductsAction(page = 1, perPage = 50, search = '', cat
       sort: sort,
       filter: filterString,
       expand: 'category',
-      fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,imagePositions,description,shortDescription,badge,colors,customColors,inventoryMode,colorStock,tags,material,weight,isHidden,isStaged,publishedAt,hasBeenPublished,expand.category.id,expand.category.name',
+      fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,imagePositions,description,shortDescription,badge,colors,customColors,inventoryMode,colorStock,tags,material,weight,isHidden,isStaged,publishedAt,hasBeenPublished,addedAt,expand.category.id,expand.category.name',
     });
     return { success: true, products: toPlain(records.items), totalItems: records.totalItems, totalPages: records.totalPages };
   } catch (error: any) {
@@ -102,6 +102,7 @@ export async function duplicateProductAction(id: string) {
     delete newData.collectionId;
     delete newData.collectionName;
     newData.name = `${newData.name} (Copy)`;
+    newData.addedAt = new Date().toISOString();
     const record = await pb.collection('products').create(newData);
     revalidateAll();
     return { success: true, product: toPlain(record) };
@@ -259,8 +260,11 @@ export async function saveProductAction(formData: FormData, id?: string) {
 
     let record;
     if (id) {
+      // 11. EXACT REQUIREMENTS: "Editing must never change addedAt."
+      formData.delete('addedAt');
       record = await pb.collection('products').update(id, formData);
     } else {
+      formData.set('addedAt', new Date().toISOString());
       record = await pb.collection('products').create(formData);
     }
     
@@ -286,7 +290,7 @@ export async function getProductOptionsAction() {
     const { pb } = await validateSession();
     const records = await pb.collection('products').getFullList({
       sort: 'name', filter: 'isStaged = false && isHidden = false',
-      fields: 'id,collectionId,name,price,inStock,quantity,images,productCode,category,colors,isHidden,isStaged,publishedAt,hasBeenPublished',
+      fields: 'id,collectionId,name,price,inStock,quantity,images,productCode,category,colors,isHidden,isStaged,publishedAt,hasBeenPublished,addedAt',
     });
     return { success: true, products: toPlain(records.map(mapRecordToProduct)) };
   } catch (error: any) {
@@ -300,7 +304,7 @@ export async function getCategoryProductsAction(categoryId: string, page = 1, pe
     // Lightweight query for the edit category modal
     const records = await pb.collection('products').getList(page, perPage, {
       filter: `category = "${categoryId}" && isStaged = false && isHidden = false`,
-      fields: 'id,name,productCode,price,quantity,category,isHidden,isStaged,publishedAt,hasBeenPublished',
+      fields: 'id,name,productCode,price,quantity,category,isHidden,isStaged,publishedAt,hasBeenPublished,addedAt',
     });
     return { 
       success: true, 
@@ -328,7 +332,7 @@ export async function getAssignableProductsAction(currentCategoryId: string, pag
     const records = await pb.collection('products').getList(page, perPage, {
       filter: filterString,
       expand: 'category',
-      fields: 'id,name,productCode,price,quantity,category,isHidden,isStaged,publishedAt,hasBeenPublished,expand.category.name,expand.category.id',
+      fields: 'id,name,productCode,price,quantity,category,isHidden,isStaged,publishedAt,hasBeenPublished,addedAt,expand.category.name,expand.category.id',
     });
     
     return { 

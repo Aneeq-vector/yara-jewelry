@@ -41,6 +41,7 @@ export function mapRecordToProduct(record: RecordModel): Product {
     tags: record.tags || [],
     isHidden: record.isHidden ?? false,
     isStaged: record.isStaged ?? false,
+    addedAt: record.addedAt || undefined,
     publishedAt: record.publishedAt || undefined,
     hasBeenPublished: record.hasBeenPublished ?? false,
   };
@@ -53,7 +54,7 @@ export async function getAllProducts(): Promise<Product[]> {
       filter: 'isStaged = false && isHidden = false',
       expand: 'category',
       sort: '-id',
-      fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,imagePositions,shortDescription,description,badge,colors,customColors,inventoryMode,colorStock,tags,material,weight,publishedAt,hasBeenPublished,expand.category.id,expand.category.name',
+      fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,imagePositions,shortDescription,description,badge,colors,customColors,inventoryMode,colorStock,tags,material,weight,publishedAt,hasBeenPublished,addedAt,expand.category.id,expand.category.name',
       $autoCancel: false,
     });
     return records.map(mapRecordToProduct);
@@ -86,7 +87,7 @@ export async function getProductsByCategory(category: string, limit = 500): Prom
       sort: '-id',
       $autoCancel: false,
       expand: 'category',
-      fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,imagePositions,shortDescription,description,badge,colors,customColors,inventoryMode,colorStock,tags,material,weight,publishedAt,hasBeenPublished,expand.category.id,expand.category.name',
+      fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,imagePositions,shortDescription,description,badge,colors,customColors,inventoryMode,colorStock,tags,material,weight,publishedAt,hasBeenPublished,addedAt,expand.category.id,expand.category.name',
     });
     const results = records.items.map(mapRecordToProduct);
     
