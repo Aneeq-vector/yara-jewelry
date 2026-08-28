@@ -690,12 +690,12 @@ function ProductFormModal({
             </div>
 
             <ChipPicker 
-              label="Preset Colors (max 5 combined with custom)" 
+              label="COLORS (MAX 10 TOTAL)" 
               options={COLOR_OPTIONS} 
               selected={form.colors as string[]} 
               onChange={v => {
-                if (v.length + (form.customColors as any[]).length > 5) {
-                   addToast('Maximum 5 colors allowed total', 'error');
+                if (v.length + (form.customColors as any[]).length > 10) {
+                   addToast('Maximum 10 colors allowed total', 'error');
                    return;
                 }
                 set('colors', v);
@@ -717,7 +717,7 @@ function ProductFormModal({
                   </div>
                 ))}
                 
-                {(form.colors as string[]).length + (form.customColors as any[]).length < 5 && (
+                {(form.colors as string[]).length + (form.customColors as any[]).length < 10 && (
                   <button type="button" onClick={() => setShowCustomColorForm(true)} className="text-xs font-ui flex items-center gap-1 text-burgundy bg-burgundy/5 hover:bg-burgundy/10 w-max px-3 py-1.5 rounded-full mt-1">
                     <Plus size={12}/> Add Custom Color
                   </button>
@@ -871,7 +871,7 @@ function ProductFormModal({
 
                 const exists = (form.customColors as any[]).some(c => c.name.toLowerCase() === name.toLowerCase()) || (form.colors as string[]).some(c => c.toLowerCase() === name.toLowerCase());
                 if (exists) return addToast('Color already exists', 'error');
-                if ((form.colors as string[]).length + (form.customColors as any[]).length >= 5) return addToast('Max 5 colors', 'error');
+                if ((form.colors as string[]).length + (form.customColors as any[]).length >= 10) return addToast('Max 10 colors', 'error');
 
                 set('customColors', [...(form.customColors as any[]), { name, hex: customColorHex.toUpperCase() }]);
                 if (form.inventoryMode === 'color') {

@@ -112,6 +112,7 @@ const MAX_PRODUCT_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB per image
 const MAX_IMAGES = 10;
 
 export async function saveProductAction(formData: FormData, id?: string) {
+  console.log('[PRODUCT_SAVE_DEBUG] ACTION_REACHED');
   try {
     const { pb } = await validateSession();
     
@@ -165,8 +166,8 @@ export async function saveProductAction(formData: FormData, id?: string) {
     }
 
     // Check custom colors count + presets
-    if (presetColors.length + canonicalCustomColors.length > 5) {
-      return { success: false, error: 'Cannot have more than 5 colors total.' };
+    if (presetColors.length + canonicalCustomColors.length > 10) {
+      return { success: false, error: 'Cannot have more than 10 colors total.' };
     }
 
     const uniqueNames = new Set([...presetColors, ...canonicalCustomColors.map(c => c.name)].map(n => String(n).trim().toLowerCase()));
