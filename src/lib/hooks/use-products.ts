@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getAllProducts, getProductById, getProductsByCategory } from '@/lib/data/products';
+import { getAllProducts, getProductById, getProductsByCategory, getTrendingProducts } from '@/lib/data/products';
 import { deleteProductAction, deleteProductsAction, duplicateProductAction, getProductOptionsAction } from '@/app/actions/products';
 import { queryKeys } from '@/lib/query-keys';
 import { Product } from '@/types';
@@ -80,6 +80,18 @@ export function useProductOptions(initialData?: any[]) {
       if (!res.success) throw new Error(res.error || 'Failed to fetch product options');
       return (res.products as any[]) || [];
     },
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    ...(initialData ? { initialData } : {}),
+  });
+}
+
+
+export function useTrendingProducts(initialData?: Product[]) {
+  return useQuery({
+    queryKey: queryKeys.products.trending(),
+    queryFn: () => getTrendingProducts(),
     staleTime: 60_000,
     gcTime: 5 * 60_000,
     refetchOnWindowFocus: false,

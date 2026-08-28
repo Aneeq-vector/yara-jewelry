@@ -107,7 +107,7 @@ export async function getProductsByCategory(category: string, limit = 500): Prom
   }
 }
 
-async function getAvailableFirstLimitedProducts(baseFilter: string, limit: number, secondarySort = '-id'): Promise<Product[]> {
+async function getAvailableFirstLimitedProducts(baseFilter: string, limit: number, secondarySort = '-id', includeOutOfStockFallback = true): Promise<Product[]> {
   const pb = createClient();
   
   // 1. Fetch IN-STOCK records first
@@ -122,7 +122,7 @@ async function getAvailableFirstLimitedProducts(baseFilter: string, limit: numbe
   let results = availableRecords.items.map(mapRecordToProduct);
   
   // 2. & 3. If fewer than limit, fetch OUT-OF-STOCK records
-  if (results.length < limit) {
+  if (includeOutOfStockFallback && results.length < limit) {
     const remainingLimit = limit - results.length;
     const outOfStockFilter = `(${baseFilter}) && quantity = 0 && isStaged = false && isHidden = false`;
     const outOfStockRecords = await pb.collection('products').getList(1, remainingLimit, {
@@ -140,17 +140,17 @@ async function getAvailableFirstLimitedProducts(baseFilter: string, limit: numbe
 
 const TRENDING_SLOTS = 4;
 
-export async function getTrendingProducts(): Promise<Product[]> {
+export async function getTrendingProducts(options: { includeOutOfStockFallback?: boolean } = {}): Promise<Product[]> {
   try {
-    return await getAvailableFirstLimitedProducts('badge="trending"', TRENDING_SLOTS, '-id');
+    return await getAvailableFirstLimitedProducts('badge="trending"', TRENDING_SLOTS, '-id', options.includeOutOfStockFallback ?? false);
   } catch (error) {
     return [];
   }
 }
 
-async function getNewArrivals(): Promise<Product[]> {
+async function getNewArrivals(options: { includeOutOfStockFallback?: boolean } = {}): Promise<Product[]> {
   try {
-    return await getAvailableFirstLimitedProducts('badge="new" || category="new-arrivals"', 8, '-publishedAt,-id');
+    return await getAvailableFirstLimitedProducts('badge="new" || category="new-arrivals"', 8, '-publishedAt,-id', options.includeOutOfStockFallback ?? false);
   } catch (error) {
     
     return [];

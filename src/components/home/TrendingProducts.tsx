@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { Heart, ShoppingBag, Eye, Star, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCartStore } from '@/lib/store/cart-store';
 import { useWishlistStore } from '@/lib/store/wishlist-store';
+import { useTrendingProducts } from '@/lib/hooks/use-products';
 import { formatPrice, calculateDiscount } from '@/lib/utils';
 import { BADGE_CONFIG } from '@/lib/constants';
 import { Product } from '@/types';
@@ -225,6 +226,7 @@ function ViewAllCard({ bgImage }: { bgImage?: string }) {
 }
 
 export default function TrendingProducts({ products = [] }: { products?: Product[] }) {
+  const { data: trendingProducts = products } = useTrendingProducts(products);
 
   return (
     <section className="section-padding bg-champagne/30 relative overflow-hidden">
@@ -262,14 +264,14 @@ export default function TrendingProducts({ products = [] }: { products?: Product
 
         {/* Products Carousel */}
         <div className="flex overflow-x-auto gap-4 sm:gap-6 pb-8 snap-x snap-mandatory no-scrollbar w-full -mx-4 px-4 sm:mx-0 sm:px-0">
-          {products.map((product, i) => (
+          {trendingProducts.map((product, i) => (
             <ProductCard
               key={product.id}
               product={product}
               index={i}
             />
           ))}
-          <ViewAllCard bgImage={products.length > 0 ? products[products.length - 1].images[0] : undefined} />
+          <ViewAllCard bgImage={trendingProducts.length > 0 ? trendingProducts[trendingProducts.length - 1].images[0] : undefined} />
           {/* Spacer for right edge on mobile */}
           <div className="w-1 shrink-0 sm:hidden"></div>
         </div>
