@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { ProductsPagination } from './components/ProductsPagination';
+import { uploadProductImageBatchAction, finalizeProductImagesAction, rollbackNewProductAction } from '@/app/actions/products';
 import {
   revalidateProductsAction,
   saveProductAction,
@@ -365,7 +366,7 @@ function ProductFormModal({
 
     let res: any;
     try {
-      // Build FormData
+      // Build FormData for metadata
       const fd = new FormData();
       if (form.productCode) fd.append('productCode', form.productCode.toString());
       fd.append('name', form.name.toString());
@@ -406,9 +407,6 @@ function ProductFormModal({
         fd.append('colorStock', JSON.stringify({}));
       }
 
-      const positionsArray = form.unifiedImages.map(img => img.position);
-      fd.append('imagePositions', JSON.stringify(positionsArray));
-
       const options = {
         maxSizeMB: 1.5, 
         maxWidthOrHeight: 1920, 
@@ -443,54 +441,103 @@ function ProductFormModal({
                  uploadImages[index] = { isExisting: false, data: item.file, name: item.file.name };
                }
              }
-          } else {
-             uploadImages[index] = null;
           }
         }
       };
 
-      const workers = Array.from({ length: Math.min(concurrencyLimit, form.unifiedImages.length) }, () => worker());
+      const workers = Array.from({ length: concurrencyLimit }, () => worker());
+      await Promise.all(workers);
+
+      const newImages = uploadImages.filter(r => !r.isExisting);
+      let productId = mode === 'edit' ? (product?.id || '') : '';
+
+      // 1. ADD MODE: Create metadata first (staged/hidden)
+      if (mode === 'add') {
+         fd.append('isStaged', 'true');
+         setSavingState('Creating product metadata...');
+         const actionRes = await saveProductAction(fd);
+         if (!actionRes.success || !actionRes.product) throw new Error(actionRes.error || "Failed");
+         productId = actionRes.product.id;
+      }
+
+      // 2. Batch new images based on byte size
+      const MAX_BATCH_BYTES = 3.5 * 1024 * 1024;
+      const batches: any[][] = [];
+      let currentBatch: any[] = [];
+      let currentBatchSize = 0;
+
+      for (const img of newImages) {
+         if (img.data.size > 2 * 1024 * 1024) {
+            throw new Error(`Image ${img.name} exceeds the 2MB limit after optimization.`);
+         }
+         if (currentBatchSize + img.data.size > MAX_BATCH_BYTES && currentBatch.length > 0) {
+            batches.push(currentBatch);
+            currentBatch = [];
+            currentBatchSize = 0;
+         }
+         currentBatch.push(img);
+         currentBatchSize += img.data.size;
+      }
+      if (currentBatch.length > 0) batches.push(currentBatch);
+
+      // 3. Upload batches sequentially
+      const uploadedFilenames: string[] = [];
       try {
-        await Promise.all(workers);
+         for (let i = 0; i < batches.length; i++) {
+            setSavingState(`Uploading images ${i+1}/${batches.length}...`);
+            const batchFd = new FormData();
+            for (const img of batches[i]) {
+               batchFd.append('images', img.data, img.name);
+            }
+            const batchRes = await uploadProductImageBatchAction(productId, batchFd);
+            if (!batchRes.success || !batchRes.product) throw new Error(batchRes.error || "Failed");
+            
+            const updatedImages = batchRes.product.images || [];
+            const newNames = updatedImages.slice(-batches[i].length);
+            uploadedFilenames.push(...newNames);
+         }
       } catch (err: any) {
-        setSavingState(null);
-        addToast(err.message, 'error');
-        return;
+         if (mode === 'add') {
+            await rollbackNewProductAction(productId);
+         } else {
+            await finalizeProductImagesAction(productId, product?.images || [], product?.imagePositions || []);
+         }
+         throw err;
       }
 
-      let totalNewSize = 0;
-      for (const res of uploadImages) {
-        if (res && !res.isExisting && res.data) {
-          if (res.data.size > 2 * 1024 * 1024) {
-            setSavingState(null);
-            addToast(`Image ${res.name} exceeds the 2MB limit after optimization.`, 'error');
-            return;
-          }
-          totalNewSize += res.data.size;
-        }
-      }
-
-      if (totalNewSize > 16 * 1024 * 1024) {
-        setSavingState(null);
-        addToast('The selected images are still too large to upload together. Please remove one or more images and try again.', 'error');
-        return;
-      }
-
-      for (const res of uploadImages) {
-        if (res) {
-           if (res.isExisting) fd.append('images', res.data as string);
-           else fd.append('images', res.data as Blob, res.name);
-        }
-      }
-
-      setSavingState('Uploading images...');
-      const actionRes = await saveProductAction(fd, mode === 'edit' ? product?.id : undefined);
+      // 4. Finalization
+      setSavingState('Finalizing product...');
       
-      if (!actionRes.success) {
-        throw new Error(actionRes.error || 'Failed to save product');
+      let uploadedIdx = 0;
+      const finalFilenames: string[] = [];
+      for (const r of uploadImages) {
+         if (r.isExisting) finalFilenames.push(r.data);
+         else finalFilenames.push(uploadedFilenames[uploadedIdx++]);
       }
       
-      res = { success: true, product: actionRes.product };
+      const positionsArray = form.unifiedImages.map(img => img.position);
+
+      if (mode === 'add') {
+         const finalQtyStr = fd.get('quantity') as string;
+         const finalInStock = Number(finalQtyStr) > 0;
+         const finRes = await finalizeProductImagesAction(productId, finalFilenames, positionsArray);
+         if (!finRes.success) {
+            await rollbackNewProductAction(productId);
+            throw new Error(finRes.error);
+         }
+         res = { success: true, product: finRes.product };
+      } else {
+         for (const fname of finalFilenames) {
+            fd.append('images', fname);
+         }
+         fd.append('imagePositions', JSON.stringify(positionsArray));
+         const editRes = await saveProductAction(fd, productId);
+         if (!editRes.success) {
+            await finalizeProductImagesAction(productId, product?.images || [], product?.imagePositions || []);
+            throw new Error(editRes.error);
+         }
+         res = { success: true, product: editRes.product };
+      }
 
     } catch (err: any) {
       console.error('Product save error:', err);
@@ -507,6 +554,7 @@ function ProductFormModal({
     }
   };
 
+  
   const inp = (field: keyof FormState) =>
     `w-full px-3 py-2 border rounded-xl text-sm font-body text-burgundy bg-white placeholder:text-burgundy/30 focus:outline-none focus:ring-2 transition-all ${
       errors[field]

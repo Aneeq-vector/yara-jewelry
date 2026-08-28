@@ -30,6 +30,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const products = await pb.collection('products').getFullList({
       fields: 'id,updated',
       $autoCancel: false,
+      filter: 'isStaged = false',
     });
 
     const productUrls = products.map((product) => ({
@@ -44,6 +45,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       filter: 'is_active = true',
       fields: 'id,updated,type',
       $autoCancel: false,
+      
     });
 
     const giftBoxUrls = giftBoxes

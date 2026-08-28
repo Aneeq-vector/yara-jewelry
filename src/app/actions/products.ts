@@ -38,6 +38,7 @@ export async function getProductsAction(page = 1, perPage = 50, search = '', cat
       filters.push(`badge = "${badge}"`);
     }
     
+    filters.push('isStaged = false');
     const filterString = filters.length > 0 ? filters.join(' && ') : '';
 
     const records = await pb.collection('products').getList(page, perPage, {
@@ -112,11 +113,11 @@ const MAX_PRODUCT_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB per image
 const MAX_IMAGES = 10;
 
 export async function saveProductAction(formData: FormData, id?: string) {
-  console.log('[PRODUCT_SAVE_DEBUG] ACTION_REACHED');
   try {
     const { pb } = await validateSession();
     
     // 1. STRICTLY VALIDATE inventoryMode
+    if (formData.has('isStaged')) { formData.set('isStaged', formData.get('isStaged') as string); }
     const inventoryMode = formData.get('inventoryMode');
     if (inventoryMode !== 'global' && inventoryMode !== 'color') {
       return { success: false, error: 'inventoryMode must be exactly "global" or "color".' };
@@ -177,33 +178,18 @@ export async function saveProductAction(formData: FormData, id?: string) {
 
     // 9 & 10. IMAGE VALIDATION & COUNT
     const imagesFormValues = formData.getAll('images');
-    let newFileCount = 0;
     let existingFileCount = 0;
-    let totalSize = 0;
-    const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
-    
     for (const val of imagesFormValues) {
-      if (val instanceof File) {
-        newFileCount++;
-        if (val.size > MAX_PRODUCT_IMAGE_SIZE) {
-          return { success: false, error: `Image ${val.name} exceeds the 2MB limit.` };
-        }
-        if (!ALLOWED_MIME.has(val.type)) {
-          return { success: false, error: `File ${val.name} has an invalid MIME type (${val.type}). Allowed: jpeg, png, webp, avif.` };
-        }
-        totalSize += val.size;
-      } else if (typeof val === 'string') {
+      if (typeof val === 'string') {
         existingFileCount++;
+      } else if (val instanceof File) {
+        return { success: false, error: 'saveProductAction does not accept new image files. Use batched uploads.' };
       }
     }
-    
-    if (newFileCount + existingFileCount > MAX_IMAGES) {
+    if (existingFileCount > MAX_IMAGES) {
       return { success: false, error: `Cannot have more than ${MAX_IMAGES} final images.` };
     }
-    if (totalSize > 16 * 1024 * 1024) {
-      return { success: false, error: `Total new image upload size exceeds 16MB.` };
-    }
-
+    
     // 5. VALIDATE colorStock keys match configuredColors EXACTLY
     const colorStockStr = formData.get('colorStock') as string;
     let colorStock: Record<string, number> = {};
@@ -300,7 +286,7 @@ export async function getCategoryProductsAction(categoryId: string, page = 1, pe
     const { pb } = await validateSession();
     // Lightweight query for the edit category modal
     const records = await pb.collection('products').getList(page, perPage, {
-      filter: `category = "${categoryId}"`,
+      filter: `category = "${categoryId}" && isStaged = false`,
       fields: 'id,name,productCode,price,quantity,category',
     });
     return { 
@@ -343,5 +329,104 @@ export async function getAssignableProductsAction(currentCategoryId: string, pag
   } catch (error: any) {
     console.error('getAssignableProductsAction error:', error.message);
     return { success: false, error: error.message || 'Failed to fetch assignable products' };
+  }
+}
+
+
+export async function uploadProductImageBatchAction(productId: string, formData: FormData) {
+  try {
+    const { pb } = await validateSession();
+    
+    // Fetch current to append safely and retain existing
+    const currentProduct = await pb.collection('products').getOne(productId);
+    const existingImages = currentProduct.images || [];
+    
+    const newFiles = formData.getAll('images');
+    let totalSize = 0;
+    const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
+    
+    if (existingImages.length + newFiles.length > MAX_IMAGES) {
+       return { success: false, error: `Cannot exceed ${MAX_IMAGES} total images.` };
+    }
+    
+    for (const val of newFiles) {
+      if (!(val instanceof File)) {
+        return { success: false, error: 'Batch must contain only File objects.' };
+      }
+      if (val.size > MAX_PRODUCT_IMAGE_SIZE) {
+        return { success: false, error: `Image ${val.name} exceeds the 2MB limit.` };
+      }
+      if (!ALLOWED_MIME.has(val.type)) {
+        return { success: false, error: `Invalid MIME type (${val.type}).` };
+      }
+      totalSize += val.size;
+    }
+    
+    if (totalSize > 3.5 * 1024 * 1024) {
+      return { success: false, error: 'Batch payload exceeds 3.5MB safety limit.' };
+    }
+    
+    const updateFd = new FormData();
+    for (const file of newFiles) {
+      updateFd.append('images+', file);
+    }
+    
+    const record = await pb.collection('products').update(productId, updateFd);
+    return { success: true, product: toPlain(record) };
+  } catch (error: any) {
+    console.error('uploadProductImageBatchAction error:', error.message);
+    return { success: false, error: error.message || 'Failed to upload image batch' };
+  }
+}
+
+export async function finalizeProductImagesAction(productId: string, finalImages: string[], finalPositions: string[]) {
+  try {
+    const { pb } = await validateSession();
+    
+    const currentProduct = await pb.collection('products').getOne(productId);
+    const currentImages = new Set(currentProduct.images || []);
+    
+    if (finalImages.length > MAX_IMAGES) {
+      return { success: false, error: `Cannot exceed ${MAX_IMAGES} final images.` };
+    }
+    
+    if (finalImages.length !== finalPositions.length) {
+      return { success: false, error: 'Image count must match positions count.' };
+    }
+    
+    const uniqueFinal = new Set(finalImages);
+    if (uniqueFinal.size !== finalImages.length) {
+      return { success: false, error: 'Duplicate filenames detected in finalization.' };
+    }
+    
+    for (const img of finalImages) {
+      if (!currentImages.has(img)) {
+         return { success: false, error: `Unknown or unowned filename: ${img}` };
+      }
+    }
+    
+    const record = await pb.collection('products').update(productId, {
+      images: finalImages,
+      imagePositions: finalPositions,
+      inStock: currentProduct.quantity > 0,
+      isStaged: false
+    });
+    
+    revalidateAll();
+    return { success: true, product: toPlain(record) };
+  } catch (error: any) {
+    console.error('finalizeProductImagesAction error:', error.message);
+    return { success: false, error: error.message || 'Failed to finalize product images' };
+  }
+}
+
+export async function rollbackNewProductAction(productId: string) {
+  try {
+    const { pb } = await validateSession();
+    await pb.collection('products').delete(productId);
+    return { success: true };
+  } catch (error: any) {
+    console.error('rollbackNewProductAction error:', error.message);
+    return { success: false, error: error.message || 'Failed to rollback product' };
   }
 }
