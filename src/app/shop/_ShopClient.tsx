@@ -143,9 +143,7 @@ function ShopContent({ initialProducts, initialCategories }: { initialProducts: 
         case 'rating':
           return b.rating - a.rating;
         case 'newest':
-          if (a.badge === 'new' && b.badge !== 'new') return -1;
-          if (b.badge === 'new' && a.badge !== 'new') return 1;
-          return 0;
+          return new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime();
         default:
           return 0; // Maintain DB order (which is now -inStock) for 'featured'
       }

@@ -47,7 +47,7 @@ export async function getProductsAction(page = 1, perPage = 50, search = '', cat
       sort: sort,
       filter: filterString,
       expand: 'category',
-      fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,imagePositions,description,shortDescription,badge,colors,customColors,inventoryMode,colorStock,tags,material,weight,isHidden,isStaged,expand.category.id,expand.category.name',
+      fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,imagePositions,description,shortDescription,badge,colors,customColors,inventoryMode,colorStock,tags,material,weight,isHidden,isStaged,publishedAt,hasBeenPublished,expand.category.id,expand.category.name',
     });
     return { success: true, products: toPlain(records.items), totalItems: records.totalItems, totalPages: records.totalPages };
   } catch (error: any) {
@@ -286,7 +286,7 @@ export async function getProductOptionsAction() {
     const { pb } = await validateSession();
     const records = await pb.collection('products').getFullList({
       sort: 'name', filter: 'isStaged = false && isHidden = false',
-      fields: 'id,collectionId,name,price,inStock,quantity,images,productCode,category,colors,isHidden,isStaged',
+      fields: 'id,collectionId,name,price,inStock,quantity,images,productCode,category,colors,isHidden,isStaged,publishedAt,hasBeenPublished',
     });
     return { success: true, products: toPlain(records.map(mapRecordToProduct)) };
   } catch (error: any) {
@@ -300,7 +300,7 @@ export async function getCategoryProductsAction(categoryId: string, page = 1, pe
     // Lightweight query for the edit category modal
     const records = await pb.collection('products').getList(page, perPage, {
       filter: `category = "${categoryId}" && isStaged = false && isHidden = false`,
-      fields: 'id,name,productCode,price,quantity,category,isHidden,isStaged',
+      fields: 'id,name,productCode,price,quantity,category,isHidden,isStaged,publishedAt,hasBeenPublished',
     });
     return { 
       success: true, 
@@ -328,7 +328,7 @@ export async function getAssignableProductsAction(currentCategoryId: string, pag
     const records = await pb.collection('products').getList(page, perPage, {
       filter: filterString,
       expand: 'category',
-      fields: 'id,name,productCode,price,quantity,category,isHidden,isStaged,expand.category.name,expand.category.id',
+      fields: 'id,name,productCode,price,quantity,category,isHidden,isStaged,publishedAt,hasBeenPublished,expand.category.name,expand.category.id',
     });
     
     return { 
@@ -496,8 +496,17 @@ export async function setProductVisibilityAction(productId: string, isHidden: bo
       return { success: false, error: 'Unauthorized' };
     }
     
-    // Patch ONLY the isHidden field
-    const record = await pb.collection('products').update(productId, { isHidden });
+    const currentProduct = await pb.collection('products').getOne(productId);
+    
+    const updateData: any = { isHidden };
+    
+    if (currentProduct.isHidden === true && isHidden === false && currentProduct.hasBeenPublished !== true) {
+      updateData.publishedAt = new Date().toISOString();
+      updateData.hasBeenPublished = true;
+    }
+    
+    // Patch ONLY the isHidden field (and publishedAt if applicable)
+    const record = await pb.collection('products').update(productId, updateData);
     
     revalidateProductsAction().catch(console.error);
     

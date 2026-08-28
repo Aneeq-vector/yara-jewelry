@@ -40,6 +40,8 @@ export function mapRecordToProduct(record: RecordModel): Product {
     tags: record.tags || [],
     isHidden: record.isHidden ?? false,
     isStaged: record.isStaged ?? false,
+    publishedAt: record.publishedAt || undefined,
+    hasBeenPublished: record.hasBeenPublished ?? false,
   };
 }
 
@@ -50,7 +52,7 @@ export async function getAllProducts(): Promise<Product[]> {
       filter: 'isStaged = false && isHidden = false',
       expand: 'category',
       sort: '-id',
-      fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,imagePositions,shortDescription,description,badge,colors,customColors,inventoryMode,colorStock,tags,material,weight,expand.category.id,expand.category.name',
+      fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,imagePositions,shortDescription,description,badge,colors,customColors,inventoryMode,colorStock,tags,material,weight,publishedAt,hasBeenPublished,expand.category.id,expand.category.name',
       $autoCancel: false,
     });
     return records.map(mapRecordToProduct);
@@ -83,7 +85,7 @@ export async function getProductsByCategory(category: string, limit = 500): Prom
       sort: '-id',
       $autoCancel: false,
       expand: 'category',
-      fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,imagePositions,shortDescription,description,badge,colors,customColors,inventoryMode,colorStock,tags,material,weight,expand.category.id,expand.category.name',
+      fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,imagePositions,shortDescription,description,badge,colors,customColors,inventoryMode,colorStock,tags,material,weight,publishedAt,hasBeenPublished,expand.category.id,expand.category.name',
     });
     const results = records.items.map(mapRecordToProduct);
     
@@ -136,7 +138,7 @@ const TRENDING_SLOTS = 4;
 
 export async function getTrendingProducts(): Promise<Product[]> {
   try {
-    return await getAvailableFirstLimitedProducts('badge="trending"', TRENDING_SLOTS);
+    return await getAvailableFirstLimitedProducts('badge="trending"', TRENDING_SLOTS, '-id');
   } catch (error) {
     return [];
   }
@@ -144,7 +146,7 @@ export async function getTrendingProducts(): Promise<Product[]> {
 
 async function getNewArrivals(): Promise<Product[]> {
   try {
-    return await getAvailableFirstLimitedProducts('badge="new" || category="new-arrivals"', 8);
+    return await getAvailableFirstLimitedProducts('badge="new" || category="new-arrivals"', 8, '-publishedAt,-id');
   } catch (error) {
     
     return [];

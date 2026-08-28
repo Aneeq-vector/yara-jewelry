@@ -26,6 +26,8 @@ export interface Product {
   tags: string[];
   isHidden?: boolean;
   isStaged?: boolean;
+  publishedAt?: string;
+  hasBeenPublished?: boolean;
 }
 
 export type GiftBoxType = 'birthday' | 'anniversary' | 'custom';
