@@ -9,6 +9,7 @@ import { formatPrice, calculateDiscount } from '@/lib/utils';
 import { BADGE_CONFIG } from '@/lib/constants';
 import { Product } from '@/types';
 import { getOptimizedImageUrl, isPocketBaseResizable, pbLoader } from '@/lib/image-utils';
+import { isProductAvailable } from '@/lib/utils';
 
 
 export function ProductCard({ product, index, aboveFold = false }: { product: Product; index: number, aboveFold?: boolean }) {
@@ -69,7 +70,7 @@ export function ProductCard({ product, index, aboveFold = false }: { product: Pr
                   fill sizes="(max-width: 767px) calc(50vw - 1.5rem), (max-width: 1023px) calc(33.333vw - 1.5rem), 300px"
                   style={{ objectPosition: product.imagePositions?.[currentImageIndex] || '50% 50%' }}
                   className={`object-cover group-hover:scale-105 transition duration-700 ${
-                    product.quantity <= 0 ? 'opacity-40 grayscale-[30%]' : ''
+                    !isProductAvailable(product) ? 'opacity-40 grayscale-[30%]' : ''
                   }`}
                   
                   loading={aboveFold ? "eager" : "lazy"}
@@ -106,7 +107,7 @@ export function ProductCard({ product, index, aboveFold = false }: { product: Pr
           </div>
         )}
 
-        {product.quantity <= 0 && (
+        {!isProductAvailable(product) && (
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none">
             <span className="px-4 py-2 bg-white/90 text-burgundy font-ui font-bold text-sm uppercase tracking-wider rounded-full shadow-lg whitespace-nowrap">
               Out of Stock
@@ -150,7 +151,7 @@ export function ProductCard({ product, index, aboveFold = false }: { product: Pr
         {/* Desktop Add to Cart Hover */}
         <div className="hidden lg:flex absolute bottom-3 left-3 right-3 z-10 opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition duration-300">
           <div className="w-full flex items-center gap-2">
-            {product.quantity > 0 ? (
+            {isProductAvailable(product) ? (
               <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={handleAddToCart}
@@ -195,9 +196,9 @@ export function ProductCard({ product, index, aboveFold = false }: { product: Pr
           {/* Mobile Quick Add */}
           <button aria-label="Action" 
             onClick={(e) => { e.preventDefault(); handleAddToCart(); }}
-            disabled={product.quantity <= 0 || isAdding}
+            disabled={!isProductAvailable(product) || isAdding}
             className={`p-2 rounded-full min-w-[36px] min-h-[36px] flex items-center justify-center transition-colors lg:hidden ${
-              product.quantity > 0 
+              isProductAvailable(product)
                 ? 'bg-burgundy text-white shadow-sm hover:bg-wine' 
                 : 'bg-nude/50 text-burgundy/30 cursor-not-allowed'
             }`}

@@ -37,7 +37,7 @@ export function useCheckoutLogic() {
   const subtotal = getTotal();
 
   const [form, setForm] = useState({
-    name: '', email: '', phone: '', street: '', city: '', state: '', zip: '', country: '',
+    name: '', email: '', phone: '', street: '', city: '', state: '', zip: '', country: 'Sri Lanka',
     deliveryMethod: 'standard',
     paymentMethod: '',
   });

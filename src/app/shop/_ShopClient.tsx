@@ -27,7 +27,7 @@ import { useProducts } from '@/lib/hooks/use-products';
 import { useCategories } from '@/lib/hooks/use-categories';
 import { useCartStore } from '@/lib/store/cart-store';
 import { useWishlistStore } from '@/lib/store/wishlist-store';
-import { formatPrice, calculateDiscount, cn } from '@/lib/utils';
+import { formatPrice, calculateDiscount, cn, isProductAvailable } from '@/lib/utils';
 import { BADGE_CONFIG } from '@/lib/constants';
 import { Product, CategoryType, Category } from '@/types';
 
@@ -131,8 +131,11 @@ function ShopContent({ initialProducts, initialCategories }: { initialProducts: 
     // Sort
     result.sort((a, b) => {
       // 1. Availability MUST BE PRIMARY SORT
-      if (a.inStock && !b.inStock) return -1;
-      if (!a.inStock && b.inStock) return 1;
+      const aAvailable = isProductAvailable(a);
+      const bAvailable = isProductAvailable(b);
+      
+      if (aAvailable && !bAvailable) return -1;
+      if (!aAvailable && bAvailable) return 1;
 
       // 2. SECONDARY SORT
       switch (sortBy) {

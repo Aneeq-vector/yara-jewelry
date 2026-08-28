@@ -30,3 +30,9 @@ const dateFormatter = new Intl.DateTimeFormat('en-US', {
 const formatDate = (date: string) => {
   return dateFormatter.format(new Date(date));
 };
+
+export const isProductAvailable = (product: { quantity?: number; inStock?: boolean; inventoryMode?: 'global' | 'color'; colorStock?: Record<string, number> }) => {
+  // Respect the unified inventory logic - the authoritative stock is what dictates availability
+  // (We use strictly inStock which is derived authoritatively on the server, ensuring it matches 1:1)
+  return product.inStock === true;
+};
