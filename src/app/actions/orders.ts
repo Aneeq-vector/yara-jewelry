@@ -135,6 +135,7 @@ export async function createOrderAction(formData: FormData) {
 
         const submittedBoxItems = Array.isArray(item.boxItems) ? item.boxItems : [];
         for (const dbInner of fixedItems) {
+          if (dbInner.isStaged || dbInner.isHidden) { return { success: false, error: 'This product is currently unavailable.', removeStaleCartItemId: item.cartItemId }; }
           const p = Number(dbInner.price) || 0;
           innerTotal += p;
           finalProductIds.add(dbInner.id);
@@ -182,7 +183,9 @@ export async function createOrderAction(formData: FormData) {
           for (const b of item.boxItems) {
             const dbInner = productMap.get(b.id);
             if (!dbInner) throw new Error(`Box item ${b.id} not found`);
-            const p = Number(dbInner.price) || 0;
+            if (dbInner.isStaged || dbInner.isHidden) { return { success: false, error: 'This product is currently unavailable.', removeStaleCartItemId: item.cartItemId }; }
+            if (dbInner.isStaged || dbInner.isHidden) { return { success: false, error: 'This product is currently unavailable.', removeStaleCartItemId: item.cartItemId }; }
+          const p = Number(dbInner.price) || 0;
             innerTotal += p;
 
             finalProductIds.add(dbInner.id);
@@ -209,6 +212,7 @@ export async function createOrderAction(formData: FormData) {
       } else {
         const dbProduct = productMap.get(item.product.id);
         if (!dbProduct) throw new Error(`Product ${item.product.id} not found`);
+        if (dbProduct.isStaged || dbProduct.isHidden) { return { success: false, error: 'This product is currently unavailable.', removeStaleCartItemId: item.cartItemId }; }
         const p = Number(dbProduct.price) || 0;
         const lineTotal = p * qty;
         calculatedSubtotal += lineTotal;

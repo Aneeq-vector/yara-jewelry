@@ -24,6 +24,8 @@ export interface Product {
   colorStock?: Record<string, number>;
   customColors?: { name: string; hex: string }[];
   tags: string[];
+  isHidden?: boolean;
+  isStaged?: boolean;
 }
 
 export type GiftBoxType = 'birthday' | 'anniversary' | 'custom';

@@ -28,6 +28,8 @@ import {
   RefreshCw,
   Trash2,
   Edit2,
+  Eye,
+  EyeOff,
   ChevronDown,
   X,
   Upload,
@@ -46,6 +48,7 @@ import { uploadProductImageBatchAction, finalizeProductImagesAction, rollbackNew
 import {
   revalidateProductsAction,
   saveProductAction,
+  setProductVisibilityAction,
 } from '@/app/actions/products';
 import { useAdminProducts, useAdminCategories } from '@/lib/hooks/use-admin-products';
 import { useDeleteProduct, useDeleteProducts, useDuplicateProduct } from '@/lib/hooks/use-products';
@@ -89,6 +92,8 @@ export interface RawProduct {
   created: string;
   updated: string;
   expand?: { category?: RawCategory };
+  isStaged?: boolean;
+  isHidden?: boolean;
 }
 
 type ToastType = 'success' | 'error' | 'info';
@@ -156,6 +161,7 @@ function emptyForm() {
     inventoryMode: 'global' as 'global' | 'color',
     tags: [] as string[],
     unifiedImages: [] as FormImage[],
+    isHidden: true,
   };
 }
 
@@ -252,6 +258,7 @@ function ProductFormModal({
         reviewCount: product.reviewCount?.toString() ?? '',
         material: product.material ?? '',
         weight: product.weight ?? '',
+        isHidden: product.isHidden ?? false,
         quantity: product.quantity?.toString() ?? '',
         inStock: product.inStock ?? true,
         colors: [...(product.colors || [])],
@@ -375,6 +382,7 @@ function ProductFormModal({
       if (form.originalPrice) fd.append('originalPrice', form.originalPrice.toString());
       fd.append('shortDescription', form.shortDescription.toString());
       fd.append('description', form.description.toString());
+      fd.append('isHidden', String(form.isHidden));
       fd.append('category', form.category ? form.category.toString() : '');
       fd.append('badge', form.badge.toString());
       if (form.rating) fd.append('rating', form.rating.toString());
@@ -579,6 +587,22 @@ function ProductFormModal({
           <section>
             <p className="text-xs font-ui font-semibold text-burgundy/40 uppercase tracking-widest mb-4">Basic Info</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+              <div className="col-span-1 sm:col-span-2 mt-2">
+                <label className="flex items-center gap-3 cursor-pointer p-3 border border-burgundy/10 rounded-xl hover:bg-burgundy/[0.02] transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={form.isHidden}
+                    onChange={e => set('isHidden', e.target.checked)}
+                    className="w-5 h-5 accent-burgundy rounded cursor-pointer"
+                  />
+                  <div>
+                    <span className="block text-sm font-body font-semibold text-burgundy">Hide from website</span>
+                    <span className="block text-xs font-body text-burgundy/60">Hidden products are visible only in Admin until you publish them.</span>
+                  </div>
+                </label>
+              </div>
+
               <div>
                 <label className="block text-xs font-ui font-semibold text-burgundy/70 uppercase tracking-wide mb-1">Product Code</label>
                 <input aria-label="Product code" type="text" placeholder="e.g. YR-001" value={form.productCode.toString()} onChange={e => set('productCode', e.target.value)} className={inp('productCode')} />
@@ -1113,6 +1137,35 @@ export default function ProductsClient({
   const handleSelectOne = (id: string, checked: boolean) =>
     setSelectedIds(prev => { const n = new Set(prev); checked ? n.add(id) : n.delete(id); return n; });
 
+  
+  const handleToggleVisibility = async (productId: string, currentIsHidden: boolean) => {
+    const newIsHidden = !currentIsHidden;
+    // Optimistic update
+    queryClient.setQueryData(queryKeys.admin.products.all(), (old: any) => {
+      if (!old || !old.products) return old;
+      return {
+        ...old,
+        products: old.products.map((p: any) => p.id === productId ? { ...p, isHidden: newIsHidden } : p)
+      };
+    });
+
+    try {
+      const res = await setProductVisibilityAction(productId, newIsHidden);
+      if (!res.success) throw new Error(res.error);
+      addToast(`Product is now ${newIsHidden ? 'hidden' : 'public'}.`, 'success');
+    } catch (err: any) {
+      // Rollback
+      queryClient.setQueryData(queryKeys.admin.products.all(), (old: any) => {
+        if (!old || !old.products) return old;
+        return {
+          ...old,
+          products: old.products.map((p: any) => p.id === productId ? { ...p, isHidden: currentIsHidden } : p)
+        };
+      });
+      addToast(err.message || 'Failed to update visibility', 'error');
+    }
+  };
+
   const confirmDelete = (id: string, name: string) => {
     setConfirmModal({
       isOpen: true,
@@ -1423,6 +1476,11 @@ export default function ProductsClient({
                             <div className="flex items-center gap-2 mt-0.5">
                               {product.productCode && <span className="text-[11px] text-burgundy/40 font-mono">{product.productCode}</span>}
                               <BadgeChip badge={product.badge} />
+
+                              {product.isHidden && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-ui font-bold bg-amber-100 text-amber-800">HIDDEN</span>
+                              )}
+
                             </div>
                           </div>
                         </div>
@@ -1468,6 +1526,16 @@ export default function ProductsClient({
                           >
                             <Edit2 size={15} />
                           </button>
+
+                          <button
+                            title={product.isHidden ? "Publish Product" : "Hide Product"}
+                            id={`toggle-visibility-${product.id}`}
+                            onClick={() => handleToggleVisibility(product.id, !!product.isHidden)}
+                            className="p-2 text-burgundy/50 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                          >
+                            {product.isHidden ? <Eye size={15} /> : <EyeOff size={15} />}
+                          </button>
+
                           <button
                             title="Duplicate"
                             id={`duplicate-product-${product.id}`}

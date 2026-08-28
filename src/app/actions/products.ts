@@ -40,14 +40,14 @@ export async function getProductsAction(page = 1, perPage = 50, search = '', cat
       filters.push(`badge = "${badge}"`);
     }
     
-    filters.push('isStaged = false');
+    // Admin query: DO NOT filter out isStaged or isHidden
     const filterString = filters.length > 0 ? filters.join(' && ') : '';
 
     const records = await pb.collection('products').getList(page, perPage, {
       sort: sort,
       filter: filterString,
       expand: 'category',
-      fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,imagePositions,description,shortDescription,badge,colors,customColors,inventoryMode,colorStock,tags,material,weight,expand.category.id,expand.category.name', // Optimized fields payload
+      fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,imagePositions,description,shortDescription,badge,colors,customColors,inventoryMode,colorStock,tags,material,weight,isHidden,isStaged,expand.category.id,expand.category.name',
     });
     return { success: true, products: toPlain(records.items), totalItems: records.totalItems, totalPages: records.totalPages };
   } catch (error: any) {
@@ -119,7 +119,18 @@ export async function saveProductAction(formData: FormData, id?: string) {
     const { pb } = await validateSession();
     
     // 1. STRICTLY VALIDATE inventoryMode
+    
     if (formData.has('isStaged')) { formData.set('isStaged', formData.get('isStaged') as string); }
+    
+    // VISIBILITY LOGIC
+    if (formData.has('isHidden')) {
+       // Explicitly supplied (e.g. from Add Product or Edit Product forms)
+       formData.set('isHidden', formData.get('isHidden') === 'true' ? 'true' : 'false');
+    } else if (!id) {
+       // ADD PRODUCT default
+       formData.set('isHidden', 'true');
+    }
+
     const inventoryMode = formData.get('inventoryMode');
     if (inventoryMode !== 'global' && inventoryMode !== 'color') {
       return { success: false, error: 'inventoryMode must be exactly "global" or "color".' };
@@ -274,8 +285,8 @@ export async function getProductOptionsAction() {
   try {
     const { pb } = await validateSession();
     const records = await pb.collection('products').getFullList({
-      sort: 'name',
-      fields: 'id,collectionId,name,price,inStock,quantity,images,productCode,category,colors', // Minimal fields including quantity and colors
+      sort: 'name', filter: 'isStaged != true && isHidden != true',
+      fields: 'id,collectionId,name,price,inStock,quantity,images,productCode,category,colors,isHidden,isStaged',
     });
     return { success: true, products: toPlain(records.map(mapRecordToProduct)) };
   } catch (error: any) {
@@ -288,8 +299,8 @@ export async function getCategoryProductsAction(categoryId: string, page = 1, pe
     const { pb } = await validateSession();
     // Lightweight query for the edit category modal
     const records = await pb.collection('products').getList(page, perPage, {
-      filter: `category = "${categoryId}" && isStaged = false`,
-      fields: 'id,name,productCode,price,quantity,category',
+      filter: `category = "${categoryId}" && isStaged != true && isHidden != true`,
+      fields: 'id,name,productCode,price,quantity,category,isHidden,isStaged',
     });
     return { 
       success: true, 
@@ -317,7 +328,7 @@ export async function getAssignableProductsAction(currentCategoryId: string, pag
     const records = await pb.collection('products').getList(page, perPage, {
       filter: filterString,
       expand: 'category',
-      fields: 'id,name,productCode,price,quantity,category,expand.category.name,expand.category.id',
+      fields: 'id,name,productCode,price,quantity,category,isHidden,isStaged,expand.category.name,expand.category.id',
     });
     
     return { 
@@ -475,5 +486,24 @@ async function warmImage(url: string) {
   const response = await fetch(url, { cache: 'no-store' });
   if (!response.ok) {
     throw new Error(`Failed to warm image derivative (${response.status})`);
+  }
+}
+
+export async function setProductVisibilityAction(productId: string, isHidden: boolean) {
+  try {
+    const { pb, user } = await validateSession();
+    if (!user || user.role !== 'admin') {
+      return { success: false, error: 'Unauthorized' };
+    }
+    
+    // Patch ONLY the isHidden field
+    const record = await pb.collection('products').update(productId, { isHidden });
+    
+    revalidateProductsAction().catch(console.error);
+    
+    return { success: true, product: toPlain(record) };
+  } catch (error: any) {
+    console.error('setProductVisibilityAction error:', error.message);
+    return { success: false, error: error.message || 'Failed to update visibility' };
   }
 }

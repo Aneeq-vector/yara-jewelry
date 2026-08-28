@@ -30,7 +30,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const products = await pb.collection('products').getFullList({
       fields: 'id,updated',
       $autoCancel: false,
-      filter: 'isStaged = false',
+      filter: 'isStaged != true && isHidden != true',
     });
 
     const productUrls = products.map((product) => ({

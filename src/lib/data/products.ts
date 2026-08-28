@@ -38,6 +38,8 @@ export function mapRecordToProduct(record: RecordModel): Product {
     inventoryMode: record.inventoryMode || 'global',
     colorStock: record.colorStock && typeof record.colorStock === 'object' ? record.colorStock : {},
     tags: record.tags || [],
+    isHidden: record.isHidden ?? false,
+    isStaged: record.isStaged ?? false,
   };
 }
 
@@ -45,7 +47,7 @@ export async function getAllProducts(): Promise<Product[]> {
   try {
     const pb = createClient();
     const records = await pb.collection('products').getFullList({
-      filter: 'isStaged = false',
+      filter: 'isStaged != true && isHidden != true',
       expand: 'category',
       fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,imagePositions,shortDescription,description,badge,colors,customColors,inventoryMode,colorStock,tags,material,weight,expand.category.id,expand.category.name',
       $autoCancel: false,
@@ -64,7 +66,7 @@ export async function getProductById(id: string): Promise<Product | undefined> {
       $autoCancel: false,
       expand: 'category',
     });
-    if (record.isStaged === true) return undefined;
+    if (record.isStaged === true || record.isHidden === true) return undefined;
     return mapRecordToProduct(record);
   } catch (error) {
     
@@ -76,7 +78,7 @@ export async function getProductsByCategory(category: string, limit = 500): Prom
   try {
     const pb = createClient();
     const records = await pb.collection('products').getList(1, limit, {
-      filter: `category="${category}" && isStaged = false`,
+      filter: `category="${category}" && isStaged != true && isHidden != true`,
       $autoCancel: false,
       expand: 'category',
       fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,imagePositions,shortDescription,description,badge,colors,customColors,inventoryMode,colorStock,tags,material,weight,expand.category.id,expand.category.name',
@@ -96,7 +98,7 @@ export async function getTrendingProducts(): Promise<Product[]> {
 
     // Fetch trending in-stock products
     const trendingRecords = await pb.collection('products').getList(1, TRENDING_SLOTS, {
-      filter: 'badge="trending" && inStock=true && isStaged=false',
+      filter: 'badge="trending" && inStock=true && isStaged != true && isHidden != true',
       $autoCancel: false,
       expand: 'category'
     });
@@ -110,7 +112,7 @@ async function getNewArrivals(): Promise<Product[]> {
   try {
     const pb = createClient();
     const records = await pb.collection('products').getList(1, 8, {
-      filter: '(badge="new" || category="new-arrivals") && inStock=true && isStaged=false',
+      filter: '(badge="new" || category="new-arrivals") && inStock=true && isStaged != true && isHidden != true',
       $autoCancel: false,
       expand: 'category'
     });
@@ -130,7 +132,7 @@ export async function searchProducts(query: string): Promise<Product[]> {
     if (terms.length === 0) return [];
     
     // Create a filter where each word must be present in the name
-    const filter = terms.map(term => `name ~ "${term}"`).join(' && ') + ' && isStaged=false';
+    const filter = terms.map(term => `name ~ "${term}"`).join(' && ') + ' && isStaged != true && isHidden != true';
 
     const records = await pb.collection('products').getFullList({
       
