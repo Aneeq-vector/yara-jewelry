@@ -253,9 +253,9 @@ function ProductFormModal({
         weight: product.weight ?? '',
         quantity: product.quantity?.toString() ?? '',
         inStock: product.inStock ?? true,
-        colors: product.colors ?? [],
-        customColors: product.customColors ?? [],
-        colorStock: product.colorStock ?? {},
+        colors: [...(product.colors || [])],
+        customColors: (product.customColors || []).map(c => ({ ...c })),
+        colorStock: { ...(product.colorStock || {}) },
         inventoryMode: product.inventoryMode || 'global',
         tags: product.tags ?? [],
         unifiedImages: (product.images ?? []).map((img, i) => ({

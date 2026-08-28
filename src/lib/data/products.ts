@@ -33,10 +33,10 @@ export function mapRecordToProduct(record: RecordModel): Product {
     inStock: record.inStock ?? true,
     quantity: record.quantity ?? 0,
     isActive: record.is_active ?? true,
-    colors: record.colors || [],
-    customColors: record.customColors || [],
+    colors: Array.isArray(record.colors) ? record.colors : [],
+    customColors: Array.isArray(record.customColors) ? record.customColors : [],
     inventoryMode: record.inventoryMode || 'global',
-    colorStock: record.colorStock || {},
+    colorStock: record.colorStock && typeof record.colorStock === 'object' ? record.colorStock : {},
     tags: record.tags || [],
   };
 }
