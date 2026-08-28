@@ -55,7 +55,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
                 <Image
                   src={product.images[currentImageIndex]}
                   alt={product.name}
-                  fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  fill sizes="(max-width: 767px) calc(50vw - 1.5rem), (max-width: 1023px) calc(33.333vw - 1.5rem), 300px"
                   className={`object-cover group-hover:scale-105 transition duration-700 ${
                     product.quantity <= 0 ? 'opacity-40 grayscale-[30%]' : ''
                   }`}
@@ -203,7 +203,7 @@ function ViewAllCard({ bgImage }: { bgImage?: string }) {
             <Image
               src={bgImage}
               alt="View All Background"
-              fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              fill sizes="(max-width: 767px) calc(50vw - 1.5rem), (max-width: 1023px) calc(33.333vw - 1.5rem), 300px"
               className="object-cover opacity-60 group-hover:scale-105 transition duration-700"
               unoptimized
             />

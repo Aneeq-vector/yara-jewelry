@@ -66,7 +66,7 @@ export function ProductCard({ product, index, aboveFold = false }: { product: Pr
                 <Image
                   src={product.images[currentImageIndex]}
                   alt={product.name}
-                  fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  fill sizes="(max-width: 767px) calc(50vw - 1.5rem), (max-width: 1023px) calc(33.333vw - 1.5rem), 300px"
                   style={{ objectPosition: product.imagePositions?.[currentImageIndex] || '50% 50%' }}
                   className={`object-cover group-hover:scale-105 transition duration-700 ${
                     product.quantity <= 0 ? 'opacity-40 grayscale-[30%]' : ''

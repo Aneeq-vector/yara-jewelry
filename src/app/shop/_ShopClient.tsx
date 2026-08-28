@@ -228,7 +228,7 @@ function ShopContent({ initialProducts, initialCategories }: { initialProducts: 
                     className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6"
                   >
                     {filteredProducts.map((product, i) => (
-                      <ProductCard key={product.id} product={product} index={i} />
+                      <ProductCard key={product.id} product={product} index={i} aboveFold={i < 3} />
                     ))}
                   </motion.div>
                 ) : (
