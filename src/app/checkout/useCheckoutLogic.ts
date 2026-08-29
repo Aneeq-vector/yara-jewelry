@@ -69,7 +69,7 @@ export function useCheckoutLogic() {
     setSelectedAddressId(addr.id);
     setForm(prev => ({
       ...prev,
-      name: addr.name,
+      name: user?.name || prev.name || '',
       phone: addr.phone || '',
       street: addr.street,
       city: addr.city,
