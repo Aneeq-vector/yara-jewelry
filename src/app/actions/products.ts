@@ -28,7 +28,7 @@ export async function getProductsAction(page = 1, perPage = 50, search = '', cat
     if (search) {
       filters.push(`(name ~ "${search}" || productCode ~ "${search}")`);
     }
-    if (categoryId) {
+    if (categoryId && categoryId !== 'all') {
       filters.push(`category = "${categoryId}"`);
     }
     if (inStock === 'In Stock') {
