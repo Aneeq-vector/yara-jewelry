@@ -72,6 +72,59 @@ export default function AdminRealtimeProvider({
         });
 
         await pb.collection('products').subscribe('*', (e) => {
+          if (e.action === 'create') {
+            const queries = queryClient.getQueriesData({ queryKey: ['admin', 'products'] });
+            queries.forEach(([queryKey, data]: [any, any]) => {
+              // Ensure it's a list query and has the filters object
+              if (queryKey.length < 3) return;
+              const filters = queryKey[2] as any;
+              if (!filters || filters.page !== 1 || !data || !data.products) return;
+
+              // Check if it matches active filters
+              if (filters.categoryId && e.record.category !== filters.categoryId) return;
+              if (filters.search) {
+                const search = filters.search.toLowerCase();
+                const nameMatch = e.record.name?.toLowerCase().includes(search);
+                const codeMatch = e.record.productCode?.toLowerCase().includes(search);
+                if (!nameMatch && !codeMatch) return;
+              }
+              if (filters.inStock === 'In Stock' && (e.record.quantity || 0) <= 0) return;
+              if (filters.inStock === 'Out of Stock' && (e.record.quantity || 0) > 0) return;
+              if (filters.badge && filters.badge !== 'All' && e.record.badge !== filters.badge) return;
+
+              const rowsPerPage = filters.perPage || 50;
+
+              queryClient.setQueryData(queryKey, (old: any) => {
+                if (!old || !old.products) return old;
+                
+                const existingIds = new Set(old.products.map((p: any) => p.id));
+                const alreadyExists = existingIds.has(e.record.id);
+                
+                let newItems = alreadyExists 
+                  ? old.products.map((p: any) => p.id === e.record.id ? e.record : p)
+                  : [e.record, ...old.products];
+
+                newItems.sort((a: any, b: any) => {
+                  const createdDiff = new Date(b.created).getTime() - new Date(a.created).getTime();
+                  if (createdDiff !== 0) return createdDiff;
+                  return b.id > a.id ? 1 : -1;
+                });
+                
+                newItems = newItems.slice(0, rowsPerPage);
+                
+                const newTotal = alreadyExists ? old.totalItems : old.totalItems + 1;
+                const newTotalPages = Math.ceil(newTotal / rowsPerPage);
+                
+                return {
+                  ...old,
+                  products: newItems,
+                  totalItems: newTotal,
+                  totalPages: newTotalPages
+                };
+              });
+            });
+          }
+
           queryClient.invalidateQueries({ queryKey: queryKeys.admin.products.all() });
           triggerDashboardDebounce();
           queryClient.invalidateQueries({ queryKey: queryKeys.products.all() });

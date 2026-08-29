@@ -19,7 +19,7 @@ function revalidateAll() {
   revalidatePath('/', 'page'); // home page (trending products etc)
 }
 
-export async function getProductsAction(page = 1, perPage = 50, search = '', categoryId = '', sort = '-addedAt,-id', inStock = 'All', badge = 'All') {
+export async function getProductsAction(page = 1, perPage = 50, search = '', categoryId = '', sort = '-created,-id', inStock = 'All', badge = 'All') {
   try {
     const { pb } = await validateSession();
     

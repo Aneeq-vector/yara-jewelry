@@ -1116,7 +1116,7 @@ export default function ProductsClient({
     perPage: rowsPerPage,
     search: debouncedSearch,
     categoryId: filterCategory,
-    sort: '-addedAt,-id',
+    sort: '-created,-id',
     inStock: filterStock,
     badge: filterBadge
   }, initialAdminData);
@@ -1287,10 +1287,49 @@ export default function ProductsClient({
         };
       });
     } else {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.admin.products.all(),
-        refetchType: 'active',
+      setCurrentPage(1);
+      
+      const currentQueryKey = queryKeys.admin.products.list({
+        page: 1,
+        perPage: rowsPerPage,
+        search: debouncedSearch,
+        categoryId: filterCategory,
+        sort: '-created,-id',
+        inStock: filterStock,
+        badge: filterBadge
       });
+
+      queryClient.setQueryData(currentQueryKey, (old: any) => {
+        if (!old || !old.products) return old;
+        
+        const existingIds = new Set(old.products.map((p: any) => p.id));
+        const alreadyExists = existingIds.has(saved.id);
+        
+        let newItems = alreadyExists 
+          ? old.products.map((p: any) => p.id === saved.id ? saved : p)
+          : [saved, ...old.products];
+
+        newItems.sort((a: any, b: any) => {
+          const createdDiff = new Date(b.created).getTime() - new Date(a.created).getTime();
+          if (createdDiff !== 0) return createdDiff;
+          return b.id > a.id ? 1 : -1;
+        });
+        
+        newItems = newItems.slice(0, rowsPerPage);
+        
+        const newTotal = alreadyExists ? old.totalItems : old.totalItems + 1;
+        const newTotalPages = Math.ceil(newTotal / rowsPerPage);
+        
+        return {
+          ...old,
+          products: newItems,
+          totalItems: newTotal,
+          totalPages: newTotalPages
+        };
+      });
+      
+      // Still invalidate to ensure eventual consistency
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.products.all() });
     }
     setFormMode(null);
     setEditProduct(undefined);
