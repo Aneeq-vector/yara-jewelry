@@ -15,7 +15,7 @@ export default async function ProductsPage() {
     const { pb } = await validateSession();
     const [productsRes, categories] = await Promise.all([
       pb.collection('products').getList(1, 10, { 
-        sort: '-created,-id', 
+        sort: '-addedAt,-id', 
         expand: 'category',
         $autoCancel: false,
         fields: 'id,collectionId,name,price,originalPrice,category,inStock,quantity,rating,reviewCount,productCode,images,imagePositions,description,shortDescription,badge,colors,tags,material,weight,expand.category.id,expand.category.name'

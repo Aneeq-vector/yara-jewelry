@@ -80,6 +80,7 @@ export interface RawProduct {
   badge?: string;
   rating?: number;
   reviewCount?: number;
+  addedAt?: string;
   material?: string;
   weight?: string;
   quantity?: number;
@@ -1107,7 +1108,8 @@ export default function ProductsClient({
   useEffect(() => {
     setCurrentPage(1);
   }, [debouncedSearch, filterBadge, filterStock, filterCategory, rowsPerPage]);
-          const initialAdminData = (currentPage === 1 && !debouncedSearch && filterStock === 'All' && filterBadge === 'All' && filterCategory === '')
+  
+  const initialAdminData = (currentPage === 1 && !debouncedSearch && filterStock === 'All' && filterBadge === 'All' && filterCategory === '')
     ? { products: initialProducts, totalItems: initialTotalItems, totalPages: initialTotalPages }
     : undefined;
 
@@ -1115,8 +1117,8 @@ export default function ProductsClient({
     page: currentPage,
     perPage: rowsPerPage,
     search: debouncedSearch,
-    categoryId: filterCategory,
-    sort: '-created,-id',
+    categoryId: filterCategory || 'all',
+    sort: '-addedAt,-id',
     inStock: filterStock,
     badge: filterBadge
   }, initialAdminData);
@@ -1124,9 +1126,15 @@ export default function ProductsClient({
   const loading = isPending && !data;
   const isRefreshing = isFetching;
 
-  const products = (data?.products as unknown as RawProduct[]) || initialProducts;
-  const totalItems = data?.totalItems ?? initialTotalItems;
-  const totalPages = data?.totalPages ?? initialTotalPages;
+  const products = (data?.products as unknown as RawProduct[]) || (data?.success === false ? [] : initialProducts);
+  const totalItems = data?.totalItems ?? (data?.success === false ? 0 : initialTotalItems);
+  const totalPages = data?.totalPages ?? (data?.success === false ? 0 : initialTotalPages);
+
+  useEffect(() => {
+    if (data && data.success === false) {
+      addToast('Unable to load products. Please try again.', 'error');
+    }
+  }, [data?.success]);
 
   const { data: categoriesData } = useAdminCategories({ success: true, categories: initialCategories });
   const categories = (categoriesData?.categories as unknown as RawCategory[]) || initialCategories;
@@ -1293,8 +1301,8 @@ export default function ProductsClient({
         page: 1,
         perPage: rowsPerPage,
         search: debouncedSearch,
-        categoryId: filterCategory,
-        sort: '-created,-id',
+        categoryId: filterCategory || 'all',
+        sort: '-addedAt,-id',
         inStock: filterStock,
         badge: filterBadge
       });
@@ -1310,8 +1318,8 @@ export default function ProductsClient({
           : [saved, ...old.products];
 
         newItems.sort((a: any, b: any) => {
-          const createdDiff = new Date(b.created).getTime() - new Date(a.created).getTime();
-          if (createdDiff !== 0) return createdDiff;
+          const addedAtDiff = new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime();
+          if (addedAtDiff !== 0) return addedAtDiff;
           return b.id > a.id ? 1 : -1;
         });
         

@@ -105,8 +105,8 @@ export default function AdminRealtimeProvider({
                   : [e.record, ...old.products];
 
                 newItems.sort((a: any, b: any) => {
-                  const createdDiff = new Date(b.created).getTime() - new Date(a.created).getTime();
-                  if (createdDiff !== 0) return createdDiff;
+                  const addedAtDiff = new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime();
+                  if (addedAtDiff !== 0) return addedAtDiff;
                   return b.id > a.id ? 1 : -1;
                 });
                 
