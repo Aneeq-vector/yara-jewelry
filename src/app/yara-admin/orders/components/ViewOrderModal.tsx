@@ -1,5 +1,6 @@
 import { X, ChevronDown, Phone, Mail, MapPin, ExternalLink } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { formatOrderAddress } from "@/lib/utils";
 import { PB_URL, getReceiptUrl } from '@/lib/pocketbase';
 
 export function ViewOrderModal({
@@ -89,7 +90,7 @@ export function ViewOrderModal({
               <div className="flex justify-between pb-3 border-b border-burgundy/10">
                 <span className="text-burgundy/60 flex items-center gap-1.5"><MapPin size={13} /> Address</span>
                 <span className="text-burgundy text-right max-w-[220px]">
-                  {[selectedOrder.shippingStreet, selectedOrder.shippingCity, selectedOrder.shippingZip, selectedOrder.shippingCountry].filter(Boolean).join(', ') || 'N/A'}
+                  {formatOrderAddress(selectedOrder.shippingStreet, selectedOrder.shippingCity, selectedOrder.shippingZip, selectedOrder.shippingCountry) || 'N/A'}
                 </span>
               </div>
 

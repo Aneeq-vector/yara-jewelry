@@ -1,6 +1,8 @@
 import { m as motion } from 'framer-motion';
 import { Upload, FileTextIcon, Loader2, FileWarningIcon, CheckIcon, XIcon, RefreshCwIcon } from 'lucide-react';
 import { Attachment, AttachmentMedia, AttachmentContent, AttachmentTitle, AttachmentDescription, AttachmentActions, AttachmentAction } from '@/components/ui/attachment';
+import { SHIPPING_FEE } from "@/lib/constants";
+import { formatPrice } from "@/lib/utils";
 
 export function CheckoutReviewStep({
   form,
@@ -30,8 +32,8 @@ export function CheckoutReviewStep({
                         <p className="font-body text-sm text-burgundy/60">{form.street}, {form.city}, {form.state} {form.zip}</p>
                       </div>
                       <div className="p-4 rounded-2xl bg-champagne/20 border border-nude/20">
-                        <h4 className="font-ui font-semibold text-xs uppercase tracking-wider text-burgundy/50 mb-2">Delivery</h4>
-                        <p className="font-body text-sm text-burgundy capitalize">{form.deliveryMethod} Delivery</p>
+                        <h4 className="font-ui font-semibold text-xs uppercase tracking-wider text-burgundy/50 mb-2">Delivery Fee</h4>
+                        <p className="font-body text-sm text-burgundy">{formatPrice(SHIPPING_FEE)}</p>
                       </div>
                       <div className="p-4 rounded-2xl bg-champagne/20 border border-nude/20">
                         <h4 className="font-ui font-semibold text-xs uppercase tracking-wider text-burgundy/50 mb-2">Payment</h4>

@@ -1,5 +1,6 @@
 'use client';
 
+import { formatOrderAddress } from "@/lib/utils";
 import { useState, useEffect, useMemo } from 'react';
 import { OrdersTable } from './components/OrdersTable';
 import { OrdersPagination } from './components/OrdersPagination';
@@ -213,7 +214,7 @@ export default function OrdersClient({ initialOrders, initialTotal, initialPages
     const exportData = filteredOrders.map((order: any) => {
       const date = new Date(order.orderDate || order.created).toLocaleDateString('en-GB');
       const items = Array.isArray(order.cartDetails) ? order.cartDetails.map((d: any) => typeof d === 'string' ? d : (d.text || d.productName)).join(" | ") : "";
-      const address = [order.shippingStreet, order.shippingCity, order.shippingZip, order.shippingCountry].filter(Boolean).join(", ");
+      const address = formatOrderAddress(order.shippingStreet, order.shippingCity, order.shippingZip, order.shippingCountry);
       
       return {
         "Order ID": order.orderId || order.id,

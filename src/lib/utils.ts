@@ -35,3 +35,18 @@ export const isProductAvailable = (product: { quantity?: number; inStock?: boole
   // Authoritative availability is driven by quantity, not inStock cache.
   return Number(product.quantity) > 0;
 };
+
+export const getAvailableProductStock = (product: { inventoryMode?: string, quantity?: number, colorStock?: Record<string, number> }, selectedColor?: string): number => {
+  if (product.inventoryMode === 'color') {
+    if (!selectedColor) return 0;
+    return product.colorStock?.[selectedColor] ?? 0;
+  }
+  return product.quantity ?? 0;
+};
+
+export function formatOrderAddress(street?: string, city?: string, zip?: string, country?: string): string {
+  return [street, city, zip, country]
+    .map(val => val && typeof val === 'string' ? val.trim() : '')
+    .filter(val => val !== '' && val !== '00000' && val !== '0000')
+    .join(', ');
+}

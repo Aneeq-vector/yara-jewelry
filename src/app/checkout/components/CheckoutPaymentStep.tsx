@@ -45,16 +45,16 @@ export function CheckoutPaymentStep({
                                 <p className="font-body text-xs text-burgundy/70 mb-2">Please transfer the total amount to the following bank account:</p>
                                 <div className="grid grid-cols-2 gap-2 font-body text-sm text-burgundy bg-white/50 p-3 rounded-xl border border-burgundy/10">
                                   <span className="text-burgundy/50">Bank Name</span>
-                                  <span className="font-medium">Commercial Bank</span>
+                                  <span className="font-medium">Hatton National Bank</span>
                                   
                                   <span className="text-burgundy/50">Account Name</span>
-                                  <span className="font-medium">Yara Jewelry</span>
+                                  <span className="font-medium">Fathima Lamaa</span>
                                   
                                   <span className="text-burgundy/50">Account Number</span>
-                                  <span className="font-medium">100 234 5678</span>
+                                  <span className="font-medium">0830 2031 0603</span>
                                   
                                   <span className="text-burgundy/50">Branch</span>
-                                  <span className="font-medium">Colombo 03</span>
+                                  <span className="font-medium">Puttalam</span>
                                 </div>
                                 <div className="mt-4 p-3 bg-rose-gold/20 border border-burgundy/20 rounded-xl flex items-start gap-3 shadow-inner">
                                   <div className="text-burgundy/70 mt-0.5"><Info size={16} /></div>
@@ -71,14 +71,13 @@ export function CheckoutPaymentStep({
                       {/* Cash on Delivery */}
                       <label 
                         htmlFor="cod" 
-                        className={`relative flex flex-col cursor-not-allowed rounded-2xl border p-5 shadow-sm transition-colors focus:outline-none opacity-60 border-nude/30 hover:border-burgundy/20`}
+                        className={`relative flex flex-col cursor-pointer rounded-2xl border p-5 shadow-sm transition-colors focus:outline-none ${form.paymentMethod === 'cod' ? 'border-burgundy bg-champagne/30' : 'border-nude/30 hover:border-burgundy/20'}`}
                       >
                         <div className="flex w-full items-center justify-between">
                           <div className="flex items-center gap-4">
-                            <RadioGroupItem disabled value="cod" id="cod" className="border-burgundy/50 text-burgundy disabled:opacity-100" />
+                            <RadioGroupItem value="cod" id="cod" className="border-burgundy/50 text-burgundy" />
                             <div className="flex flex-col">
                               <span className="font-ui font-semibold text-sm text-burgundy">Cash on Delivery</span>
-                              <span className="font-body text-xs text-burgundy/60 mt-1">Available after three orders completed.</span>
                             </div>
                           </div>
                         </div>

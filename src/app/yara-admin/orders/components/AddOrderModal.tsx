@@ -9,7 +9,7 @@ import { getProductColors } from '@/lib/colors';
 import { Product } from '@/types';
 
 const SOURCES = ['Instagram', 'Facebook', 'WhatsApp', 'Walk-in', 'Phone Call', 'Other'];
-const DELIVERY_FEE = 350;
+import { SHIPPING_FEE } from '@/lib/constants';
 
 interface AddOrderModalProps {
   isOpen: boolean;
@@ -32,7 +32,6 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'paid'>('pending');
   const [notes, setNotes] = useState('');
   const [deductStock, setDeductStock] = useState(true);
-  const [includeDelivery, setIncludeDelivery] = useState(true);
 
   // Products
   const { data: rawProducts, isLoading: productsLoading } = useProductOptions();
@@ -43,11 +42,11 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
 
   // UI state
   const [submitting, setSubmitting] = useState(false);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [showProductPicker, setShowProductPicker] = useState(false);
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const receiptInputRef = useRef<HTMLInputElement>(null);
 
   // Fetched by useProductOptions hook
@@ -55,8 +54,7 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
   const resetForm = () => {
     setName(''); setPhone(''); setEmail(''); setCity(''); setAddress(''); setCountry('Sri Lanka');
     setSource('Instagram'); setPaymentMethod('cod'); setPaymentStatus('pending');
-    setNotes(''); setDeductStock(true); setIncludeDelivery(true);
-    setOrderItems([]); setProductSearch('');
+    setNotes(''); setDeductStock(true);     setOrderItems([]); setProductSearch('');
     setError(''); setSuccess(false); setShowProductPicker(false);
     setReceiptFile(null);
   };
@@ -137,7 +135,7 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
     Object.values(item.colorQuantities).reduce((s, q) => s + q, 0);
 
   const subtotal = orderItems.reduce((sum, i) => sum + i.price * itemTotalQty(i), 0);
-  const total = subtotal + (includeDelivery ? DELIVERY_FEE : 0);
+  const total = subtotal + SHIPPING_FEE;
 
   const handleSubmit = async () => {
     if (!name.trim()) { setError('Customer name is required.'); return; }
@@ -399,11 +397,8 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
                   <span>Subtotal</span><span>Rs. {subtotal.toLocaleString()}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm font-body text-burgundy/70">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={includeDelivery} onChange={e => setIncludeDelivery(e.target.checked)} className="accent-burgundy" />
-                    Delivery fee
-                  </label>
-                  <span>{includeDelivery ? `Rs. ${DELIVERY_FEE.toLocaleString()}` : 'Free'}</span>
+                  <span>Delivery fee</span>
+                  <span>Rs. {SHIPPING_FEE.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-base font-ui font-bold text-burgundy border-t border-burgundy/10 pt-2">
                   <span>Total</span><span>Rs. {total.toLocaleString()}</span>

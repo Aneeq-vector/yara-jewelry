@@ -3,7 +3,7 @@ const emptyArray: any[] = [];
 import { getOptimizedImageUrl, isPocketBaseResizable , pbLoader } from '@/lib/image-utils';
 import { CustomBoxSidebar } from './CustomBoxSidebar';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { m as motion, LazyMotion, domAnimation, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { useCartStore } from '@/lib/store/cart-store';
 import { Product, Category } from '@/types';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, getAvailableProductStock } from '@/lib/utils';
 import { getProductColors } from '@/lib/colors';
 import { useRouter } from 'next/navigation';
 import { BRAND } from '@/lib/constants';
@@ -41,6 +41,34 @@ export default function CustomBoxBuilder({
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [added, setAdded] = useState(false);
   const addToCart = useCartStore((s) => s.addItem);
+
+  // Re-clamp items if stock changes or color changes (realtime)
+  useEffect(() => {
+    setSelectedItems(prev => {
+      let changed = false;
+      const next = prev.map(item => {
+        const p = allProducts.find(x => x.id === item.product.id);
+        if (!p) return item; // product deleted, handle gracefully or keep? Let's keep for now as user said "Do not recreate"
+        
+        const maxStock = getAvailableProductStock(p, item.color);
+        if (item.quantity > maxStock) {
+          changed = true;
+          return { ...item, product: p, quantity: Math.max(0, maxStock) };
+        }
+        
+        // Always refresh product reference to keep price/name updated
+        if (item.product.price !== p.price || item.product.name !== p.name) {
+          changed = true;
+          return { ...item, product: p };
+        }
+        
+        return item;
+      }).filter(item => item.quantity > 0);
+      
+      return changed ? next : prev;
+    });
+  }, [allProducts]);
+
 
   // Map category id → display name
   const categoryIdToName = useMemo(() => {
@@ -72,13 +100,23 @@ export default function CustomBoxBuilder({
 
   const handleAddItem = (product: Product, color?: string) => {
     setSelectedItems((prev) => {
+      // Find the most recent product info from allProducts
+      const freshProduct = allProducts.find(p => p.id === product.id) || product;
+      const maxStock = getAvailableProductStock(freshProduct, color);
+      
       const existing = prev.find((item) => item.product.id === product.id && item.color === color);
+      const currentQty = existing ? existing.quantity : 0;
+      
+      if (currentQty >= maxStock) {
+         return prev; // Do nothing, clamped
+      }
+      
       if (existing) {
         return prev.map((item) =>
-          item.product.id === product.id && item.color === color ? { ...item, quantity: item.quantity + 1 } : item
+          item.product.id === product.id && item.color === color ? { ...item, quantity: item.quantity + 1, product: freshProduct } : item
         );
       }
-      return [...prev, { product, quantity: 1, color }];
+      return [...prev, { product: freshProduct, quantity: 1, color }];
     });
   };
 
@@ -210,11 +248,7 @@ export default function CustomBoxBuilder({
                     selectedItems.find((i) => i.product.id === product.id && i.color === activeColor)?.quantity || 0;
 
                   // determine stock
-                  let maxStock = product.quantity;
-                  if (product.inventoryMode === 'color') {
-                     maxStock = activeColorObj ? (activeColorObj.stock || 0) : 0;
-                  }
-                  
+                  const maxStock = getAvailableProductStock(product, activeColor);
                   const isOOS = maxStock <= 0;
                   const canAddMore = selectedCount < maxStock;
 

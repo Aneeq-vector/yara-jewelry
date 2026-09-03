@@ -235,7 +235,7 @@ export async function sendInvoiceEmail(details: InvoiceDetails) {
                             <td align="right" style="color: #4a1c27; font-size: 14px; font-weight: 500;">${subtotalDisplay}</td>
                           </tr>
                           <tr>
-                            <td align="left" style="padding-right: 20px; color: #666666; font-size: 14px; padding-top: 10px;">Shipping</td>
+                            <td align="left" style="padding-right: 20px; color: #666666; font-size: 14px; padding-top: 10px;">Delivery Fee</td>
                             <td align="right" style="color: #4a1c27; font-size: 14px; font-weight: 500; padding-top: 10px;">${shippingDisplay}</td>
                           </tr>
                           <tr>

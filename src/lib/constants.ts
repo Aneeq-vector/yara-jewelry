@@ -68,3 +68,4 @@ export const BADGE_CONFIG = {
   limited: { label: 'Limited Stock', color: 'bg-gradient-to-r from-red-400 to-rose-500' },
   new: { label: 'New', color: 'bg-gradient-to-r from-emerald-400 to-teal-500' },
 } as const;
+export const SHIPPING_FEE = 450;

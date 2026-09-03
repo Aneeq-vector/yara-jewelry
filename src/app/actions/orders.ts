@@ -4,6 +4,7 @@ import { getServerSession, validateSession, getAdminClient } from '@/lib/pocketb
 import { revalidatePath } from 'next/cache';
 import { validateColorStock, normalizeColorName } from '@/lib/colors';
 import { unstable_noStore as noStore } from 'next/cache';
+import { SHIPPING_FEE } from "@/lib/constants";
 async function syncInStock(productIds: string[]) {
   if (!productIds || productIds.length === 0) return;
   try {
@@ -258,14 +259,7 @@ export async function createOrderAction(formData: FormData) {
     }
 
     // Calculate shipping
-    const deliveryMethod = formData.get('deliveryMethod') as string;
-    let shippingFee = 450;
-    if (calculatedSubtotal >= 10000 && deliveryMethod === 'standard') {
-      shippingFee = 0;
-    } else {
-      if (deliveryMethod === 'express') shippingFee = 1000;
-      else if (deliveryMethod === 'premium') shippingFee = 1450;
-    }
+    const shippingFee = SHIPPING_FEE;
 
     const calculatedTotalAmount = calculatedSubtotal + shippingFee;
     const generatedOrderId = formData.get('orderId') as string || `YRA-${Math.floor(100000 + Math.random() * 900000)}`;
@@ -313,7 +307,7 @@ export async function createOrderAction(formData: FormData) {
       
       const v = validateColorStock(dbProduct, color || '', quantity);
       if (!v.valid) {
-        throw new Error(v.error || `Stock error for ${dbProduct.name}`);
+        throw new Error(`${dbProduct.name}${color ? ' - ' + color : ''} no longer has enough stock.`);
       }
       
       const arr = productDeductions.get(productId) || [];
@@ -540,9 +534,9 @@ export async function createManualOrderAction(payload: ManualOrderPayload) {
       shippingEmail: payload.shippingEmail || '',
       shippingStreet: payload.shippingStreet || '',
       shippingCity: payload.shippingCity,
-      shippingZip: payload.shippingZip || '00000',
+      shippingZip: payload.shippingZip || '',
       shippingCountry: payload.shippingCountry || 'Sri Lanka',
-      totalAmount: calculatedTotal,
+      totalAmount: calculatedTotal + SHIPPING_FEE,
       paymentMethod: payload.paymentMethod,
       paymentStatus: payload.paymentStatus,
       status: 'pending',
@@ -555,12 +549,13 @@ export async function createManualOrderAction(payload: ManualOrderPayload) {
       items: productIdsToFetch,
     };
 
-    const batchRequests: any[] = [];
-    batchRequests.push({
-      method: 'POST',
-      url: '/api/collections/orders/records',
-      body: orderPayload
-    });
+    const batch = adminPb.createBatch();
+    
+    if (payload.paymentMethod === 'bank_transfer' && payload.receiptFile) {
+      (orderPayload as any).receipt = payload.receiptFile;
+    }
+    
+    batch.collection('orders').create(orderPayload);
 
     if (payload.deductStock) {
       // 1. Group deductions by productId
@@ -572,7 +567,7 @@ export async function createManualOrderAction(payload: ManualOrderPayload) {
         
         const v = validateColorStock(dbProduct, color || '', quantity);
         if (!v.valid) {
-          throw new Error(v.error || `Stock error for ${dbProduct.name}`);
+          throw new Error(`${dbProduct.name}${color ? ' - ' + color : ''} no longer has enough stock.`);
         }
         
         const arr = productDeductions.get(productId) || [];
@@ -602,39 +597,23 @@ export async function createManualOrderAction(payload: ManualOrderPayload) {
           
           const newTotalQty = Object.values(colorStock).reduce((sum: number, q: any) => sum + Number(q), 0);
           
-          batchRequests.push({
-            method: 'PATCH',
-            url: `/api/collections/products/records/${prodId}`,
-            body: { colorStock, quantity: newTotalQty }
-          });
+          batch.collection('products').update(prodId, { colorStock, quantity: newTotalQty });
           
         } else {
           const totalDeduct = deductionsArr.reduce((sum: number, d: any) => sum + d.quantity, 0);
           if (totalDeduct > 0) {
-            batchRequests.push({
-              method: 'PATCH',
-              url: `/api/collections/products/records/${prodId}`,
-              body: { "quantity-": totalDeduct }
-            });
+            batch.collection('products').update(prodId, { "quantity-": totalDeduct });
           }
         }
       }
     }
 
-    const batchRes = await adminPb.send('/api/batch', {
-      method: 'POST',
-      body: { requests: batchRequests }
-    });
+    await batch.send();
     
     // Best-effort inStock sync
     syncInStock(productIdsToFetch).catch(console.error);
     
-    let record = null;
-    if (Array.isArray(batchRes) && batchRes.length > 0 && batchRes[0].body) {
-       record = batchRes[0].body;
-    } else {
-       record = await adminPb.collection('orders').getFirstListItem(`orderId="${generatedOrderId}"`);
-    }
+    const record = await adminPb.collection('orders').getFirstListItem(`orderId="${generatedOrderId}"`);
 
     return { success: true, orderId: generatedOrderId, record: structuredClone(record) };
   } catch (error: any) {

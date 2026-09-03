@@ -6,6 +6,7 @@ import { getAddressesAction } from '@/app/actions/addresses';
 import { useCartStore } from '@/lib/store/cart-store';
 import { useWishlistStore } from '@/lib/store/wishlist-store';
 import { createOrderAction } from '@/app/actions/orders';
+import { SHIPPING_FEE } from '@/lib/constants';
 
 export function useCheckoutLogic() {
   const router = useRouter();
@@ -38,7 +39,7 @@ export function useCheckoutLogic() {
 
   const [form, setForm] = useState({
     name: '', email: '', phone: '', street: '', city: '', state: '', zip: '', country: 'Sri Lanka',
-    deliveryMethod: 'standard',
+    
     paymentMethod: '',
   });
 
@@ -122,20 +123,11 @@ export function useCheckoutLogic() {
     setUploadProgress(0);
   };
   
-  const FREE_DELIVERY_THRESHOLD = 10000;
+  
 
-  const getShippingFee = (method: string) => {
-    if (items.length === 0) return 0;
-    if (subtotal >= FREE_DELIVERY_THRESHOLD && method === 'standard') return 0;
-    switch (method) {
-      case 'standard': return 450;
-      case 'express': return 1000;
-      case 'premium': return 1450;
-      default: return 450;
-    }
-  };
+  
 
-  const shipping = getShippingFee(form.deliveryMethod);
+  const shipping = SHIPPING_FEE;
   const total = subtotal + shipping;
 
   const updateForm = (field: string, value: string) => {
@@ -165,14 +157,14 @@ export function useCheckoutLogic() {
         return;
       }
     }
-    if (currentStep === 3) {
+    if (currentStep === 2) {
       if (!form.paymentMethod) {
         alert("Please select a payment method to continue.");
         return;
       }
     }
     setErrors({});
-    setCurrentStep((s) => Math.min(s + 1, 4));
+    setCurrentStep((s) => Math.min(s + 1, 3));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   const prevStep = () => {
@@ -212,9 +204,7 @@ export function useCheckoutLogic() {
     // We pass the raw items to the server for authoritative calculation
     formData.append('cartItems', JSON.stringify(items));
     formData.append('idempotencyKey', idempotencyKey);
-    // Also pass deliveryMethod so server knows which shipping fee to apply
-    formData.append('deliveryMethod', form.deliveryMethod);
-
+    
     const productIds = Array.from(productIdsSet);
     productIds.forEach(id => formData.append('items', id));
 
@@ -255,8 +245,7 @@ export function useCheckoutLogic() {
         setIdempotencyKey(crypto.randomUUID());
         setForm(prev => ({
           ...prev,
-          deliveryMethod: 'standard',
-          paymentMethod: '',
+                    paymentMethod: '',
         }));
       } else {
         alert(res.error || "Failed to place order.");
@@ -280,7 +269,7 @@ export function useCheckoutLogic() {
     currentStep, setCurrentStep, orderPlaced, setOrderPlaced, orderId,
     receiptFile, setReceiptFile, uploadState, setUploadState, uploadProgress,
     isSubmitting, hasHydrated, user, savedAddresses, selectedAddressId, errors, items,
-    subtotal, form, FREE_DELIVERY_THRESHOLD, shipping, total, receiptError,
+    subtotal, form, shipping, total, receiptError,
     handleSelectAddress, handleFileChange, retryUpload, updateForm,
     nextStep, prevStep, placeOrder, getInputClass
   };

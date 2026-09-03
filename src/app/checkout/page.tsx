@@ -8,7 +8,6 @@ import { MapPin, Truck, CreditCard, ClipboardCheck, Check, ChevronRight, Info, U
 import { useCheckoutLogic } from './useCheckoutLogic';
 import PageWrapper from '@/components/layout/PageWrapper';
 import { CheckoutShippingStep } from './components/CheckoutShippingStep';
-import { CheckoutDeliveryStep } from './components/CheckoutDeliveryStep';
 import { CheckoutPaymentStep } from './components/CheckoutPaymentStep';
 import { CheckoutReviewStep } from './components/CheckoutReviewStep';
 import { CheckoutSuccess } from './components/CheckoutSuccess';
@@ -42,16 +41,15 @@ import {
 
 const steps = [
   { id: 1, label: 'Shipping', icon: MapPin },
-  { id: 2, label: 'Delivery', icon: Truck },
-  { id: 3, label: 'Payment', icon: CreditCard },
-  { id: 4, label: 'Review', icon: ClipboardCheck },
+  { id: 2, label: 'Payment', icon: CreditCard },
+  { id: 3, label: 'Review', icon: ClipboardCheck },
 ];
 
 export default function CheckoutPage() {
   const {
     currentStep, orderPlaced, orderId, receiptFile, setReceiptFile, uploadState, setUploadState, uploadProgress, receiptError,
     isSubmitting, hasHydrated, savedAddresses, selectedAddressId, errors, items,
-    subtotal, form, FREE_DELIVERY_THRESHOLD, shipping, total,
+    subtotal, form, shipping, total,
     handleSelectAddress, handleFileChange, retryUpload, updateForm,
     nextStep, prevStep, placeOrder, getInputClass
   } = useCheckoutLogic();
@@ -152,29 +150,26 @@ export default function CheckoutPage() {
                   <CheckoutShippingStep form={form} updateForm={updateForm} errors={errors} savedAddresses={savedAddresses} selectedAddressId={selectedAddressId} handleSelectAddress={handleSelectAddress} getInputClass={getInputClass} currentStep={currentStep} />
                 )}
 
-                {/* Step 2: Delivery */}
-                {currentStep === 2 && (
-                  <CheckoutDeliveryStep form={form} updateForm={updateForm} subtotal={subtotal} FREE_DELIVERY_THRESHOLD={FREE_DELIVERY_THRESHOLD} currentStep={currentStep} />
-                )}
+                
 
-                {/* Step 3: Payment */}
-                {currentStep === 3 && (
+                {/* Step 2: Payment */}
+                {currentStep === 2 && (
                   <CheckoutPaymentStep form={form} updateForm={updateForm} currentStep={currentStep} />
                 )}
 
-                {/* Step 4: Review */}
-                {currentStep === 4 && (
+                {/* Step 3: Review */}
+                {currentStep === 3 && (
                   <CheckoutReviewStep form={form} receiptFile={receiptFile} uploadState={uploadState} uploadProgress={uploadProgress} handleFileChange={handleFileChange} retryUpload={retryUpload} setReceiptFile={setReceiptFile} setUploadState={setUploadState} receiptError={receiptError} currentStep={currentStep} />
                 )}
               </AnimatePresence>
 
               {/* Navigation Buttons */}
               <div className="flex flex-col sm:flex-row-reverse items-stretch sm:items-center justify-between gap-3 sm:gap-4 mt-6">
-                {currentStep < 4 ? (
+                {currentStep < 3 ? (
                   <button 
                     onClick={nextStep} 
-                    disabled={currentStep === 3 && !form.paymentMethod}
-                    className={`btn-primary w-full sm:w-auto justify-center flex items-center gap-2 ${currentStep === 3 && !form.paymentMethod ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    disabled={currentStep === 2 && !form.paymentMethod}
+                    className={`btn-primary w-full sm:w-auto justify-center flex items-center gap-2 ${currentStep === 2 && !form.paymentMethod ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <span>Continue</span>
                     <ChevronRight size={16} className="relative z-10" />
