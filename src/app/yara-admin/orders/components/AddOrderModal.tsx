@@ -23,6 +23,7 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [city, setCity] = useState('');
+  const [zip, setZip] = useState('');
   const [address, setAddress] = useState('');
   const [country, setCountry] = useState('Sri Lanka');
 
@@ -140,7 +141,10 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
   const handleSubmit = async () => {
     if (!name.trim()) { setError('Customer name is required.'); return; }
     if (!phone.trim()) { setError('Phone number is required.'); return; }
+    if (!address.trim()) { setError('Street Address is required.'); return; }
     if (!city.trim()) { setError('City is required.'); return; }
+    if (!zip.trim()) { setError('Postal Code is required.'); return; }
+    if (!country.trim()) { setError('Country is required.'); return; }
     if (orderItems.length === 0) { setError('Please add at least one product.'); return; }
     const hasQty = orderItems.some(i => itemTotalQty(i) > 0);
     if (!hasQty) { setError('Please set a quantity for at least one product/color.'); return; }
@@ -152,9 +156,10 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
       shippingName: name.trim(),
       shippingPhone: phone.trim(),
       shippingEmail: email.trim() || undefined,
-      shippingStreet: address.trim() || undefined,
+      shippingStreet: address.trim(),
       shippingCity: city.trim(),
-      shippingCountry: country || 'Sri Lanka',
+      shippingZip: zip.trim(),
+      shippingCountry: country.trim() || 'Sri Lanka',
       source,
       items: orderItems.filter(i => itemTotalQty(i) > 0),
       totalAmount: total,

@@ -433,7 +433,11 @@ export interface ManualOrderPayload {
 
 export async function createManualOrderAction(payload: ManualOrderPayload) {
   try {
-    const adminPb = await getAdminClient();
+
+    if (!payload.shippingStreet?.trim() || !payload.shippingCity?.trim() || !payload.shippingZip?.trim() || !payload.shippingCountry?.trim()) {
+      return { success: false, error: 'Please enter the complete shipping address.' };
+    }
+      const adminPb = await getAdminClient();
     
     // 1. Validate Admin Session
     const { user } = await validateSession();
