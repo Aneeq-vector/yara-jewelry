@@ -24,6 +24,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import PageWrapper from '@/components/layout/PageWrapper';
+import { getProductColors } from '@/lib/colors';
 import { ProductInfo } from './components/ProductInfo';
 import { ProductTabs } from './components/ProductTabs';
 import { SizeGuideModal } from './components/SizeGuideModal';
@@ -93,6 +94,15 @@ export default function ProductDetailClient({
   };
 
   const [selectedColor, setSelectedColor] = useState<string | undefined>();
+
+  useEffect(() => {
+    if (product && product.inventoryMode === 'color' && !selectedColor) {
+      const colors = getProductColors(product).filter(c => (c.stock || 0) > 0);
+      if (colors.length > 0) {
+        setSelectedColor(colors[0].name);
+      }
+    }
+  }, [product]);
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
   const [activeTab, setActiveTab] = useState<'description' | 'details' | 'reviews'>('description');
@@ -113,12 +123,18 @@ export default function ProductDetailClient({
   const [addError, setAddError] = useState<string | null>(null);
 
   const handleAddToCart = () => {
+    if (product?.inventoryMode === 'color' && !selectedColor) {
+      setAddError('Please select a color');
+      setTimeout(() => setAddError(null), 3000);
+      return;
+    }
+
     setIsAdding(true);
     setAddError(null);
     // Simulate network delay for UX
     setTimeout(() => {
       if (product) {
-        const res = addToCart(product, quantity, selectedColor || product.colors?.[0]);
+        const res = addToCart(product, quantity, selectedColor);
         if (res && !res.success) {
           setAddError(res.message || 'Cannot add more to cart');
           setTimeout(() => setAddError(null), 4000);

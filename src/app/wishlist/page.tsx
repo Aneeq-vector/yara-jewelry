@@ -4,16 +4,19 @@ import { getOptimizedImageUrl, isPocketBaseResizable , pbLoader } from '@/lib/im
 import { useState, useSyncExternalStore } from 'react';
 import { m as motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Heart, ShoppingBag, X, Star } from 'lucide-react';
 import PageWrapper from '@/components/layout/PageWrapper';
 import { useWishlistStore } from '@/lib/store/wishlist-store';
 import { useCartStore } from '@/lib/store/cart-store';
 import { formatPrice } from '@/lib/utils';
+import { getProductColors, NormalizedColor } from '@/lib/colors';
 
 export default function WishlistPage() {
   const { items, removeItem } = useWishlistStore();
   const addToCart = useCartStore((s) => s.addItem);
+  const router = useRouter();
 
   const mounted = useSyncExternalStore(
     () => () => {},
@@ -85,7 +88,19 @@ export default function WishlistPage() {
                     <div className="absolute bottom-3 left-3 right-3">
                       <motion.button
                         whileTap={{ scale: 0.95 }}
-                        onClick={() => addToCart(product)}
+                        onClick={() => {
+                          if (product.inventoryMode === 'color') {
+                            const colors = getProductColors(product).filter((c: NormalizedColor) => (c.stock || 0) > 0);
+                            if (colors.length > 1) {
+                              router.push(`/shop/${product.id}`);
+                              return;
+                            } else if (colors.length === 1) {
+                              addToCart(product, 1, colors[0].name);
+                              return;
+                            }
+                          }
+                          addToCart(product);
+                        }}
                         className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-burgundy/90 backdrop-blur-sm text-ivory font-ui text-xs font-semibold uppercase tracking-wider opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition duration-300"
                       >
                         <ShoppingBag size={14} />

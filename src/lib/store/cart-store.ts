@@ -15,19 +15,26 @@ interface CartStore {
   getCartProductQuantity: (productId: string, color?: string) => number;
 }
 
+export function normalizeCartColor(color?: string): string | undefined {
+  if (!color || !color.trim()) return undefined;
+  return color.trim().toLowerCase();
+}
+
 export const useCartStore = create<CartStore>()(
   persist(
     (set, get) => ({
       items: [],
       getCartProductQuantity: (productId: string, color?: string) => {
+        const normColor = normalizeCartColor(color);
         return get().items.reduce((total, item) => {
-          if (!item.isCustomBox && item.product.id === productId && (color ? item.selectedColor === color : true)) {
+          if (!item.isCustomBox && item.product.id === productId && (normColor ? normalizeCartColor(item.selectedColor) === normColor : true)) {
             return total + item.quantity;
           }
           return total;
         }, 0);
       },
       addItem: (product, quantity = 1, color, isCustomBox, boxItems, customPrice, giftBoxType, giftBoxId) => {
+        const normColor = normalizeCartColor(color);
         const items = get().items;
         
         if (isCustomBox) {
@@ -68,7 +75,7 @@ export const useCartStore = create<CartStore>()(
 
         // Merge same standard product matching selected color differences as per requirements
         const existing = items.find(
-          (item) => !item.isCustomBox && item.product.id === product.id && item.selectedColor === color
+          (item) => !item.isCustomBox && item.product.id === product.id && normalizeCartColor(item.selectedColor) === normColor
         );
         
         if (existing) {
@@ -119,8 +126,9 @@ export const useCartStore = create<CartStore>()(
         }
 
         // Calculate total of ALL instances of this product & color minus this specific cart item's current qty
+        const normColorToUpdate = normalizeCartColor(itemToUpdate.selectedColor);
         const otherQty = get().items.reduce((total, item) => {
-          if (!item.isCustomBox && item.product.id === itemToUpdate.product.id && item.selectedColor === itemToUpdate.selectedColor && item.cartItemId !== cartItemId) {
+          if (!item.isCustomBox && item.product.id === itemToUpdate.product.id && normalizeCartColor(item.selectedColor) === normColorToUpdate && item.cartItemId !== cartItemId) {
             return total + item.quantity;
           }
           return total;
@@ -167,7 +175,8 @@ export const useCartStore = create<CartStore>()(
           if (item.isCustomBox) {
             merged.push(item);
           } else {
-            const existing = merged.find(i => !i.isCustomBox && i.product.id === item.product.id && i.selectedColor === item.selectedColor);
+            const normColor = normalizeCartColor(item.selectedColor);
+            const existing = merged.find(i => !i.isCustomBox && i.product.id === item.product.id && normalizeCartColor(i.selectedColor) === normColor);
             if (existing) {
               existing.quantity += item.quantity;
               

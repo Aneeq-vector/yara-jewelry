@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { m as motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Heart, ShoppingBag, Star, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { useCartStore } from '@/lib/store/cart-store';
@@ -10,10 +11,12 @@ import { BADGE_CONFIG } from '@/lib/constants';
 import { Product } from '@/types';
 import { getOptimizedImageUrl, isPocketBaseResizable, pbLoader } from '@/lib/image-utils';
 import { isProductAvailable } from '@/lib/utils';
+import { getProductColors } from '@/lib/colors';
 
 
 export function ProductCard({ product, index, aboveFold = false }: { product: Product; index: number, aboveFold?: boolean }) {
   const addToCart = useCartStore((s) => s.addItem);
+  const router = useRouter();
   const { isInWishlist, toggleItem } = useWishlistStore();
   const wishlisted = isInWishlist(product.id);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -22,6 +25,26 @@ export function ProductCard({ product, index, aboveFold = false }: { product: Pr
   const [addError, setAddError] = useState<string | null>(null);
 
   const handleAddToCart = () => {
+    if (product.inventoryMode === 'color') {
+      const colors = getProductColors(product).filter(c => (c.stock || 0) > 0);
+      if (colors.length > 1) {
+        router.push(`/shop/${product.id}`);
+        return;
+      } else if (colors.length === 1) {
+        setIsAdding(true);
+        setAddError(null);
+        setTimeout(() => {
+          const res = addToCart(product, 1, colors[0].name);
+          if (res && !res.success) {
+            setAddError(res.message || 'Cannot add more to cart');
+            setTimeout(() => setAddError(null), 3000);
+          }
+          setIsAdding(false);
+        }, 600);
+        return;
+      }
+    }
+    
     setIsAdding(true);
     setAddError(null);
     setTimeout(() => {
