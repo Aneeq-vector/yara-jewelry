@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { Minus, Plus, X, ShoppingBag, ArrowRight, Tag } from 'lucide-react';
 import PageWrapper from '@/components/layout/PageWrapper';
 import { useCartStore } from '@/lib/store/cart-store';
+import { getShippingFee } from "@/lib/constants";
 import { formatPrice } from '@/lib/utils';
 import { useCategories } from '@/lib/hooks/use-categories';
 export default function CartPage() {
@@ -28,8 +29,7 @@ export default function CartPage() {
   };
 
   const subtotal = getTotal();
-  const FREE_DELIVERY_THRESHOLD = 10000;
-  const shipping = subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : 450;
+  const shipping = getShippingFee(subtotal);
   const total = subtotal - discount + shipping;
 
   const applyCoupon = () => {
@@ -263,8 +263,8 @@ export default function CartPage() {
 
                 <p className="font-body text-xs text-burgundy/60 text-center mt-4">
                   {shipping === 0 
-                    ? "✨ Free delivery unlocked for orders over Rs. 10,000!" 
-                    : `Orders over Rs. 10,000 are eligible for free delivery.`}
+                    ? "✨ Free delivery unlocked for orders above Rs. 4,999!" 
+                    : `Orders above Rs. 4,999 are eligible for free delivery.`}
                 </p>
 
 

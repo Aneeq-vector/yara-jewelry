@@ -31,7 +31,7 @@ export function AnnouncementSection({ expandedSections, toggleSection }: any) {
                   <label htmlFor="field_879692" className="block text-xs font-bold text-burgundy/60 mb-2 font-ui uppercase tracking-wider">Announcement Text</label>
                   <input id="field_879692" aria-label="Action" 
                     type="text" 
-                    defaultValue="✨ Free shipping on all orders over Rs. 10,000! ✨"
+                    defaultValue="✨ Free shipping on all orders above Rs. 4,999! ✨"
                     className="w-full bg-ivory/50 border border-burgundy/10 rounded-xl px-4 py-2.5 font-body text-burgundy focus:border-burgundy/30 outline-none transition-colors focus:bg-white"
                   />
                 </div>

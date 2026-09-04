@@ -6,7 +6,7 @@ import { getAddressesAction } from '@/app/actions/addresses';
 import { useCartStore } from '@/lib/store/cart-store';
 import { useWishlistStore } from '@/lib/store/wishlist-store';
 import { createOrderAction } from '@/app/actions/orders';
-import { SHIPPING_FEE } from '@/lib/constants';
+import { getShippingFee } from '@/lib/constants';
 
 export function useCheckoutLogic() {
   const router = useRouter();
@@ -127,7 +127,7 @@ export function useCheckoutLogic() {
 
   
 
-  const shipping = SHIPPING_FEE;
+  const shipping = getShippingFee(subtotal);
   const total = subtotal + shipping;
 
   const updateForm = (field: string, value: string) => {

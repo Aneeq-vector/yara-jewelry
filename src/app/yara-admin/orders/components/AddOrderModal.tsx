@@ -9,7 +9,7 @@ import { getProductColors } from '@/lib/colors';
 import { Product } from '@/types';
 
 const SOURCES = ['Instagram', 'Facebook', 'WhatsApp', 'Walk-in', 'Phone Call', 'Other'];
-import { SHIPPING_FEE } from '@/lib/constants';
+import { getShippingFee } from '@/lib/constants';
 
 interface AddOrderModalProps {
   isOpen: boolean;
@@ -135,7 +135,7 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
     Object.values(item.colorQuantities).reduce((s, q) => s + q, 0);
 
   const subtotal = orderItems.reduce((sum, i) => sum + i.price * itemTotalQty(i), 0);
-  const total = subtotal + SHIPPING_FEE;
+  const total = subtotal + getShippingFee(subtotal);
 
   const handleSubmit = async () => {
     if (!name.trim()) { setError('Customer name is required.'); return; }
@@ -398,7 +398,7 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
                 </div>
                 <div className="flex items-center justify-between text-sm font-body text-burgundy/70">
                   <span>Delivery fee</span>
-                  <span>Rs. {SHIPPING_FEE.toLocaleString()}</span>
+                  <span>{getShippingFee(subtotal) === 0 ? 'Free' : `Rs. ${getShippingFee(subtotal).toLocaleString()}`}</span>
                 </div>
                 <div className="flex justify-between text-base font-ui font-bold text-burgundy border-t border-burgundy/10 pt-2">
                   <span>Total</span><span>Rs. {total.toLocaleString()}</span>

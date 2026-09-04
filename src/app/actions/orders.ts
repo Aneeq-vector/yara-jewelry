@@ -4,7 +4,7 @@ import { getServerSession, validateSession, getAdminClient } from '@/lib/pocketb
 import { revalidatePath } from 'next/cache';
 import { validateColorStock, normalizeColorName } from '@/lib/colors';
 import { unstable_noStore as noStore } from 'next/cache';
-import { SHIPPING_FEE } from "@/lib/constants";
+import { getShippingFee } from "@/lib/constants";
 async function syncInStock(productIds: string[]) {
   if (!productIds || productIds.length === 0) return;
   try {
@@ -259,7 +259,7 @@ export async function createOrderAction(formData: FormData) {
     }
 
     // Calculate shipping
-    const shippingFee = SHIPPING_FEE;
+    const shippingFee = getShippingFee(calculatedSubtotal);
 
     const calculatedTotalAmount = calculatedSubtotal + shippingFee;
     const generatedOrderId = formData.get('orderId') as string || `YRA-${Math.floor(100000 + Math.random() * 900000)}`;
@@ -536,7 +536,7 @@ export async function createManualOrderAction(payload: ManualOrderPayload) {
       shippingCity: payload.shippingCity,
       shippingZip: payload.shippingZip || '',
       shippingCountry: payload.shippingCountry || 'Sri Lanka',
-      totalAmount: calculatedTotal + SHIPPING_FEE,
+      totalAmount: calculatedTotal + getShippingFee(calculatedTotal),
       paymentMethod: payload.paymentMethod,
       paymentStatus: payload.paymentStatus,
       status: 'pending',

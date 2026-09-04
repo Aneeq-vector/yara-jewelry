@@ -69,3 +69,8 @@ export const BADGE_CONFIG = {
   new: { label: 'New', color: 'bg-gradient-to-r from-emerald-400 to-teal-500' },
 } as const;
 export const SHIPPING_FEE = 450;
+export const FREE_SHIPPING_THRESHOLD = 5000;
+
+export function getShippingFee(subtotal: number): number {
+  return subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+}
