@@ -159,7 +159,7 @@ export default function CheckoutPage() {
 
                 {/* Step 3: Review */}
                 {currentStep === 3 && (
-                  <CheckoutReviewStep form={form} receiptFile={receiptFile} uploadState={uploadState} uploadProgress={uploadProgress} handleFileChange={handleFileChange} retryUpload={retryUpload} setReceiptFile={setReceiptFile} setUploadState={setUploadState} receiptError={receiptError} currentStep={currentStep} />
+                  <CheckoutReviewStep form={form} receiptFile={receiptFile} uploadState={uploadState} uploadProgress={uploadProgress} handleFileChange={handleFileChange} retryUpload={retryUpload} setReceiptFile={setReceiptFile} setUploadState={setUploadState} receiptError={receiptError} currentStep={currentStep} subtotal={subtotal} />
                 )}
               </AnimatePresence>
 

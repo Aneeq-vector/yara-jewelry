@@ -14,7 +14,8 @@ export function CheckoutReviewStep({
   setReceiptFile,
   setUploadState,
   receiptError,
-  currentStep
+  currentStep,
+  subtotal
 }: any) {
   return (
                   <motion.div
@@ -34,7 +35,7 @@ export function CheckoutReviewStep({
                       <div className="p-4 rounded-2xl bg-champagne/20 border border-nude/20">
                         <h4 className="font-ui font-semibold text-xs uppercase tracking-wider text-burgundy/50 mb-2">Delivery Fee</h4>
                         <p className="font-body text-sm text-burgundy">
-                          {getShippingFee(form.watch('subtotal') || 0) === 0 ? 'Free' : formatPrice(getShippingFee(form.watch('subtotal') || 0))}
+                          {getShippingFee(subtotal || 0) === 0 ? 'Free' : formatPrice(getShippingFee(subtotal || 0))}
                         </p>
                       </div>
                       <div className="p-4 rounded-2xl bg-champagne/20 border border-nude/20">
