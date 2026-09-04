@@ -1,3 +1,4 @@
+import { formatPaymentMethod } from "@/lib/utils";
 import nodemailer from 'nodemailer';
 
 // Configure the email transporter using environment variables
@@ -210,7 +211,7 @@ export async function sendInvoiceEmail(details: InvoiceDetails) {
                         <p style="color: #4a1c27; font-size: 14px; margin: 0; line-height: 1.5;">${details.shippingAddress.replace(/, /g, '<br>')}</p>
                         
                         <h3 style="color: #c9856a; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; margin-top: 25px;">Payment Method</h3>
-                        <p style="color: #4a1c27; font-size: 14px; font-weight: 500; margin: 0; text-transform: uppercase;">${details.paymentMethod.replace('_', ' ')}</p>
+                        <p style="color: #4a1c27; font-size: 14px; font-weight: 500; margin: 0;">${formatPaymentMethod(details.paymentMethod)}</p>
                       </td>
                     </tr>
                   </table>

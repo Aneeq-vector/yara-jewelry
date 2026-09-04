@@ -50,3 +50,9 @@ export function formatOrderAddress(street?: string, city?: string, zip?: string,
     .filter(val => val !== '' && val !== '00000' && val !== '0000')
     .join(', ');
 }
+
+export function formatPaymentMethod(method: string): string {
+  if (method === 'cod') return 'Cash on Delivery';
+  if (method === 'bank_transfer') return 'Bank Transfer';
+  return method.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+}
