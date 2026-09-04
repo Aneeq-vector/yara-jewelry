@@ -307,7 +307,7 @@ export function ProductInfo({
               {/* Trust Badges */}
               <div className="grid grid-cols-3 gap-3 mb-8">
                 {[
-                  { icon: Truck, label: 'Free Shipping', sub: 'Orders above Rs. 999' },
+                  { icon: Truck, label: 'Free Shipping', sub: 'Orders above Rs. 4,999' },
                   { icon: RotateCcw, label: 'Easy Returns', sub: '7-day returns' },
                   { icon: Shield, label: 'Quality Assured', sub: 'Premium materials' },
                 ].map((badge) => {
