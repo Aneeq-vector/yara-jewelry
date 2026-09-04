@@ -53,7 +53,7 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
   // Fetched by useProductOptions hook
 
   const resetForm = () => {
-    setName(''); setPhone(''); setEmail(''); setCity(''); setAddress(''); setCountry('Sri Lanka');
+    setName(''); setPhone(''); setEmail(''); setCity(''); setZip(''); setAddress(''); setCountry('Sri Lanka');
     setSource('Instagram'); setPaymentMethod('cod'); setPaymentStatus('pending');
     setNotes(''); setDeductStock(true);     setOrderItems([]); setProductSearch('');
     setError(''); setSuccess(false); setShowProductPicker(false);
@@ -148,6 +148,7 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
     if (orderItems.length === 0) { setError('Please add at least one product.'); return; }
     const hasQty = orderItems.some(i => itemTotalQty(i) > 0);
     if (!hasQty) { setError('Please set a quantity for at least one product/color.'); return; }
+    if (paymentMethod === 'bank_transfer' && !receiptFile) { setError('Payment receipt is required for Bank Transfer.'); return; }
 
     setError('');
     setSubmitting(true);
@@ -249,11 +250,15 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
                   <input className={inputClass} placeholder="Colombo" value={city} onChange={e => setCity(e.target.value)} />
                 </div>
                 <div>
-                  <label className={labelClass}>Country</label>
+                  <label className={labelClass}>Postal Code <span className="text-rose-500">*</span></label>
+                  <input className={inputClass} placeholder="e.g. 61300" value={zip} onChange={e => setZip(e.target.value)} />
+                </div>
+                <div className="col-span-2">
+                  <label className={labelClass}>Country <span className="text-rose-500">*</span></label>
                   <input className={inputClass} placeholder="Sri Lanka" value={country} onChange={e => setCountry(e.target.value)} />
                 </div>
                 <div className="col-span-2">
-                  <label className={labelClass}>Address <span className="text-burgundy/30">(optional)</span></label>
+                  <label className={labelClass}>Address <span className="text-rose-500">*</span></label>
                   <input className={inputClass} placeholder="Street address" value={address} onChange={e => setAddress(e.target.value)} />
                 </div>
               </div>
@@ -432,7 +437,7 @@ export function AddOrderModal({ isOpen, onClose, onOrderCreated }: AddOrderModal
             {/* Receipt Upload — shown only for bank transfer */}
             {paymentMethod === 'bank_transfer' && (
               <div>
-                <label className={labelClass}>Payment Receipt <span className="text-burgundy/30">(optional)</span></label>
+                <label className={labelClass}>Payment Receipt <span className="text-rose-500">*</span></label>
                 <div
                   onClick={() => receiptInputRef.current?.click()}
                   className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors ${
